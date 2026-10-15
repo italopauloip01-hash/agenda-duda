@@ -19,6 +19,11 @@
 - Repo: https://github.com/italopauloip01-hash/agenda-duda — publicar = commit + `git push`
 - O app é um único `index.html` (antes se chamava `painel-duda.html`)
 
+## Dados de demonstração (2026-10-15)
+- Conta italo.pauloip01@gmail.com recebeu: 40 clientes, ~334 agendamentos (1º/ago até +14 dias), estoque, despesas, avaliações, notificações, 1 folga e 1 bloqueio
+- Gerar de novo: `SB_KEY=<service_role> OWNER=<uuid> node supabase/demo/gerar_demo.mjs` (usa os serviços já cadastrados)
+- Apagar: `supabase/demo/limpar_demo.sql` no SQL Editor
+
 ## Design (2026-10-15)
 - Visual discreto: fonte Geist, paleta neutra (tons de pedra) com acento rosé `--accent`, sem sombras, bordas de 1px, botões principais em preto (`--fg`)
 - Modo escuro automático pelo sistema; sem emojis na interface (só nas mensagens de WhatsApp para clientes)
