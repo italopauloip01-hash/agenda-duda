@@ -197,6 +197,10 @@ svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stro
 /* FAB */
 .fab{position:fixed;bottom:calc(var(--nav-h) + 18px + env(safe-area-inset-bottom,0px));right:max(20px,calc(50% - 260px + 20px));width:52px;height:52px;border-radius:16px;background:var(--fg);color:var(--on-fg);border:none;font-size:24px;font-weight:300;display:flex;align-items:center;justify-content:center;transition:transform .15s;z-index:15;box-shadow:var(--shadow-lg)}
 .fab:active{transform:scale(.95)}
+.fab{display:none!important} /* o atalho "Agendar" já cumpre esse papel */
+#alertsContainer:not(:empty){background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:2px 14px;margin-top:10px}
+#alertsContainer .alert{border:none;border-radius:0;margin:0;padding:11px 0;background:transparent}
+#alertsContainer .alert+.alert{border-top:1px solid var(--border)}
 
 /* Modal / Drawer */
 .modal-overlay{position:fixed;inset:0;z-index:30;background:rgba(12,10,9,.32);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -370,6 +374,7 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
 .pnl-table th{padding:10px 16px;text-align:left;font-size:12px;font-weight:500;color:var(--fg-muted);border-bottom:1px solid var(--border)}
 .pnl-table td{padding:10px 16px;border-bottom:1px solid var(--border)}
 .pnl-table tr:last-child td{border-bottom:none}
+.pnl-table thead{display:none}
 .pnl-up{color:var(--ok)}
 .pnl-down{color:var(--danger)}
 
@@ -1089,7 +1094,7 @@ const SERVICOS_PADRAO = [
   {nome:'Calosidades',tipo:'podologia',duracao_min:45,preco:80,cor:'#6B63C2'},
   {nome:'Palmilha Personalizada',tipo:'podologia',duracao_min:30,preco:70,cor:'#8B63C2'},
 ];
-const CORES_CLIENTE = ['#C2637A','#D4856E','#7A63C2','#C26398','#C29A63','#9A63C2','#63C2B0','#C2A863'];
+const CORES_CLIENTE = ['#B5637A','#7366B0','#5E8C7A','#A07F5C','#6F7F99','#9A6B8F','#7C8B5E','#8A6E6E'];
 
 // ── HELPERS ───────────────────────────────────────────────────────
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -1102,7 +1107,10 @@ function parseValor(s){
   const t=String(s||'').replace(/[^\d,.-]/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.');
   const v=parseFloat(t);return isNaN(v)?null:v;
 }
-function fmtR(v){v=Number(v)||0;return v>=1000?'R$'+(v/1000).toFixed(1).replace('.0','')+'k':'R$'+(Number.isInteger(v)?v:v.toFixed(2).replace('.',','))}
+function fmtR(v){
+  v=Number(v)||0;const s=v<0?'−':'';v=Math.abs(v);
+  return s+(v>=1000?'R$'+(v/1000).toFixed(1).replace('.0','').replace('.',',')+'k':'R$'+(Number.isInteger(v)?v:v.toFixed(2).replace('.',',')));
+}
 function normTel(s){let d=String(s||'').replace(/\D/g,'');if(!d)return null;if(d.length<=11)d='55'+d;return d}
 function fmtTel(s){const d=String(s||'').replace(/^55/,'');if(d.length===11)return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;if(d.length===10)return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;return s||'—'}
 function relDia(d){
@@ -1455,7 +1463,7 @@ function renderClients() {
       row.innerHTML = `
         <div class="client-avatar" style="background:${esc(c.color)}">${esc(c.name[0])}</div>
         <div class="client-info">
-          <div class="client-name">${c.vip?'⭐ ':''} ${esc(c.name)}</div>
+          <div class="client-name">${esc(c.name)}${c.vip?' <span class="badge badge-neutral" style="margin-left:4px;vertical-align:1px">VIP</span>':''}</div>
           <div class="client-sub">${typeL} · ${c.visits} visita${c.visits===1?'':'s'} · última: ${esc(c.last)}${c.faltou?` · <span style="color:var(--danger)">${c.faltou} falta${c.faltou>1?'s':''}</span>`:''}</div>
         </div>
         <span class="chevron">›</span>`;
@@ -1471,7 +1479,7 @@ function openFicha(c) {
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
       <div class="client-avatar" style="background:${esc(c.color)};width:56px;height:56px;font-size:22px">${esc(c.name[0])}</div>
       <div>
-        <div style="font-size:20px;font-weight:600;letter-spacing:-.02em">${c.vip?'⭐ ':''} ${esc(c.name)}</div>
+        <div style="font-size:20px;font-weight:600;letter-spacing:-.02em">${esc(c.name)}${c.vip?' <span class="badge badge-neutral" style="margin-left:4px;vertical-align:1px">VIP</span>':''}</div>
         <div style="font-size:12px;color:var(--fg-muted)">${typeL} · ${c.visits} visita${c.visits===1?'':'s'}</div>
       </div>
     </div>
