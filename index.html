@@ -1,393 +1,417 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Agenda da Duda</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
+<meta name="description" content="Agenda, clientes e financeiro do studio.">
+<meta name="theme-color" content="#FAFAF9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C0A09" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Agenda">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231C1917'/%3E%3Ccircle cx='32' cy='32' r='9' fill='%23D8A7B4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap">
 
 <style>
 /* ============================================================
-   DESIGN SYSTEM
+   DESIGN SYSTEM — neutro, discreto, sem sombras
    ============================================================ */
 :root {
-  --bg:        #FAF7F5;
+  --bg:        #FAFAF9;
   --bg-card:   #FFFFFF;
-  --fg:        #2A1F1A;
-  --fg-muted:  #8A7570;
-  --fg-soft:   #B8A8A2;
-  --border:    #EDE5E1;
-  --accent:    #C2637A;
-  --accent-lt: #F5E3E8;
-  --nail:      #C2637A;
-  --pod:       #7A63C2;
-  --nail-lt:   #F5E3E8;
-  --pod-lt:    #EDE8F8;
-  --ok:        #3D9E6A;
-  --ok-lt:     #E6F5EE;
-  --warn:      #D4860A;
-  --warn-lt:   #FEF3E0;
-  --danger:    #C93B3B;
-  --danger-lt: #FDEAEA;
-  --info:      #2E86C1;
-  --info-lt:   #E8F4FD;
-  --shadow:    0 1px 8px rgba(42,31,26,.07);
-  --shadow-md: 0 4px 20px rgba(42,31,26,.11);
+  --bg-subtle: #F5F5F4;
+  --fg:        #1C1917;
+  --fg-muted:  #78716C;
+  --fg-soft:   #A8A29E;
+  --border:    #E7E5E4;
+  --border-strong: #D6D3D1;
+  --accent:    #A8556B;
+  --accent-lt: #F7ECEF;
+  --nail:      #B5637A;
+  --pod:       #7366B0;
+  --nail-lt:   #F7ECEF;
+  --pod-lt:    #EFEDF7;
+  --ok:        #3D7F5A;
+  --ok-lt:     #EBF4EE;
+  --warn:      #A16207;
+  --warn-lt:   #FBF3E2;
+  --danger:    #B42318;
+  --danger-lt: #FBECEA;
+  --info:      #3B6A9E;
+  --info-lt:   #EBF1F8;
+  --on-fg:     #FFFFFF;
+  --shadow:    none;
+  --shadow-md: 0 1px 2px rgba(28,25,23,.04);
+  --shadow-lg: 0 12px 40px rgba(28,25,23,.12);
   --r:         14px;
-  --r-sm:      9px;
+  --r-sm:      10px;
+  --nav-h:     64px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg:        #181210;
-    --bg-card:   #231916;
-    --fg:        #F3EAE6;
-    --fg-muted:  #9A8780;
-    --fg-soft:   #6A5750;
-    --border:    #382820;
-    --accent:    #D97A90;
-    --accent-lt: #38181F;
-    --nail-lt:   #38181F;
-    --pod-lt:    #22183A;
-    --ok-lt:     #122618;
-    --warn-lt:   #281A04;
-    --danger-lt: #2A0E0E;
-    --info-lt:   #0E1C2A;
-    --shadow:    0 1px 8px rgba(0,0,0,.3);
-    --shadow-md: 0 4px 20px rgba(0,0,0,.45);
+    --bg:#0C0A09;--bg-card:#161412;--bg-subtle:#1C1917;--fg:#F5F5F4;--fg-muted:#A8A29E;--fg-soft:#6B6560;
+    --border:#292524;--border-strong:#3A3532;--accent:#D8A7B4;--accent-lt:#2A1C20;--nail:#D08A9E;--pod:#A59BD8;
+    --nail-lt:#2A1C20;--pod-lt:#1F1C2B;--ok:#7BC29A;--ok-lt:#15241B;--warn:#E0B25C;--warn-lt:#2A2210;
+    --danger:#F08A7E;--danger-lt:#2C1513;--info:#8DB4E2;--info-lt:#14202D;--on-fg:#0C0A09;
+    --shadow-lg:0 12px 40px rgba(0,0,0,.5);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg:#181210;--bg-card:#231916;--fg:#F3EAE6;--fg-muted:#9A8780;--fg-soft:#6A5750;
-  --border:#382820;--accent:#D97A90;--accent-lt:#38181F;--nail-lt:#38181F;--pod-lt:#22183A;
-  --ok-lt:#122618;--warn-lt:#281A04;--danger-lt:#2A0E0E;--info-lt:#0E1C2A;
-  --shadow:0 1px 8px rgba(0,0,0,.3);--shadow-md:0 4px 20px rgba(0,0,0,.45);
-  color-scheme:dark;
+  --bg:#0C0A09;--bg-card:#161412;--bg-subtle:#1C1917;--fg:#F5F5F4;--fg-muted:#A8A29E;--fg-soft:#6B6560;
+  --border:#292524;--border-strong:#3A3532;--accent:#D8A7B4;--accent-lt:#2A1C20;--nail:#D08A9E;--pod:#A59BD8;
+  --nail-lt:#2A1C20;--pod-lt:#1F1C2B;--ok:#7BC29A;--ok-lt:#15241B;--warn:#E0B25C;--warn-lt:#2A2210;
+  --danger:#F08A7E;--danger-lt:#2C1513;--info:#8DB4E2;--info-lt:#14202D;--on-fg:#0C0A09;
+  --shadow-lg:0 12px 40px rgba(0,0,0,.5);
+  color-scheme: dark;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;background:var(--bg);color:var(--fg);overscroll-behavior:none}
+html,body{height:100%;font-family:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;font-size:15px;background:var(--bg);color:var(--fg);overscroll-behavior:none;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+img{max-width:100%}
+[hidden]{display:none!important}
+svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 
 /* App Shell */
-#app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;position:relative}
+#app{display:flex;flex-direction:column;min-height:100%;max-width:520px;margin:0 auto;position:relative}
 
 /* Top Bar */
 .top-bar{
   display:flex;align-items:center;justify-content:space-between;
-  padding:14px max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px));
-  padding-top:max(14px,env(safe-area-inset-top,0px));
-  background:var(--bg);position:sticky;top:env(safe-area-inset-top,0px);z-index:10;
-  border-bottom:1px solid var(--border);
+  padding:max(18px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) 10px max(20px,env(safe-area-inset-left,0px));
+  background:var(--bg);position:sticky;top:0;z-index:10;
 }
-.top-bar-left{display:flex;flex-direction:column;gap:1px}
-.top-bar-greeting{font-size:11px;color:var(--fg-muted);font-weight:500;letter-spacing:.02em}
-.top-bar-name{font-family:'DM Serif Display',serif;font-size:19px;color:var(--fg);line-height:1.2}
-.top-bar-right{display:flex;gap:7px;align-items:center}
-.icon-btn{width:36px;height:36px;border-radius:50%;border:none;background:var(--bg-card);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow);color:var(--fg-muted);font-size:17px;transition:background .15s;flex-shrink:0}
-.icon-btn:active{background:var(--accent-lt);color:var(--accent)}
-.avatar{width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;color:#fff;font-size:15px;cursor:pointer;flex-shrink:0}
+.top-bar-left{display:flex;flex-direction:column;gap:2px;min-width:0}
+.top-bar-greeting{font-size:12px;color:var(--fg-muted)}
+.top-bar-name{font-size:20px;font-weight:600;letter-spacing:-.02em;line-height:1.2}
+.top-bar-right{display:flex;gap:2px;align-items:center}
+.icon-btn{width:36px;height:36px;border-radius:10px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;color:var(--fg-muted);font-size:16px;transition:background .15s,color .15s;flex-shrink:0}
+.icon-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.icon-btn:hover{background:var(--bg-subtle);color:var(--fg)}
+.icon-btn:active{background:var(--border)}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--bg-subtle);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--fg);font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;margin-left:6px}
 .notif-wrap{position:relative}
-.notif-badge{position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+.notif-badge{position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--bg)}
 
 /* Page content */
-.page-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px max(16px,env(safe-area-inset-right,0px)) 90px max(16px,env(safe-area-inset-left,0px))}
+.page-content{flex:1;padding:6px max(20px,env(safe-area-inset-right,0px)) calc(var(--nav-h) + 40px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px))}
 
 /* Bottom Nav */
 .bottom-nav{
   position:fixed;bottom:0;left:50%;transform:translateX(-50%);
-  width:100%;max-width:480px;background:var(--bg-card);border-top:1px solid var(--border);
-  display:flex;padding-bottom:max(10px,env(safe-area-inset-bottom,0px));z-index:20;
-  box-shadow:0 -2px 16px rgba(42,31,26,.06);
+  width:100%;max-width:520px;background:color-mix(in srgb,var(--bg) 82%,transparent);
+  backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);
+  border-top:1px solid var(--border);
+  display:flex;justify-content:space-around;padding:6px 6px max(8px,env(safe-area-inset-bottom,0px));z-index:20;
 }
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 0;border:none;background:none;cursor:pointer;color:var(--fg-soft);font-size:10px;font-weight:500;letter-spacing:.02em;transition:color .15s}
-.nav-item svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7}
-.nav-item.active{color:var(--accent)}
-.nav-item.active svg{stroke-width:2.2}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0 2px;border:none;background:none;color:var(--fg-soft);font-size:10.5px!important;font-weight:500;transition:color .15s;border-radius:10px}
+.nav-item svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.nav-item.active{color:var(--fg)}
+.nav-item.active svg{stroke-width:2}
 
 /* Section headers */
-.section-label{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-muted);margin:18px 0 9px;display:flex;align-items:center;justify-content:space-between}
-.section-label:first-child{margin-top:4px}
-.section-action{font-size:12px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--accent);cursor:pointer}
+.section-label{font-size:13px;font-weight:500;color:var(--fg-muted);margin:26px 0 10px;display:flex;align-items:center;justify-content:space-between;letter-spacing:-.005em}
+.section-label:first-child{margin-top:6px}
+.section-action{font-size:13px;color:var(--fg);cursor:pointer}
 
 /* Cards */
-.card{background:var(--bg-card);border-radius:var(--r);padding:15px;box-shadow:var(--shadow);border:1px solid var(--border)}
-.card+.card{margin-top:9px}
+.card{background:var(--bg-card);border-radius:var(--r);padding:16px;border:1px solid var(--border)}
+.card+.card{margin-top:10px}
 
 /* Date strip */
-.date-strip{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:13px}
+.date-strip{display:flex;gap:4px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none;margin:4px -4px 14px;scroll-snap-type:x proximity}
 .date-strip::-webkit-scrollbar{display:none}
-.date-chip{display:flex;flex-direction:column;align-items:center;padding:7px 11px;border-radius:var(--r-sm);background:var(--bg-card);border:1px solid var(--border);cursor:pointer;min-width:48px;transition:all .15s;box-shadow:var(--shadow)}
-.date-chip .dow{font-size:9px;color:var(--fg-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
-.date-chip .dom{font-size:19px;font-weight:700;color:var(--fg);line-height:1.2;font-variant-numeric:tabular-nums}
-.date-chip .has-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);margin-top:3px;opacity:0}
+.date-chip{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 7px;border-radius:12px;background:transparent;cursor:pointer;min-width:46px;transition:background .15s;scroll-snap-align:start}
+.date-chip:hover{background:var(--bg-subtle)}
+.date-chip .dow{font-size:11px;color:var(--fg-muted);font-weight:500}
+.date-chip .dom{font-size:17px;font-weight:600;color:var(--fg);line-height:1.1;font-variant-numeric:tabular-nums}
+.date-chip .has-dot{width:4px;height:4px;border-radius:50%;background:var(--accent);opacity:0}
 .date-chip.has-appt .has-dot{opacity:1}
-.date-chip.active{background:var(--accent);border-color:var(--accent)}
-.date-chip.active .dow,.date-chip.active .dom{color:#fff}
-.date-chip.active .has-dot{background:#fff}
+.date-chip.active{background:var(--fg)}
+.date-chip.active .dow{color:var(--on-fg);opacity:.7}
+.date-chip.active .dom{color:var(--on-fg)}
+.date-chip.active .has-dot{background:var(--on-fg)}
 
 /* Appointment cards */
-.appt-card{display:flex;gap:11px;align-items:flex-start;padding:12px 14px;background:var(--bg-card);border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--shadow);cursor:pointer;transition:box-shadow .15s}
-.appt-card+.appt-card{margin-top:7px}
-.appt-card:active{box-shadow:var(--shadow-md)}
-.appt-time-col{display:flex;flex-direction:column;align-items:center;min-width:40px;padding-top:1px}
-.appt-hour{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--fg)}
-.appt-min{font-size:10px;color:var(--fg-muted);font-variant-numeric:tabular-nums}
-.appt-dot{width:9px;height:9px;border-radius:50%;margin:5px 0;flex-shrink:0}
-.appt-line{width:1px;background:var(--border);flex:1;min-height:20px}
+.appt-card{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;background:var(--bg-card);border-radius:var(--r);border:1px solid var(--border);cursor:pointer;transition:border-color .15s}
+.appt-card+.appt-card{margin-top:8px}
+.appt-card:hover{border-color:var(--border-strong)}
+.appt-time-col{display:flex;flex-direction:column;align-items:flex-start;min-width:42px;padding-top:1px}
+.appt-hour{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2}
+.appt-min{font-size:12px;color:var(--fg-muted);font-variant-numeric:tabular-nums}
+.appt-dot{width:6px;height:6px;border-radius:50%;margin:8px 0 0;flex-shrink:0}
+.appt-line{display:none}
 .appt-body{flex:1;min-width:0}
-.appt-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.appt-service{font-size:12px;color:var(--fg-muted);margin-top:2px}
-.appt-meta{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;align-items:center}
-.appt-price{font-size:14px;font-weight:700;color:var(--fg);margin-left:auto;white-space:nowrap;font-variant-numeric:tabular-nums;padding-left:8px;flex-shrink:0}
+.appt-name{font-weight:500;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
+.appt-service{font-size:13px;color:var(--fg-muted);margin-top:2px}
+.appt-meta{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.appt-price{font-size:14px;font-weight:500;color:var(--fg);margin-left:auto;white-space:nowrap;font-variant-numeric:tabular-nums;padding-left:8px;flex-shrink:0}
 
 /* Badges */
-.badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;white-space:nowrap;letter-spacing:.02em}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:500;padding:2px 8px;border-radius:999px;white-space:nowrap;line-height:1.5}
 .badge-nail{background:var(--nail-lt);color:var(--nail)}
 .badge-pod{background:var(--pod-lt);color:var(--pod)}
 .badge-ok{background:var(--ok-lt);color:var(--ok)}
 .badge-warn{background:var(--warn-lt);color:var(--warn)}
 .badge-danger{background:var(--danger-lt);color:var(--danger)}
 .badge-info{background:var(--info-lt);color:var(--info)}
-.badge-neutral{background:var(--border);color:var(--fg-muted)}
+.badge-neutral{background:var(--bg-subtle);color:var(--fg-muted)}
 .badge-purple{background:var(--pod-lt);color:var(--pod)}
 
 /* Stat tiles */
-.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:4px}
-.stats-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:4px}
-.stat-tile{background:var(--bg-card);border-radius:var(--r);padding:13px 14px;border:1px solid var(--border);box-shadow:var(--shadow)}
-.stat-label{font-size:10px;color:var(--fg-muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase}
-.stat-value{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25;margin-top:2px}
-.stat-sub{font-size:11px;color:var(--fg-muted);margin-top:1px}
-.stat-nail{color:var(--nail)}
-.stat-pod{color:var(--pod)}
-.stat-ok{color:var(--ok)}
-.stat-warn{color:var(--warn)}
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+.stats-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:4px}
+.stat-tile{background:var(--bg-card);border-radius:var(--r);padding:14px 16px;border:1px solid var(--border);min-width:0}
+.stat-label{font-size:12px;color:var(--fg-muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-value{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.25;margin-top:4px;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-sub{font-size:12px;color:var(--fg-soft);margin-top:1px}
+.stat-nail,.stat-pod,.stat-ok{color:var(--fg)}
+.stat-warn{color:var(--fg)}
 
 /* Client rows */
-.client-row{display:flex;align-items:center;gap:11px;padding:11px 14px;background:var(--bg-card);border-radius:var(--r-sm);border:1px solid var(--border);cursor:pointer;transition:box-shadow .15s}
-.client-row+.client-row{margin-top:6px}
-.client-row:active{box-shadow:var(--shadow-md)}
-.client-avatar{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#fff}
+.client-row{display:flex;align-items:center;gap:12px;padding:12px 4px;background:transparent;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.client-row:last-child{border-bottom:none}
+.client-row:hover{background:var(--bg-subtle)}
+.client-avatar{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;color:#fff}
 .client-info{flex:1;min-width:0}
-.client-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.client-sub{font-size:11px;color:var(--fg-muted);margin-top:2px}
-.chevron{color:var(--fg-soft);font-size:16px;flex-shrink:0}
+.client-name{font-weight:500;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.client-sub{font-size:12.5px;color:var(--fg-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chevron{color:var(--fg-soft);font-size:18px;flex-shrink:0}
 
 /* Service items */
-.service-item{display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--bg-card);border-radius:var(--r-sm);border:1px solid var(--border)}
-.service-item+.service-item{margin-top:6px}
-.service-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.service-item{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--border)}
+.service-item:last-child{border-bottom:none}
+.service-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .service-info{flex:1;min-width:0}
-.service-name{font-weight:500;font-size:14px}
-.service-dur{font-size:11px;color:var(--fg-muted)}
-.service-price{font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;flex-shrink:0}
-.service-actions{display:flex;gap:6px}
+.service-name{font-weight:500;font-size:15px}
+.service-dur{font-size:12.5px;color:var(--fg-muted);margin-top:1px}
+.service-price{font-weight:500;font-size:14px;font-variant-numeric:tabular-nums;flex-shrink:0}
+.service-actions{display:flex;gap:4px}
 
 /* FAB */
-.fab{position:fixed;bottom:max(72px,calc(62px + env(safe-area-inset-bottom,0px)));right:max(18px,env(safe-area-inset-right,0px));width:50px;height:50px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:22px;cursor:pointer;box-shadow:0 4px 16px rgba(194,99,122,.4);display:flex;align-items:center;justify-content:center;transition:transform .15s,box-shadow .15s;z-index:15}
-.fab:active{transform:scale(.94);box-shadow:0 2px 8px rgba(194,99,122,.3)}
+.fab{position:fixed;bottom:calc(var(--nav-h) + 18px + env(safe-area-inset-bottom,0px));right:max(20px,calc(50% - 260px + 20px));width:52px;height:52px;border-radius:16px;background:var(--fg);color:var(--on-fg);border:none;font-size:24px;font-weight:300;display:flex;align-items:center;justify-content:center;transition:transform .15s;z-index:15;box-shadow:var(--shadow-lg)}
+.fab:active{transform:scale(.95)}
 
 /* Modal / Drawer */
-.modal-overlay{position:fixed;inset:0;z-index:30;background:rgba(26,14,10,.45);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay{position:fixed;inset:0;z-index:30;background:rgba(12,10,9,.32);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
 .modal-overlay.open{opacity:1;pointer-events:all}
-.drawer{background:var(--bg-card);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding:18px max(18px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px));transform:translateY(100%);transition:transform .25s cubic-bezier(.32,.72,0,1)}
+.drawer{background:var(--bg-card);border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding:10px max(20px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));transform:translateY(100%);transition:transform .28s cubic-bezier(.32,.72,0,1);box-shadow:var(--shadow-lg)}
 .modal-overlay.open .drawer{transform:translateY(0)}
-.drawer-handle{width:34px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 18px}
-.drawer-title{font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:18px}
-.drawer-subtitle{font-size:12px;color:var(--fg-muted);margin-top:-14px;margin-bottom:16px}
+.drawer-handle{width:36px;height:4px;border-radius:2px;background:var(--border-strong);margin:0 auto 18px}
+.drawer-title{font-size:19px;font-weight:600;letter-spacing:-.02em;margin-bottom:18px}
+.drawer-subtitle{font-size:13px;color:var(--fg-muted);margin-top:-14px;margin-bottom:16px}
+@media (min-width:640px){.modal-overlay{align-items:center}.drawer{border-radius:20px;max-height:86vh}}
 
 /* Forms */
-.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
-.form-label{font-size:11px;font-weight:700;color:var(--fg-muted);letter-spacing:.05em;text-transform:uppercase}
-.form-input{padding:11px 13px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;transition:border-color .15s;outline:none;width:100%}
-.form-input:focus{border-color:var(--accent)}
-.form-input[readonly]{background:var(--bg);color:var(--fg-muted)}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;min-width:0}
+.form-label{font-size:12.5px;font-weight:500;color:var(--fg-muted)}
+.form-input{padding:11px 13px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--fg);font-size:15px;transition:border-color .15s,box-shadow .15s;outline:none;width:100%;min-width:0;-webkit-appearance:none;appearance:none}
+select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2378716C' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.form-input::placeholder{color:var(--fg-soft)}
+.form-input:focus{border-color:var(--fg);box-shadow:0 0 0 3px color-mix(in srgb,var(--fg) 8%,transparent)}
+.form-input[readonly]{background:var(--bg-subtle);color:var(--fg-muted)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 
 /* Buttons */
-.btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:13px 18px;border-radius:var(--r-sm);border:none;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity .15s,transform .1s;width:100%}
-.btn:active{transform:scale(.97)}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-ghost{background:var(--bg);color:var(--fg);border:1px solid var(--border)}
-.btn-danger{background:var(--danger-lt);color:var(--danger);border:1px solid var(--danger-lt)}
-.btn-ok{background:var(--ok-lt);color:var(--ok);border:1px solid var(--ok-lt)}
-.btn-sm{padding:8px 13px;font-size:13px;border-radius:7px}
-.btn-row{display:flex;gap:9px;margin-top:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:12px 18px;border-radius:var(--r-sm);border:1px solid transparent;font-size:14.5px;font-weight:500;transition:background .15s,border-color .15s,transform .1s,opacity .15s;width:100%;text-decoration:none;line-height:1.2}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-primary{background:var(--fg);color:var(--on-fg)}
+.btn-primary:hover{opacity:.9}
+.btn-ghost{background:var(--bg-card);color:var(--fg);border-color:var(--border)}
+.btn-ghost:hover{border-color:var(--border-strong);background:var(--bg-subtle)}
+.btn-danger{background:transparent;color:var(--danger);border-color:var(--border)}
+.btn-danger:hover{background:var(--danger-lt)}
+.btn-ok{background:var(--bg-card);color:var(--fg);border-color:var(--border)}
+.btn-ok:hover{background:var(--bg-subtle)}
+.btn-sm{padding:9px 12px;font-size:13.5px;border-radius:9px}
+.btn-row{display:flex;gap:10px;margin-top:6px}
 .btn-row .btn{flex:1}
 
 /* Slot grid */
-.slot-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:7px 0}
-.slot{padding:9px 5px;text-align:center;border-radius:var(--r-sm);border:1px solid var(--border);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;font-variant-numeric:tabular-nums;background:var(--bg)}
-.slot:active:not(.slot-taken){border-color:var(--accent);background:var(--accent-lt)}
-.slot.selected{background:var(--accent);color:#fff;border-color:var(--accent)}
-.slot.slot-taken{opacity:.3;cursor:not-allowed;text-decoration:line-through;font-size:11px}
+.slot-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0}
+.slot{padding:10px 4px;text-align:center;border-radius:9px;border:1px solid var(--border);font-size:13.5px;font-weight:500;cursor:pointer;transition:all .12s;font-variant-numeric:tabular-nums;background:var(--bg-card)}
+.slot:hover:not(.slot-taken){border-color:var(--fg)}
+.slot.selected{background:var(--fg);color:var(--on-fg);border-color:var(--fg)}
+.slot.slot-taken{color:var(--fg-soft);background:var(--bg-subtle);border-color:transparent;cursor:not-allowed;text-decoration:line-through;text-decoration-color:var(--border-strong)}
 
 /* Alert */
-.alert{display:flex;align-items:flex-start;gap:9px;padding:11px 13px;border-radius:var(--r-sm);font-size:13px;margin-bottom:11px}
-.alert-warn{background:var(--warn-lt);color:var(--warn)}
-.alert-info{background:var(--info-lt);color:var(--info)}
-.alert-ok{background:var(--ok-lt);color:var(--ok)}
-.alert-danger{background:var(--danger-lt);color:var(--danger)}
-.alert-icon{font-size:15px;flex-shrink:0;margin-top:1px}
+.alert{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:var(--r-sm);font-size:13.5px;margin-bottom:8px;background:var(--bg-card);border:1px solid var(--border);color:var(--fg);line-height:1.45}
+.alert::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:7px;background:var(--fg-soft)}
+.alert-warn::before{background:var(--warn)}
+.alert-info::before{background:var(--info)}
+.alert-ok::before{background:var(--ok)}
+.alert-danger::before{background:var(--danger)}
+.alert-icon{display:none}
 
 /* Tab bar */
-.tab-bar{display:flex;gap:3px;background:var(--bg);border-radius:var(--r-sm);padding:4px;margin-bottom:13px;border:1px solid var(--border)}
-.tab-item{flex:1;padding:7px 8px;border:none;border-radius:6px;background:none;cursor:pointer;font-size:12px;font-weight:600;color:var(--fg-muted);font-family:inherit;transition:all .15s;letter-spacing:.01em;white-space:nowrap}
-.tab-item.active{background:var(--bg-card);color:var(--accent);box-shadow:var(--shadow)}
+.tab-bar{display:flex;gap:2px;background:var(--bg-subtle);border-radius:11px;padding:3px;margin-bottom:16px}
+.tab-item{flex:1;padding:8px 6px;border:none;border-radius:8px;background:none;font-size:13px;font-weight:500;color:var(--fg-muted);transition:all .15s;white-space:nowrap}
+.tab-item.active{background:var(--bg-card);color:var(--fg);box-shadow:0 1px 2px rgba(28,25,23,.08)}
 
 /* Page */
 .page{display:none}.page.active{display:block}
 
 /* Search bar */
-.search-bar{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 13px;margin-bottom:12px;box-shadow:var(--shadow)}
-.search-bar input{flex:1;border:none;background:none;color:var(--fg);font-size:14px;font-family:inherit;outline:none}
+.search-bar{display:flex;align-items:center;gap:10px;background:var(--bg-subtle);border:1px solid transparent;border-radius:var(--r-sm);padding:10px 13px;margin-bottom:12px;transition:border-color .15s}
+.search-bar:focus-within{border-color:var(--border-strong);background:var(--bg-card)}
+.search-bar input{flex:1;border:none;background:none;color:var(--fg);font-size:15px;outline:none;min-width:0}
 .search-bar input::placeholder{color:var(--fg-soft)}
-.search-icon{color:var(--fg-soft);font-size:15px;flex-shrink:0}
+.search-icon{color:var(--fg-soft);display:flex}
 
 /* Revenue bar */
-.rev-bar{margin:7px 0;border-radius:5px;overflow:hidden;height:7px;background:var(--border)}
-.rev-fill{height:100%;border-radius:5px;transition:width .6s ease}
-.rev-row{display:flex;justify-content:space-between;font-size:11px;color:var(--fg-muted);margin-top:3px;font-variant-numeric:tabular-nums}
+.rev-bar{margin:8px 0 6px;border-radius:3px;overflow:hidden;height:4px;background:var(--bg-subtle)}
+.rev-fill{height:100%;border-radius:3px;transition:width .6s ease}
+.rev-row{display:flex;justify-content:space-between;font-size:12px;color:var(--fg-muted);font-variant-numeric:tabular-nums}
 
-/* Divider row */
 .divider{height:1px;background:var(--border);margin:12px 0}
 
-/* List with chevrons */
-.settings-row{display:flex;align-items:center;gap:12px;padding:13px 14px;cursor:pointer;transition:background .15s;border-radius:var(--r-sm)}
-.settings-row:active{background:var(--accent-lt)}
+/* Settings rows */
+.settings-row{display:flex;align-items:center;gap:12px;padding:13px 2px;cursor:pointer;transition:opacity .15s}
+.settings-row:active{opacity:.6}
 .settings-row+.settings-row{border-top:1px solid var(--border)}
-.settings-icon{font-size:19px;width:26px;text-align:center;flex-shrink:0}
+.settings-icon{display:none}
 .settings-text{flex:1;min-width:0}
-.settings-label{font-size:14px;font-weight:500}
-.settings-sub{font-size:11px;color:var(--fg-muted);margin-top:1px}
+.settings-label{font-size:15px;font-weight:500}
+.settings-sub{font-size:12.5px;color:var(--fg-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* Birthday / highlight rows */
-.birthday-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+/* Birthday rows */
+.birthday-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
 .birthday-row:last-child{border-bottom:none}
 
-/* Quick actions row */
-.quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:4px}
-.quick-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-sm);cursor:pointer;font-size:10px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:var(--fg-muted);transition:all .15s;box-shadow:var(--shadow)}
-.quick-btn:active{background:var(--accent-lt);color:var(--accent);border-color:var(--accent)}
-.quick-btn span{font-size:20px}
+/* Quick actions */
+.quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 4px}
+.quick-btn{display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 4px 11px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-weight:500;color:var(--fg);transition:border-color .15s,background .15s}
+.quick-btn:hover{border-color:var(--border-strong)}
+.quick-btn:active{background:var(--bg-subtle)}
+.quick-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;color:var(--fg-muted)}
 
-/* Progress ring small */
-.ring-wrap{position:relative;width:56px;height:56px;flex-shrink:0}
-.ring-wrap svg{width:100%;height:100%;transform:rotate(-90deg)}
-.ring-bg{fill:none;stroke:var(--border);stroke-width:4}
-.ring-fg{fill:none;stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset .6s ease}
-.ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
-
-/* Inventory item */
-.invent-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-card);border-radius:var(--r-sm);border:1px solid var(--border)}
-.invent-item+.invent-item{margin-top:6px}
+/* Inventory */
+.invent-item{display:flex;align-items:center;gap:8px;padding:12px 2px;border-bottom:1px solid var(--border)}
+.invent-item:last-child{border-bottom:none}
 .invent-info{flex:1;min-width:0}
-.invent-name{font-size:14px;font-weight:500}
-.invent-sub{font-size:11px;color:var(--fg-muted)}
-.invent-stock{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0}
+.invent-name{font-size:15px;font-weight:500}
+.invent-sub{font-size:12.5px;color:var(--fg-muted);margin-top:1px}
+.invent-stock{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;flex-shrink:0}
 
-/* Gallery grid */
-.gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
-.gallery-item{aspect-ratio:1;border-radius:var(--r-sm);overflow:hidden;position:relative;cursor:pointer;background:var(--border)}
+/* Gallery */
+.gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px}
+.gallery-item{aspect-ratio:1;border-radius:8px;overflow:hidden;position:relative;cursor:pointer;background:var(--bg-subtle)}
 .gallery-item img{width:100%;height:100%;object-fit:cover}
-.gallery-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;background:var(--accent-lt)}
+.gallery-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:26px;opacity:.55}
 .gallery-type{position:absolute;bottom:4px;left:4px}
 
-/* Avaliação stars */
-.stars{display:flex;gap:2px;font-size:15px}
-.star{cursor:pointer;transition:transform .1s}
-.star:active{transform:scale(1.3)}
+.stars{display:flex;gap:1px;font-size:14px;color:var(--warn);letter-spacing:1px}
+.star{cursor:pointer}
 
-/* Folga badge */
-.folga-day{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--bg-card);border-radius:var(--r-sm);border:1px solid var(--border)}
-.folga-day+.folga-day{margin-top:6px}
+.folga-day,.expense-row{display:flex;align-items:center;gap:10px;padding:12px 2px;border-bottom:1px solid var(--border)}
+.expense-row:last-child{border-bottom:none}
 
-/* Expense row */
-.expense-row{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--bg-card);border-radius:var(--r-sm);border:1px solid var(--border)}
-.expense-row+.expense-row{margin-top:6px}
-
-/* Toggle switch */
-.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0}
+/* Toggle */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0}
 .toggle-row+.toggle-row{border-top:1px solid var(--border)}
 .toggle-info{flex:1;min-width:0}
-.toggle-label{font-size:14px;font-weight:500}
-.toggle-sub{font-size:11px;color:var(--fg-muted);margin-top:1px}
-.toggle{position:relative;width:44px;height:25px;flex-shrink:0}
+.toggle-label{font-size:15px;font-weight:500}
+.toggle-sub{font-size:12.5px;color:var(--fg-muted);margin-top:2px}
+.toggle{position:relative;width:40px;height:24px;flex-shrink:0}
 .toggle input{opacity:0;width:0;height:0;position:absolute}
-.toggle-track{position:absolute;inset:0;background:var(--border);border-radius:25px;transition:background .2s;cursor:pointer}
-.toggle input:checked+.toggle-track{background:var(--accent)}
-.toggle-track::after{content:'';position:absolute;width:19px;height:19px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
-.toggle input:checked+.toggle-track::after{transform:translateX(19px)}
+.toggle-track{position:absolute;inset:0;background:var(--border-strong);border-radius:24px;transition:background .2s;cursor:pointer}
+.toggle input:checked+.toggle-track{background:var(--fg)}
+.toggle-track::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:var(--bg-card);top:3px;left:3px;transition:transform .2s}
+.toggle input:checked+.toggle-track::after{transform:translateX(16px)}
 
 /* Chart bars */
-.chart-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
-.chart-label{font-size:12px;color:var(--fg-muted);width:60px;flex-shrink:0;text-align:right}
-.chart-bar-wrap{flex:1;height:18px;background:var(--border);border-radius:4px;overflow:hidden}
-.chart-bar{height:100%;border-radius:4px;transition:width .6s ease}
-.chart-value{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;width:60px;flex-shrink:0}
+.chart-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.chart-row:last-child{margin-bottom:0}
+.chart-label{font-size:12.5px;color:var(--fg-muted);width:36px;flex-shrink:0}
+.chart-bar-wrap{flex:1;height:6px;background:var(--bg-subtle);border-radius:3px;overflow:hidden}
+.chart-bar{height:100%;border-radius:3px;transition:width .6s ease}
+.chart-value{font-size:12.5px;font-weight:500;font-variant-numeric:tabular-nums;width:62px;flex-shrink:0;text-align:right;color:var(--fg)!important}
 
 /* Pill tabs */
-.pill-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:12px;padding-bottom:2px}
+.pill-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -20px 14px;padding:0 20px 2px}
 .pill-tabs::-webkit-scrollbar{display:none}
-.pill{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card);font-size:12px;font-weight:600;color:var(--fg-muted);cursor:pointer;white-space:nowrap;transition:all .15s;box-shadow:var(--shadow)}
-.pill.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.pill{padding:6px 13px;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);font-size:13px;font-weight:500;color:var(--fg-muted);cursor:pointer;white-space:nowrap;transition:all .15s}
+.pill:hover{color:var(--fg)}
+.pill.active{background:var(--fg);border-color:var(--fg);color:var(--on-fg)}
 
-/* ── CALENDAR ── */
-.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.cal-month-title{font-family:'DM Serif Display',serif;font-size:20px;color:var(--fg)}
-.cal-grid-header{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:5px}
-.cal-grid-header span{text-align:center;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);padding:3px 0}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.cal-day{border-radius:8px;padding:5px 3px 6px;background:var(--bg-card);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;transition:box-shadow .15s;min-height:52px}
-.cal-day:active{box-shadow:var(--shadow-md)}
-.cal-day.today{border-color:var(--accent);background:var(--accent-lt)}
-.cal-day.today .cal-day-num{color:var(--accent)}
-.cal-day.empty{background:transparent;border-color:transparent;cursor:default}
-.cal-day-num{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--fg)}
-.cal-bar-wrap{width:100%;height:18px;background:var(--border);border-radius:3px;overflow:hidden;position:relative}
-.cal-bar-fill{position:absolute;bottom:0;left:0;right:0;border-radius:3px;transition:height .5s ease}
-.cal-day-count{font-size:9px;color:var(--fg-muted);font-variant-numeric:tabular-nums}
+/* Calendar */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin:4px 0 14px}
+.cal-month-title{font-size:18px;font-weight:600;letter-spacing:-.02em}
+.cal-grid-header{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:14px 0 6px}
+.cal-grid-header span{text-align:center;font-size:11px;font-weight:500;color:var(--fg-soft)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-day{border-radius:10px;padding:7px 4px 6px;background:transparent;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:background .15s;min-height:54px}
+.cal-day:hover{background:var(--bg-subtle)}
+.cal-day.today{background:var(--fg)}
+.cal-day.today .cal-day-num,.cal-day.today .cal-day-count{color:var(--on-fg)}
+.cal-day.empty{cursor:default}
+.cal-day.empty:hover{background:transparent}
+.cal-day-num{font-size:14px;font-weight:500;font-variant-numeric:tabular-nums}
+.cal-bar-wrap{width:60%;height:3px;background:var(--bg-subtle);border-radius:2px;overflow:hidden;position:relative}
+.cal-day.today .cal-bar-wrap{background:color-mix(in srgb,var(--on-fg) 25%,transparent)}
+.cal-bar-fill{position:absolute;inset:0 auto 0 0;height:100%!important;border-radius:2px}
+.cal-day-count{font-size:10.5px;color:var(--fg-muted);font-variant-numeric:tabular-nums}
 
-/* ── DONUT CHART ── */
-.donut-wrap{position:relative;width:130px;height:130px;flex-shrink:0}
-.donut-wrap svg{transform:rotate(-90deg)}
+/* Donut */
+.donut-wrap{position:relative;width:120px;height:120px;flex-shrink:0}
+.donut-wrap svg{transform:rotate(-90deg);width:120px;height:120px}
 .donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 
-/* ── TREND CHART ── */
-.trend-chart{width:100%;overflow:hidden;border-radius:var(--r-sm);display:block}
-
-/* ── P&L TABLE ── */
-.pnl-table{width:100%;border-collapse:collapse;font-size:12px}
-.pnl-table th{padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--fg-muted);border-bottom:1px solid var(--border)}
-.pnl-table td{padding:8px 8px;border-bottom:1px solid var(--border)}
+/* P&L */
+.pnl-table{width:100%;border-collapse:collapse;font-size:14px}
+.pnl-table th{padding:10px 16px;text-align:left;font-size:12px;font-weight:500;color:var(--fg-muted);border-bottom:1px solid var(--border)}
+.pnl-table td{padding:10px 16px;border-bottom:1px solid var(--border)}
 .pnl-table tr:last-child td{border-bottom:none}
-.pnl-up{color:var(--ok);font-weight:600}
-.pnl-down{color:var(--danger);font-weight:600}
+.pnl-up{color:var(--ok)}
+.pnl-down{color:var(--danger)}
 
-/* ── PORTFOLIO ── */
-.portfolio-section{margin-bottom:16px}
+/* Portfolio */
+.portfolio-section{margin-bottom:18px}
 .portfolio-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.portfolio-section-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px}
-.portfolio-section-count{font-size:11px;color:var(--fg-muted)}
+.portfolio-section-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px}
+.portfolio-section-count{font-size:12px;color:var(--fg-muted)}
 .gallery-grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
-.gallery-item-lg{aspect-ratio:4/3;border-radius:var(--r-sm);overflow:hidden;position:relative;cursor:pointer;background:var(--border)}
-.gallery-tag{position:absolute;bottom:5px;left:5px;font-size:9px;padding:2px 6px;border-radius:10px;font-weight:700;backdrop-filter:blur(4px);background:rgba(0,0,0,.35);color:#fff}
+.gallery-item-lg{aspect-ratio:4/3;border-radius:10px;overflow:hidden;position:relative;cursor:pointer;background:var(--bg-subtle)}
+.gallery-tag{position:absolute;bottom:6px;left:6px;font-size:10.5px;padding:2px 8px;border-radius:999px;font-weight:500;backdrop-filter:blur(6px);background:rgba(0,0,0,.4);color:#fff}
 
-/* ── LOGIN ── */
-#loginScreen{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px 16px}
-#loginScreen[hidden]{display:none}
-.login-box{width:100%;max-width:360px;text-align:center}
-.login-title{font-family:'DM Serif Display',serif;font-size:30px;margin-bottom:4px}
-.login-sub{font-size:13px;color:var(--fg-muted);margin-bottom:26px}
-.login-or{font-size:11px;color:var(--fg-soft);margin:16px 0;text-transform:uppercase;letter-spacing:.08em}
-.login-msg{font-size:13px;margin-top:14px;min-height:18px}
-.empty-state{text-align:center;padding:26px 12px;color:var(--fg-muted);font-size:13px}
-#toast{position:fixed;left:50%;bottom:max(84px,calc(74px + env(safe-area-inset-bottom,0px)));transform:translateX(-50%) translateY(20px);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:20px;font-size:13px;font-weight:500;opacity:0;pointer-events:none;transition:all .2s;z-index:60;max-width:90vw;text-align:center}
+/* Lists inside cards */
+.list-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:2px 14px}
+.list-card:empty{display:none}
+
+/* Login */
+#loginScreen{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px 20px}
+.login-box{width:100%;max-width:340px}
+.login-mark{width:44px;height:44px;border-radius:13px;background:var(--fg);display:flex;align-items:center;justify-content:center;margin-bottom:22px}
+.login-mark span{width:12px;height:12px;border-radius:50%;background:var(--accent)}
+.login-title{font-size:24px;font-weight:600;letter-spacing:-.03em;margin-bottom:4px}
+.login-sub{font-size:14px;color:var(--fg-muted);margin-bottom:28px}
+.login-or{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--fg-soft);margin:18px 0}
+.login-or::before,.login-or::after{content:'';flex:1;height:1px;background:var(--border)}
+.login-msg{font-size:13px;margin-top:14px;min-height:18px;line-height:1.5}
+.empty-state{text-align:center;padding:32px 16px;color:var(--fg-muted);font-size:14px;line-height:1.5}
+#toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(10px);background:var(--fg);color:var(--on-fg);padding:10px 16px;border-radius:12px;font-size:13.5px;font-weight:500;opacity:0;pointer-events:none;transition:all .2s;z-index:60;max-width:calc(100vw - 40px);text-align:center;box-shadow:var(--shadow-lg)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
+</head>
+<body>
+
 
 <!-- ================================================================ LOGIN ================================================================ -->
 <div id="loginScreen">
   <div class="login-box">
-    <div class="login-title">Agenda da Duda ✨</div>
-    <div class="login-sub">Entre para ver sua agenda</div>
+    <div class="login-mark"><span></span></div>
+    <div class="login-title">Agenda da Duda</div>
+    <div class="login-sub">Entre para ver sua agenda.</div>
     <button class="btn btn-ghost" onclick="loginGoogle()">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
       Entrar com Google
@@ -410,8 +434,8 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
 <!-- Top Bar -->
 <header class="top-bar">
   <div class="top-bar-left">
-    <span class="top-bar-greeting" id="greeting">Bom dia ☀️</span>
-    <span class="top-bar-name">Duda ✨</span>
+    <span class="top-bar-greeting" id="greeting">Bom dia</span>
+    <span class="top-bar-name" id="topName">Duda</span>
   </div>
   <div class="top-bar-right">
     <div class="notif-wrap">
@@ -445,10 +469,10 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
   </div>
 
   <div class="quick-actions">
-    <button class="quick-btn" onclick="openDrawer('novoAgendDrawer')"><span>➕</span>Agendar</button>
-    <button class="quick-btn" onclick="openDrawer('bloquearDrawer')"><span>🔒</span>Bloquear</button>
-    <button class="quick-btn" onclick="openDrawer('folga2Drawer')"><span>🌴</span>Folga</button>
-    <button class="quick-btn" onclick="gotoPage('relatorios',document.querySelectorAll('.nav-item')[3])"><span>📊</span>Relatório</button>
+    <button class="quick-btn" onclick="openDrawer('novoAgendDrawer')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Agendar</button>
+    <button class="quick-btn" onclick="openDrawer('bloquearDrawer')"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Bloquear</button>
+    <button class="quick-btn" onclick="openDrawer('folga2Drawer')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Folga</button>
+    <button class="quick-btn" onclick="gotoPage('financeiro',document.querySelectorAll('.nav-item')[3])"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Resumo</button>
   </div>
 
   <div id="alertsContainer"></div>
@@ -461,43 +485,43 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
 <!-- ── CLIENTES ── -->
 <main class="page-content page" id="page-clientes">
   <div class="search-bar">
-    <span class="search-icon">🔍</span>
-    <input type="text" placeholder="Buscar cliente…" id="clientSearch" oninput="renderClients()">
+    <span class="search-icon"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+    <input type="text" placeholder="Buscar por nome ou telefone" id="clientSearch" oninput="renderClients()">
   </div>
   <div class="pill-tabs">
-    <div class="pill active" onclick="setClientFilter('todos',this)">Todos</div>
-    <div class="pill" onclick="setClientFilter('esmalteria',this)">💅 Esmalteria</div>
-    <div class="pill" onclick="setClientFilter('podologia',this)">🦶 Podologia</div>
-    <div class="pill" onclick="setClientFilter('vip',this)">⭐ VIP</div>
-    <div class="pill" onclick="setClientFilter('faltou',this)">⚠️ Faltou</div>
-    <div class="pill" onclick="openDrawer('aniversariantesDrawer')">🎂 Aniversários</div>
+    <div class="pill active" onclick="setClientFilter('todos',this)">Todas</div>
+    <div class="pill" onclick="setClientFilter('esmalteria',this)">Esmalteria</div>
+    <div class="pill" onclick="setClientFilter('podologia',this)">Podologia</div>
+    <div class="pill" onclick="setClientFilter('vip',this)">VIP</div>
+    <div class="pill" onclick="setClientFilter('faltou',this)">Com faltas</div>
+    <div class="pill" onclick="openDrawer('aniversariantesDrawer')">Aniversários</div>
   </div>
-  <div id="clientList"></div>
+  <div id="clientList" class="list-card"></div>
   <div class="btn-row" style="margin-top:14px">
-    <button class="btn btn-ghost" onclick="openDrawer('novoClienteDrawer')">+ Novo cliente</button>
-    <button class="btn btn-ghost" onclick="importContacts()" style="flex-shrink:0;width:auto;padding:13px 15px" title="Importar contatos do celular">📱 Importar</button>
+    <button class="btn btn-primary" onclick="openDrawer('novoClienteDrawer')">Nova cliente</button>
+    <button class="btn btn-ghost" onclick="importContacts()" style="flex-shrink:0;width:auto;padding:12px 16px" title="Importar contatos do celular">Importar</button>
   </div>
 </main>
 
 <!-- ── SERVIÇOS ── -->
 <main class="page-content page" id="page-servicos">
   <div class="tab-bar">
-    <button class="tab-item active" onclick="setServTab('nail',this)">💅 Esmalteria</button>
-    <button class="tab-item" onclick="setServTab('pod',this)">🦶 Podologia</button>
-    <button class="tab-item" onclick="setServTab('estoque',this)">📦 Estoque</button>
+    <button class="tab-item active" onclick="setServTab('nail',this)">Esmalteria</button>
+    <button class="tab-item" onclick="setServTab('pod',this)">Podologia</button>
+    <button class="tab-item" onclick="setServTab('estoque',this)">Estoque</button>
   </div>
   <div id="servPageNail" class="serv-tab active">
-    <div id="serviceListNail"></div>
-    <button class="btn btn-ghost" style="margin-top:13px" onclick="openDrawer('novoServicoDrawer')">+ Novo serviço</button>
+    <div id="serviceListNail" class="list-card"></div>
+    <button class="btn btn-ghost" style="margin-top:12px" onclick="novoServico('esmalteria')">Novo serviço</button>
   </div>
   <div id="servPagePod" class="serv-tab" hidden>
-    <div id="serviceListPod"></div>
-    <button class="btn btn-ghost" style="margin-top:13px" onclick="openDrawer('novoServicoDrawer')">+ Novo serviço</button>
+    <div id="serviceListPod" class="list-card"></div>
+    <button class="btn btn-ghost" style="margin-top:12px" onclick="novoServico('podologia')">Novo serviço</button>
   </div>
   <div id="servPageEstoque" class="serv-tab" hidden>
     <div id="estoqueAlert"></div>
-    <div id="inventList"></div>
-    <button class="btn btn-ghost" style="margin-top:13px" onclick="openDrawer('novoProdutoDrawer')">+ Novo produto</button>
+    <div id="inventList" class="list-card"></div>
+    <button class="btn btn-ghost" style="margin-top:12px" onclick="openDrawer('novoProdutoDrawer')">Novo produto</button>
   </div>
 </main>
 
@@ -520,12 +544,12 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
     <div class="stats-row" style="margin-bottom:9px">
       <div class="stat-tile">
         <div class="stat-label">Receita bruta</div>
-        <div class="stat-value stat-ok" id="finReceita">R$1.840</div>
+        <div class="stat-value" id="finReceita">R$0</div>
         <div class="stat-sub" id="finPeriodo">esta semana</div>
       </div>
       <div class="stat-tile">
         <div class="stat-label">Lucro líquido</div>
-        <div class="stat-value" style="color:var(--info)" id="finLucro">R$1.420</div>
+        <div class="stat-value" id="finLucro">R$0</div>
         <div class="stat-sub">após despesas</div>
       </div>
     </div>
@@ -540,7 +564,7 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
       </div>
       <div class="stat-tile">
         <div class="stat-label">Despesas</div>
-        <div class="stat-value stat-warn" style="font-size:20px" id="finDesp">R$420</div>
+        <div class="stat-value" style="font-size:20px" id="finDesp">R$0</div>
       </div>
     </div>
     <div class="section-label">Por dia da semana</div>
@@ -548,15 +572,15 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
     <div class="section-label">Por categoria</div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
-        <span style="color:var(--nail);font-weight:600">💅 Esmalteria</span>
-        <span style="font-variant-numeric:tabular-nums;font-weight:700" id="finNailVal">R$1.240</span>
+        <span style="font-weight:500"><span class="service-dot" style="display:inline-block;background:var(--nail);margin-right:7px"></span>Esmalteria</span>
+        <span style="font-variant-numeric:tabular-nums;font-weight:500" id="finNailVal">R$0</span>
       </div>
       <div class="rev-bar"><div class="rev-fill" style="background:var(--nail);width:67%" id="finNailBar"></div></div>
       <div class="rev-row"><span id="finNailAtend">16 atendimentos</span><span id="finNailPct">67%</span></div>
       <div style="height:12px"></div>
       <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
-        <span style="color:var(--pod);font-weight:600">🦶 Podologia</span>
-        <span style="font-variant-numeric:tabular-nums;font-weight:700" id="finPodVal">R$600</span>
+        <span style="font-weight:500"><span class="service-dot" style="display:inline-block;background:var(--pod);margin-right:7px"></span>Podologia</span>
+        <span style="font-variant-numeric:tabular-nums;font-weight:500" id="finPodVal">R$0</span>
       </div>
       <div class="rev-bar"><div class="rev-fill" style="background:var(--pod);width:33%" id="finPodBar"></div></div>
       <div class="rev-row"><span id="finPodAtend">8 atendimentos</span><span id="finPodPct">33%</span></div>
@@ -579,20 +603,20 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
           <div style="font-size:13px;font-weight:700" id="donutPodPct">33%</div>
         </div>
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
-          <div style="font-size:10px;color:var(--fg-muted);text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-bottom:2px">Receita total</div>
-          <div style="font-size:18px;font-weight:700;color:var(--ok)" id="donutTotal">R$1.840</div>
+          <div style="font-size:12px;color:var(--fg-muted);margin-bottom:2px">Receita total</div>
+          <div style="font-size:18px;font-weight:600" id="donutTotal">R$0</div>
         </div>
       </div>
     </div>
-    <div class="section-label">Evolução mensal (12 meses)</div>
-    <div class="card" style="padding:10px 14px 4px">
+    <div class="section-label">Receita mês a mês</div>
+    <div class="card" style="padding:14px 14px 10px">
       <canvas id="trendCanvas" height="80" style="width:100%;display:block"></canvas>
-      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--fg-muted);margin-top:4px;padding:0 2px">
+      <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--fg-soft);margin-top:6px;padding:0 2px">
         <span>Jan</span><span>Fev</span><span>Mar</span><span>Abr</span><span>Mai</span><span>Jun</span><span>Jul</span><span>Ago</span><span>Set</span><span>Out</span><span>Nov</span><span>Dez</span>
       </div>
     </div>
-    <div class="section-label">DRE simplificado — <span id="pnlPeriodLabel" style="text-transform:none;font-size:11px;letter-spacing:0">esta semana</span></div>
-    <div class="card" style="padding:0 0 2px">
+    <div class="section-label"><span>Resultado <span id="pnlPeriodLabel">esta semana</span></span></div>
+    <div class="card" style="padding:0">
       <table class="pnl-table" id="pnlTable"></table>
     </div>
     <div class="section-label">Serviços mais solicitados</div>
@@ -601,9 +625,9 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
 
   <!-- Despesas -->
   <div id="finTabDespesas" class="fin-tab" hidden>
-    <div class="alert alert-info"><span class="alert-icon">ℹ️</span><span>Registre despesas de material, aluguel, cursos etc.</span></div>
-    <div id="expenseList"></div>
-    <button class="btn btn-ghost" style="margin-top:13px" onclick="openDrawer('novaDespesaDrawer')">+ Nova despesa</button>
+    <div id="expenseList" class="list-card"></div>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="openDrawer('novaDespesaDrawer')">Lançar despesa</button>
+    <p style="font-size:12.5px;color:var(--fg-soft);margin-top:10px;text-align:center">Material, aluguel, cursos — tudo entra no cálculo do lucro.</p>
   </div>
 
   <!-- Avaliações -->
@@ -626,24 +650,17 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
 
   <!-- Galeria / Portfólio -->
   <div id="finTabGaleria" class="fin-tab" hidden>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div style="font-size:13px;color:var(--fg-muted)">Portfólio categorizado</div>
-      <div style="display:flex;gap:5px">
-        <button class="btn btn-ghost btn-sm" id="viewGrid" onclick="setGalleryView('grid',this)" style="width:auto;padding:6px 10px;background:var(--accent);color:#fff;border-color:var(--accent)">⊞</button>
-        <button class="btn btn-ghost btn-sm" id="viewList" onclick="setGalleryView('list',this)" style="width:auto;padding:6px 10px">☰</button>
-      </div>
-    </div>
     <div class="pill-tabs">
-      <div class="pill active" onclick="filterPortfolio('todos',this)">🖼 Todos</div>
-      <div class="pill" onclick="filterPortfolio('gel',this)">💎 Gel</div>
-      <div class="pill" onclick="filterPortfolio('acrilico',this)">✨ Acrílico</div>
-      <div class="pill" onclick="filterPortfolio('esmaltacao',this)">💅 Esmaltação</div>
-      <div class="pill" onclick="filterPortfolio('nailart',this)">🎨 Nail Art</div>
-      <div class="pill" onclick="filterPortfolio('podologia',this)">🦶 Podo</div>
-      <div class="pill" onclick="filterPortfolio('tratamentos',this)">💊 Trat.</div>
+      <div class="pill active" onclick="filterPortfolio('todos',this)">Todos</div>
+      <div class="pill" onclick="filterPortfolio('gel',this)">Gel</div>
+      <div class="pill" onclick="filterPortfolio('acrilico',this)">Acrílico</div>
+      <div class="pill" onclick="filterPortfolio('esmaltacao',this)">Esmaltação</div>
+      <div class="pill" onclick="filterPortfolio('nailart',this)">Nail art</div>
+      <div class="pill" onclick="filterPortfolio('podologia',this)">Podologia</div>
+      <div class="pill" onclick="filterPortfolio('tratamentos',this)">Tratamentos</div>
     </div>
+    <span id="viewGrid" hidden></span><span id="viewList" hidden></span>
     <div id="galeriaGrid"></div>
-    <button class="btn btn-ghost" style="margin-top:10px">📷 Adicionar foto</button>
   </div>
 </main>
 
@@ -670,11 +687,7 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
     <span>DOM</span><span>SEG</span><span>TER</span><span>QUA</span><span>QUI</span><span>SEX</span><span>SÁB</span>
   </div>
   <div class="cal-grid" id="calGrid"></div>
-  <div style="display:flex;gap:12px;margin-top:12px;font-size:11px;color:var(--fg-muted)">
-    <div style="display:flex;align-items:center;gap:5px"><div style="width:14px;height:7px;border-radius:3px;background:var(--ok)"></div>Livre</div>
-    <div style="display:flex;align-items:center;gap:5px"><div style="width:14px;height:7px;border-radius:3px;background:var(--warn)"></div>Parcial</div>
-    <div style="display:flex;align-items:center;gap:5px"><div style="width:14px;height:7px;border-radius:3px;background:var(--danger)"></div>Cheio</div>
-  </div>
+  <p style="margin-top:14px;font-size:12.5px;color:var(--fg-soft);text-align:center">A linha embaixo do dia mostra o quanto ele está cheio. Toque num dia para abrir a agenda.</p>
 </main>
 
 <!-- ── CONFIG ── -->
@@ -713,7 +726,7 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
     <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Serviços
   </button>
   <button class="nav-item" onclick="gotoPage('config',this)" style="font-size:9px">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Config
+    <svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Ajustes
   </button>
 </nav>
 
@@ -735,8 +748,8 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
     <div class="form-group">
       <label class="form-label">Tipo</label>
       <select class="form-input" id="inputTipo" onchange="loadServicesForm()">
-        <option value="esmalteria">💅 Esmalteria</option>
-        <option value="podologia">🦶 Podologia</option>
+        <option value="esmalteria">Esmalteria</option>
+        <option value="podologia">Podologia</option>
       </select>
     </div>
     <div class="form-group">
@@ -772,7 +785,7 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
   </div>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="closeDrawer('novoAgendDrawer')">Cancelar</button>
-    <button class="btn btn-primary" onclick="salvarAgendamento()">✓ Agendar</button>
+    <button class="btn btn-primary" onclick="salvarAgendamento()">Agendar</button>
   </div>
 </div></div>
 
@@ -795,7 +808,7 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
   <div class="form-group"><label class="form-label">Motivo</label><input class="form-input" type="text" id="bloqMotivo" placeholder="Ex: dentista, reunião…"></div>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="closeDrawer('bloquearDrawer')">Cancelar</button>
-    <button class="btn btn-primary" onclick="salvarBloqueio('bloqueio')">🔒 Bloquear</button>
+    <button class="btn btn-primary" onclick="salvarBloqueio('bloqueio')">Bloquear</button>
   </div>
 </div></div>
 
@@ -807,7 +820,7 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
   <div class="form-group"><label class="form-label">Motivo (opcional)</label><input class="form-input" type="text" id="folgaMotivo" placeholder="Ex: feriado, viagem…"></div>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="closeDrawer('folga2Drawer')">Cancelar</button>
-    <button class="btn btn-primary" onclick="salvarBloqueio('folga')">🌴 Confirmar folga</button>
+    <button class="btn btn-primary" onclick="salvarBloqueio('folga')">Confirmar folga</button>
   </div>
 </div></div>
 
@@ -823,9 +836,9 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
   <div class="form-group">
     <label class="form-label">Tipo de atendimento</label>
     <select class="form-input" id="cliTipo">
-      <option value="esmalteria">💅 Esmalteria</option>
-      <option value="podologia">🦶 Podologia</option>
-      <option value="ambos">💅🦶 Ambos</option>
+      <option value="esmalteria">Esmalteria</option>
+      <option value="podologia">Podologia</option>
+      <option value="ambos">Ambos</option>
     </select>
   </div>
   <div class="form-group"><label class="form-label">Como conheceu</label>
@@ -836,7 +849,7 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
   <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:13px"><input type="checkbox" id="cliVip"> ⭐ Cliente VIP</label>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="closeDrawer('novoClienteDrawer')">Cancelar</button>
-    <button class="btn btn-primary" onclick="salvarCliente()">✓ Cadastrar</button>
+    <button class="btn btn-primary" onclick="salvarCliente()">Cadastrar</button>
   </div>
 </div></div>
 
@@ -849,7 +862,7 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
 <!-- Aniversariantes -->
 <div class="modal-overlay" id="aniversariantesDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
-  <div class="drawer-title">🎂 Aniversariantes</div>
+  <div class="drawer-title">Aniversários</div>
   <div id="aniversList"></div>
   <button class="btn btn-ghost" style="margin-top:13px" onclick="closeDrawer('aniversariantesDrawer')">Fechar</button>
 </div></div>
@@ -868,11 +881,11 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
     <div class="form-group"><label class="form-label">Promo</label><input class="form-input" type="text" inputmode="decimal" id="svcPromo" placeholder="R$ 0,00"></div>
   </div>
   <div class="form-group"><label class="form-label">Tipo</label>
-    <select class="form-input" id="svcTipo"><option value="esmalteria">💅 Esmalteria</option><option value="podologia">🦶 Podologia</option></select>
+    <select class="form-input" id="svcTipo"><option value="esmalteria">Esmalteria</option><option value="podologia">Podologia</option></select>
   </div>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="closeDrawer('novoServicoDrawer')">Cancelar</button>
-    <button class="btn btn-primary" onclick="salvarServico()">✓ Salvar</button>
+    <button class="btn btn-primary" onclick="salvarServico()">Salvar</button>
   </div>
 </div></div>
 
@@ -893,7 +906,7 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
   </div>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="closeDrawer('novoProdutoDrawer')">Cancelar</button>
-    <button class="btn btn-primary" onclick="salvarProduto()">✓ Salvar</button>
+    <button class="btn btn-primary" onclick="salvarProduto()">Salvar</button>
   </div>
 </div></div>
 
@@ -911,7 +924,7 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
   </div>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="closeDrawer('novaDespesaDrawer')">Cancelar</button>
-    <button class="btn btn-primary" onclick="salvarDespesa()">✓ Lançar</button>
+    <button class="btn btn-primary" onclick="salvarDespesa()">Lançar</button>
   </div>
 </div></div>
 
@@ -928,7 +941,7 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
   <div class="drawer-handle"></div>
   <div class="drawer-title">Busca rápida</div>
   <div class="search-bar" style="margin-bottom:14px">
-    <span class="search-icon">🔍</span>
+    <span class="search-icon"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
     <input type="text" placeholder="Nome, serviço, telefone…" id="globalSearch" oninput="renderGlobalSearch()">
   </div>
   <div id="globalSearchResults"></div>
@@ -980,7 +993,7 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;
 <!-- Config lembretes detalhado -->
 <div class="modal-overlay" id="lembretesDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
-  <div class="drawer-title">🔔 Configurar lembretes</div>
+  <div class="drawer-title">Lembretes</div>
   <div class="card" style="margin-bottom:10px">
     <div class="toggle-row">
       <div class="toggle-info"><div class="toggle-label">Confirmação imediata</div><div class="toggle-sub">Mensagem ao confirmar agendamento</div></div>
@@ -1137,6 +1150,8 @@ async function entrar(user){
   document.getElementById('contaEmail').textContent=user.email;
   document.getElementById('contaAvatar').textContent=(nome[0]||'?').toUpperCase();
   document.querySelector('.avatar').textContent=(nome[0]||'D').toUpperCase();
+  const primeiro=nome.split(/[\s._-]/)[0];
+  document.getElementById('topName').textContent=primeiro.charAt(0).toUpperCase()+primeiro.slice(1);
   await recarregar();
 }
 async function loginGoogle(){
@@ -1268,7 +1283,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function setGreeting() {
   const h = new Date().getHours();
   const el = document.getElementById('greeting');
-  el.textContent = h<12 ? 'Bom dia ☀️' : h<18 ? 'Boa tarde 🌤️' : 'Boa noite 🌙';
+  el.textContent = h<12 ? 'Bom dia' : h<18 ? 'Boa tarde' : 'Boa noite';
 }
 
 // ── DATE STRIP ────────────────────────────────────────────────────
@@ -1315,15 +1330,13 @@ function renderAppointments() {
   const list = document.getElementById('apptList');
   list.innerHTML = '';
   const folga=BLOQUEIOS.find(b=>b.tipo==='folga'&&b.ini<=addDias(selectedDate,1)&&b.fim>selectedDate);
-  if(folga) list.innerHTML=`<div class="alert alert-info"><span class="alert-icon">🌴</span><span>Folga${folga.motivo?': '+esc(folga.motivo):''}</span></div>`;
+  if(folga) list.innerHTML=`<div class="alert alert-info"><span>Folga${folga.motivo?': '+esc(folga.motivo):''}</span></div>`;
   let total=0;
-  if(!APPTS.length) list.innerHTML+=`<div class="empty-state">Nenhum agendamento ${label==='Hoje'?'hoje':'neste dia'}.<br><br><button class="btn btn-ghost btn-sm" style="width:auto;margin:0 auto" onclick="openDrawer('novoAgendDrawer')">➕ Agendar</button></div>`;
+  if(!APPTS.length) list.innerHTML+=`<div class="empty-state">Nada marcado ${label==='Hoje'?'para hoje':'neste dia'}.<br><br><button class="btn btn-ghost btn-sm" style="width:auto" onclick="openDrawer('novoAgendDrawer')">Agendar horário</button></div>`;
   APPTS.forEach(a => {
     if(ATIVOS(a)) total+=a.price;
     const dot = a.type==='esmalteria'?'var(--nail)':'var(--pod)';
-    const typeB = a.type==='esmalteria'
-      ?'<span class="badge badge-nail">💅 Esmalte</span>'
-      :'<span class="badge badge-pod">🦶 Podo</span>';
+    const typeB = '';
     const stB = `<span class="badge ${STATUS_MAP[a.status].cls}">${STATUS_MAP[a.status].label}</span>`;
     const [h,m] = a.time.split(':');
     const card = document.createElement('div');
@@ -1337,8 +1350,8 @@ function renderAppointments() {
       </div>
       <div class="appt-body">
         <div class="appt-name">${esc(a.name)}</div>
-        <div class="appt-service">${esc(a.service)} · ${a.dur}min</div>
-        <div class="appt-meta">${typeB}${stB}<span class="badge badge-neutral">até ${a.end}</span></div>
+        <div class="appt-service">${esc(a.service)} · até ${a.end}</div>
+        <div class="appt-meta">${typeB}${stB}</div>
       </div>
       <div class="appt-price">${fmtR(a.price)}</div>`;
     card.onclick = ()=>openDetail(a);
@@ -1356,10 +1369,10 @@ function renderAlerts() {
   const anivAmanha=CLIENTS.filter(x=>x.bday&&md(x.bday)===md(ymd(amanha)));
   const baixo=INVENTORY.filter(p=>p.qtd<p.min).length;
   let h='';
-  if(pend) h+=`<div class="alert alert-warn"><span class="alert-icon">⏳</span><span>${pend} cliente${pend>1?'s':''} ainda não confirm${pend>1?'aram':'ou'} para amanhã.</span></div>`;
-  if(anivHoje.length) h+=`<div class="alert alert-info"><span class="alert-icon">🎂</span><span>Aniversário hoje: ${anivHoje.map(x=>esc(x.name)).join(', ')}</span></div>`;
-  if(anivAmanha.length) h+=`<div class="alert alert-info"><span class="alert-icon">🎂</span><span>Aniversário amanhã: ${anivAmanha.map(x=>esc(x.name)).join(', ')}</span></div>`;
-  if(baixo) h+=`<div class="alert alert-danger"><span class="alert-icon">📦</span><span>${baixo} produto${baixo>1?'s':''} com estoque baixo</span></div>`;
+  if(pend) h+=`<div class="alert alert-warn"><span>${pend} cliente${pend>1?'s':''} ainda não confirm${pend>1?'aram':'ou'} para amanhã.</span></div>`;
+  if(anivHoje.length) h+=`<div class="alert alert-info"><span>Aniversário hoje: ${anivHoje.map(x=>esc(x.name)).join(', ')}</span></div>`;
+  if(anivAmanha.length) h+=`<div class="alert alert-info"><span>Aniversário amanhã: ${anivAmanha.map(x=>esc(x.name)).join(', ')}</span></div>`;
+  if(baixo) h+=`<div class="alert alert-danger"><span>${baixo} produto${baixo>1?'s':''} com estoque baixo</span></div>`;
   c.innerHTML = h;
 }
 function openDetail(a) {
@@ -1370,25 +1383,25 @@ function openDetail(a) {
   document.getElementById('detailBody').innerHTML = `
     <div class="card" style="margin-bottom:12px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px">
-        <div><div style="color:var(--fg-muted);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px">SERVIÇO</div><strong>${esc(a.service)}</strong></div>
-        <div><div style="color:var(--fg-muted);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px">HORÁRIO</div><strong>${a.time} – ${a.end}</strong></div>
-        <div><div style="color:var(--fg-muted);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px">DURAÇÃO</div><strong>${a.dur} min</strong></div>
-        <div><div style="color:var(--fg-muted);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px">VALOR</div><strong style="color:var(--ok)">${fmtR(a.price)}</strong></div>
-        <div><div style="color:var(--fg-muted);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px">TIPO</div><span class="badge ${a.type==='esmalteria'?'badge-nail':'badge-pod'}">${a.type==='esmalteria'?'💅 Esmalteria':'🦶 Podologia'}</span></div>
-        <div><div style="color:var(--fg-muted);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px">STATUS</div><span class="badge ${STATUS_MAP[a.status].cls}">${STATUS_MAP[a.status].label}</span></div>
+        <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Serviço</div><span style="font-weight:500">${esc(a.service)}</span></div>
+        <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Horário</div><span style="font-weight:500">${a.time} – ${a.end}</span></div>
+        <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Duração</div><span style="font-weight:500">${a.dur} min</span></div>
+        <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Valor</div><span style="font-weight:500">${fmtR(a.price)}</span></div>
+        <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Tipo</div><span class="badge ${a.type==='esmalteria'?'badge-nail':'badge-pod'}">${a.type==='esmalteria'?'Esmalteria':'Podologia'}</span></div>
+        <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Status</div><span class="badge ${STATUS_MAP[a.status].cls}">${STATUS_MAP[a.status].label}</span></div>
       </div>
-      ${a.obs?`<div style="font-size:12px;color:var(--fg-muted);margin-top:10px">📝 ${esc(a.obs)}</div>`:''}
+      ${a.obs?`<div style="font-size:12px;color:var(--fg-muted);margin-top:10px">${esc(a.obs)}</div>`:''}
     </div>
-    <div style="font-size:11px;color:var(--fg-muted);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">Ações rápidas</div>
+    <div style="font-size:13px;color:var(--fg-muted);font-weight:500;margin-bottom:8px">Ações rápidas</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px">
-      <button class="btn btn-ok btn-sm" onclick="mudarStatus('${a.id}','confirmado')">✅ Confirmar</button>
-      <button class="btn btn-ghost btn-sm" onclick="remarcar('${a.id}')">🔄 Remarcar</button>
-      <button class="btn btn-ghost btn-sm" onclick="mudarStatus('${a.id}','concluido')">✔ Concluir</button>
-      <button class="btn btn-danger btn-sm" onclick="mudarStatus('${a.id}','cancelado')">✕ Cancelar</button>
-      <button class="btn btn-ghost btn-sm" onclick="mudarStatus('${a.id}','faltou')">⚠️ Faltou</button>
-      ${lembrete?`<a class="btn btn-ghost btn-sm" style="text-decoration:none" href="${lembrete}" target="_blank" rel="noopener">📨 Lembrete</a>`:'<button class="btn btn-ghost btn-sm" disabled title="Cliente sem WhatsApp">📨 Lembrete</button>'}
+      <button class="btn btn-ok btn-sm" onclick="mudarStatus('${a.id}','confirmado')">Confirmar</button>
+      <button class="btn btn-ghost btn-sm" onclick="remarcar('${a.id}')">Remarcar</button>
+      <button class="btn btn-ghost btn-sm" onclick="mudarStatus('${a.id}','concluido')">Concluir</button>
+      <button class="btn btn-danger btn-sm" onclick="mudarStatus('${a.id}','cancelado')">Cancelar</button>
+      <button class="btn btn-ghost btn-sm" onclick="mudarStatus('${a.id}','faltou')">Faltou</button>
+      ${lembrete?`<a class="btn btn-ghost btn-sm" style="text-decoration:none" href="${lembrete}" target="_blank" rel="noopener">Lembrete</a>`:'<button class="btn btn-ghost btn-sm" disabled title="Cliente sem WhatsApp">Lembrete</button>'}
     </div>
-    <div style="font-size:11px;color:var(--fg-muted);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px">📋 Histórico da cliente</div>
+    <div style="font-size:13px;color:var(--fg-muted);font-weight:500;margin-bottom:6px">Histórico</div>
     <div class="card" style="font-size:13px;color:var(--fg-muted)">${cli?`${cli.visits} visita${cli.visits===1?'':'s'} · última: ${esc(cli.last)} · ${fmtR(gasto)} gasto este ano${cli.faltou?` · ${cli.faltou} falta${cli.faltou>1?'s':''}`:''}`:'—'}</div>`;
   openDrawer('detailDrawer');
 }
@@ -1436,14 +1449,14 @@ function renderClients() {
     });
   if(!rows.length) list.innerHTML=`<div class="empty-state">${CLIENTS.length?'Nenhuma cliente encontrada.':'Nenhuma cliente cadastrada ainda.'}</div>`;
   rows.forEach(c => {
-      const typeL = c.type==='esmalteria'?'💅':c.type==='podologia'?'🦶':'💅🦶';
+      const typeL = c.type==='esmalteria'?'Esmalteria':c.type==='podologia'?'Podologia':'Ambos';
       const row = document.createElement('div');
       row.className = 'client-row';
       row.innerHTML = `
         <div class="client-avatar" style="background:${esc(c.color)}">${esc(c.name[0])}</div>
         <div class="client-info">
           <div class="client-name">${c.vip?'⭐ ':''} ${esc(c.name)}</div>
-          <div class="client-sub">${typeL} · ${c.visits} visita${c.visits===1?'':'s'} · última: ${esc(c.last)}${c.faltou?` · <span style="color:var(--danger)">⚠️${c.faltou} falta${c.faltou>1?'s':''}</span>`:''}</div>
+          <div class="client-sub">${typeL} · ${c.visits} visita${c.visits===1?'':'s'} · última: ${esc(c.last)}${c.faltou?` · <span style="color:var(--danger)">${c.faltou} falta${c.faltou>1?'s':''}</span>`:''}</div>
         </div>
         <span class="chevron">›</span>`;
       row.onclick = ()=>openFicha(c);
@@ -1451,14 +1464,14 @@ function renderClients() {
     });
 }
 function openFicha(c) {
-  const typeL = c.type==='esmalteria'?'💅 Esmalteria':c.type==='podologia'?'🦶 Podologia':'💅🦶 Ambos';
+  const typeL = c.type==='esmalteria'?'Esmalteria':c.type==='podologia'?'Podologia':'Esmalteria e podologia';
   const wa=waLink(c.phone,`Olá ${c.name.split(' ')[0]}! `);
   window._fichaNome=c.name;
   document.getElementById('fichaClienteBody').innerHTML = `
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
       <div class="client-avatar" style="background:${esc(c.color)};width:56px;height:56px;font-size:22px">${esc(c.name[0])}</div>
       <div>
-        <div style="font-family:'DM Serif Display',serif;font-size:20px">${c.vip?'⭐ ':''} ${esc(c.name)}</div>
+        <div style="font-size:20px;font-weight:600;letter-spacing:-.02em">${c.vip?'⭐ ':''} ${esc(c.name)}</div>
         <div style="font-size:12px;color:var(--fg-muted)">${typeL} · ${c.visits} visita${c.visits===1?'':'s'}</div>
       </div>
     </div>
@@ -1469,15 +1482,15 @@ function openFicha(c) {
     </div>
     <div class="card" style="margin-bottom:10px;font-size:13px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><div style="color:var(--fg-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:2px">WhatsApp</div>${esc(fmtTel(c.phone))}</div>
-        <div><div style="color:var(--fg-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:2px">Aniversário</div>${c.bday?new Date(c.bday+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long'}):'—'}</div>
+        <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:2px">WhatsApp</div>${esc(fmtTel(c.phone))}</div>
+        <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:2px">Aniversário</div>${c.bday?new Date(c.bday+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long'}):'—'}</div>
       </div>
-      ${c.pref?`<div style="margin-top:8px"><div style="color:var(--fg-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:2px">Preferências</div>${esc(c.pref)}</div>`:''}
-      ${c.obs?`<div style="margin-top:8px"><div style="color:var(--fg-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:2px">Observações</div>${esc(c.obs)}</div>`:''}
+      ${c.pref?`<div style="margin-top:8px"><div style="color:var(--fg-muted);font-size:12px;margin-bottom:2px">Preferências</div>${esc(c.pref)}</div>`:''}
+      ${c.obs?`<div style="margin-top:8px"><div style="color:var(--fg-muted);font-size:12px;margin-bottom:2px">Observações</div>${esc(c.obs)}</div>`:''}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px">
-      <button class="btn btn-primary btn-sm" onclick="closeDrawer('fichaClienteDrawer');novoAgendamentoPara(window._fichaNome)">📅 Agendar</button>
-      ${wa?`<a class="btn btn-ghost btn-sm" style="text-decoration:none" href="${wa}" target="_blank" rel="noopener">💬 WhatsApp</a>`:'<button class="btn btn-ghost btn-sm" disabled>💬 Sem WhatsApp</button>'}
+      <button class="btn btn-primary btn-sm" onclick="closeDrawer('fichaClienteDrawer');novoAgendamentoPara(window._fichaNome)">Agendar</button>
+      ${wa?`<a class="btn btn-ghost btn-sm" style="text-decoration:none" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>`:'<button class="btn btn-ghost btn-sm" disabled>Sem WhatsApp</button>'}
     </div>
     <button class="btn btn-ghost" onclick="closeDrawer('fichaClienteDrawer')">Fechar</button>`;
   openDrawer('fichaClienteDrawer');
@@ -1501,7 +1514,7 @@ function renderAniversarios() {
         <div style="font-size:14px;font-weight:600">${esc(c.name)}</div>
         <div style="font-size:12px;color:var(--fg-muted)">${bday.toLocaleDateString('pt-BR',{day:'numeric',month:'long'})}</div>
       </div>
-      ${wa?`<a class="btn btn-ghost btn-sm" style="width:auto;padding:7px 12px;text-decoration:none" href="${wa}" target="_blank" rel="noopener">🎂 Parabéns</a>`:''}`;
+      ${wa?`<a class="btn btn-ghost btn-sm" style="width:auto;padding:7px 12px;text-decoration:none" href="${wa}" target="_blank" rel="noopener">Parabéns</a>`:''}`;
     el.appendChild(row);
   });
 }
@@ -1517,7 +1530,7 @@ async function salvarCliente(){
   ['cliNome','cliTel','cliNasc','cliPref','cliObs'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('cliVip').checked=false;
   closeDrawer('novoClienteDrawer');
-  toast('✅ Cliente cadastrada');
+  toast('Cliente cadastrada');
   await recarregar();
 }
 
@@ -1547,7 +1560,7 @@ function renderServiceLists() {
         </div>
         <div class="service-price">${promo}</div>
         <div class="service-actions">
-          <button class="icon-btn" style="width:28px;height:28px;font-size:13px" title="Remover" onclick="event.stopPropagation();removerServico('${s.id}')">🗑️</button>
+          <button class="icon-btn" style="width:28px;height:28px;font-size:13px" title="Remover" onclick="event.stopPropagation();removerServico('${s.id}')"><svg class="i" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
         </div>`;
       el.appendChild(d);
     });
@@ -1555,9 +1568,13 @@ function renderServiceLists() {
   mk(SVCS_NAIL,'serviceListNail');
   mk(SVCS_POD,'serviceListPod');
 }
+function novoServico(tipo){
+  document.getElementById('svcTipo').value=tipo;
+  openDrawer('novoServicoDrawer');
+}
 async function usarServicosPadrao(){
   try{await q(sb.from('servicos').insert(SERVICOS_PADRAO))}catch(e){return}
-  toast('✅ Serviços cadastrados — ajuste os preços se precisar');
+  toast('Serviços cadastrados — ajuste os preços se precisar');
   await recarregar();
 }
 async function salvarServico(){
@@ -1568,7 +1585,7 @@ async function salvarServico(){
     preco,preco_promo:parseValor(v('svcPromo')),cor:v('svcTipo')==='podologia'?'#7A63C2':'#C2637A'}))}catch(e){return}
   ['svcNome','svcDur','svcInt','svcPreco','svcPromo'].forEach(id=>document.getElementById(id).value='');
   closeDrawer('novoServicoDrawer');
-  toast('✅ Serviço salvo');
+  toast('Serviço salvo');
   await recarregar();
 }
 async function removerServico(id){
@@ -1581,7 +1598,7 @@ function renderInventory() {
   const el = document.getElementById('inventList');
   el.innerHTML='';
   const baixo=INVENTORY.filter(p=>p.qtd<p.min).length;
-  document.getElementById('estoqueAlert').innerHTML=baixo?`<div class="alert alert-warn"><span class="alert-icon">⚠️</span><span>${baixo} produto${baixo>1?'s':''} com estoque baixo</span></div>`:'';
+  document.getElementById('estoqueAlert').innerHTML=baixo?`<div class="alert alert-warn"><span>${baixo} produto${baixo>1?'s':''} com estoque baixo</span></div>`:'';
   if(!INVENTORY.length) el.innerHTML='<div class="empty-state">Nenhum produto cadastrado.</div>';
   INVENTORY.forEach(p => {
     const low = p.qtd < p.min;
@@ -1613,7 +1630,7 @@ async function salvarProduto(){
     minimo:parseFloat(v('prodMin'))||0,custo:parseValor(v('prodCusto'))||0}))}catch(e){return}
   ['prodNome','prodQtd','prodMin','prodCusto'].forEach(id=>document.getElementById(id).value='');
   closeDrawer('novoProdutoDrawer');
-  toast('✅ Produto salvo');
+  toast('Produto salvo');
   await recarregar();
 }
 
@@ -1692,7 +1709,7 @@ function renderChartDias() {
   const max = Math.max(...data.map(d=>d.val));
   if(!max){el.innerHTML='<div class="empty-state" style="padding:10px">Sem atendimentos concluídos '+FIN_PERIOD_LABELS[finPeriod]+'.</div>';return}
   el.innerHTML = data.map(d=>{
-    const color=d.val===max?'var(--ok)':'var(--nail)';
+    const color=d.val===max?'var(--fg)':'var(--fg-soft)';
     return `
     <div class="chart-row">
       <div class="chart-label">${d.label}</div>
@@ -1724,13 +1741,13 @@ function renderExpenses() {
     const d = document.createElement('div');
     d.className = 'expense-row';
     d.innerHTML = `
-      <div style="font-size:18px">💸</div>
+      
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:500">${esc(e.desc)}</div>
         <div style="font-size:11px;color:var(--fg-muted)">${esc(e.cat)} · ${esc(e.data)}</div>
       </div>
       <div style="font-size:14px;font-weight:700;color:var(--danger);white-space:nowrap">−${fmtR(e.valor)}</div>
-      <button class="icon-btn" style="width:28px;height:28px;font-size:12px" title="Apagar" onclick="apagarDespesa('${e.id}')">🗑️</button>`;
+      <button class="icon-btn" style="width:28px;height:28px;font-size:12px" title="Apagar" onclick="apagarDespesa('${e.id}')"><svg class="i" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>`;
     el.appendChild(d);
   });
 }
@@ -1741,7 +1758,7 @@ async function salvarDespesa(){
   try{await q(sb.from('despesas').insert({descricao,valor,categoria:v('despCat'),data:v('despData')||ymd(new Date())}))}catch(e){return}
   ['despDesc','despValor'].forEach(id=>document.getElementById(id).value='');
   closeDrawer('novaDespesaDrawer');
-  toast('✅ Despesa lançada');
+  toast('Despesa lançada');
   await recarregar();
 }
 async function apagarDespesa(id){
@@ -1755,7 +1772,7 @@ function renderAvaliacoes() {
   const pend=AVALIACOES.filter(a=>a.pendente).length;
   document.getElementById('avTotal').textContent=AVALIACOES.length;
   document.getElementById('avMedia').textContent=AVALIACOES.length?(AVALIACOES.reduce((s,a)=>s+a.nota,0)/AVALIACOES.length).toFixed(1)+' ⭐':'—';
-  document.getElementById('avPendAlert').innerHTML=pend?`<div class="alert alert-warn"><span class="alert-icon">⏳</span><span>${pend} avaliaç${pend>1?'ões':'ão'} aguardando aprovação</span></div>`:'';
+  document.getElementById('avPendAlert').innerHTML=pend?`<div class="alert alert-warn"><span>${pend} avaliaç${pend>1?'ões':'ão'} aguardando aprovação</span></div>`:'';
   if(!AVALIACOES.length) el.innerHTML='<div class="empty-state">Nenhuma avaliação ainda. Elas chegam pelo robô do WhatsApp.</div>';
   AVALIACOES.forEach(a => {
     const d = document.createElement('div');
@@ -1765,10 +1782,10 @@ function renderAvaliacoes() {
         <span style="font-weight:600;font-size:14px">${esc(a.name)}</span>
         ${a.pendente?'<span class="badge badge-warn">Aguardando</span>':'<span class="badge badge-ok">Publicada</span>'}
       </div>
-      <div class="stars">${'⭐'.repeat(a.nota)}${'☆'.repeat(5-a.nota)}</div>
+      <div class="stars">${'★'.repeat(a.nota)}<span style="color:var(--border-strong)">${'★'.repeat(5-a.nota)}</span></div>
       ${a.comentario?`<div style="font-size:13px;color:var(--fg-muted);margin-top:7px;line-height:1.5">"${esc(a.comentario)}"</div>`:''}
       <div style="font-size:11px;color:var(--fg-soft);margin-top:6px">${esc(a.data)}</div>
-      ${a.pendente?`<div style="display:flex;gap:7px;margin-top:10px"><button class="btn btn-ok btn-sm" onclick="aprovarAvaliacao('${a.id}',true)">✓ Aprovar</button><button class="btn btn-danger btn-sm" onclick="aprovarAvaliacao('${a.id}',false)">✕ Recusar</button></div>`:''}`;
+      ${a.pendente?`<div style="display:flex;gap:7px;margin-top:10px"><button class="btn btn-ok btn-sm" onclick="aprovarAvaliacao('${a.id}',true)">Aprovar</button><button class="btn btn-danger btn-sm" onclick="aprovarAvaliacao('${a.id}',false)">Recusar</button></div>`:''}`;
     el.appendChild(d);
   });
 }
@@ -1816,7 +1833,7 @@ async function salvarBloqueio(tipo){
   try{await q(sb.from('bloqueios').insert({tipo,inicio:ini.toISOString(),fim:fim.toISOString(),motivo:motivo||null}))}catch(e){return}
   document.getElementById(tipo==='folga'?'folgaMotivo':'bloqMotivo').value='';
   closeDrawer(tipo==='folga'?'folga2Drawer':'bloquearDrawer');
-  toast(tipo==='folga'?'🌴 Folga marcada':'🔒 Horário bloqueado');
+  toast(tipo==='folga'?'Folga marcada':'Horário bloqueado');
   await recarregar();
 }
 
@@ -1859,11 +1876,11 @@ function renderConfig() {
 
 function renderLembretesCard() {
   document.getElementById('lembretesCard').innerHTML = `
-    <div class="alert alert-info" style="margin-bottom:6px"><span class="alert-icon">🤖</span><span>Os lembretes automáticos começam a funcionar quando o robô do WhatsApp for ligado. Por enquanto, use o botão 📨 Lembrete em cada agendamento.</span></div>
+    <div class="alert alert-info" style="margin-bottom:6px"><span>Os lembretes automáticos começam a funcionar quando o robô do WhatsApp for ligado. Por enquanto, use o botão Lembrete em cada agendamento.</span></div>
     <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Confirmação imediata</div><div class="toggle-sub">Mensagem ao criar agendamento</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label></div>
     <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">24h antes</div><div class="toggle-sub">Lembrete no dia anterior</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label></div>
     <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Pedido de avaliação</div><div class="toggle-sub">2 horas após o atendimento</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label></div>
-    <div style="margin-top:12px"><button class="btn btn-primary btn-sm" style="width:auto" onclick="openDrawer('lembretesDrawer')">⚙️ Configurar em detalhes</button></div>`;
+    <div style="margin-top:12px"><button class="btn btn-primary btn-sm" style="width:auto" onclick="openDrawer('lembretesDrawer')">Configurar</button></div>`;
 }
 function renderHorariosConfig() {
   const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
@@ -1990,7 +2007,7 @@ async function salvarAgendamento() {
   closeDrawer('novoAgendDrawer');
   ['inputCliente','inputObs'].forEach(id=>document.getElementById(id).value='');
   selectedDate=new Date(ini.getFullYear(),ini.getMonth(),ini.getDate());
-  toast(foiRemarcacao?`🔄 Remarcado para ${labelDia(selectedDate).toLowerCase()} às ${hhmm(ini)}`:`✅ ${nome} — ${labelDia(selectedDate).toLowerCase()} às ${hhmm(ini)}`);
+  toast(foiRemarcacao?`Remarcado para ${labelDia(selectedDate).toLowerCase()} às ${hhmm(ini)}`:`${nome} — ${labelDia(selectedDate).toLowerCase()} às ${hhmm(ini)}`);
   await recarregar();
 }
 
@@ -2017,13 +2034,13 @@ function buildCalendar() {
   for(let d=1;d<=days;d++) {
     const occ = getOccupancy(calYear, calMonth, d);
     const pct = Math.min(occ / maxSlots, 1);
-    const color = pct === 0 ? 'var(--border)' : pct < 0.4 ? 'var(--ok)' : pct < 0.8 ? 'var(--warn)' : 'var(--danger)';
+    const color = pct >= 1 ? 'var(--danger)' : 'var(--accent)';
     const isToday = calYear===today.getFullYear() && calMonth===today.getMonth() && d===today.getDate();
     const cell = document.createElement('div');
     cell.className = 'cal-day' + (isToday?' today':'');
     cell.innerHTML = `
       <span class="cal-day-num">${d}</span>
-      <div class="cal-bar-wrap"><div class="cal-bar-fill" style="height:${pct*100}%;background:${color}"></div></div>
+      <div class="cal-bar-wrap"><div class="cal-bar-fill" style="width:${pct*100}%;background:${isToday?'var(--on-fg)':color}"></div></div>
       ${occ>0?`<span class="cal-day-count">${occ}</span>`:''}`;
     // tocar num dia abre a agenda dele
     cell.onclick = () => {
@@ -2063,7 +2080,7 @@ async function importContacts() {
     if(!rows.length){toast('Esses contatos já estão cadastrados');return}
     const {error}=await sb.from('clientes').upsert(rows,{onConflict:'owner_id,telefone',ignoreDuplicates:true});
     if(error){toast('Erro: '+error.message);return}
-    toast(`✅ ${rows.length} contato${rows.length>1?'s':''} importado${rows.length>1?'s':''}`);
+    toast(`${rows.length} contato${rows.length>1?'s':''} importado${rows.length>1?'s':''}`);
     await recarregar();
   } catch(err) {
     toast('Não foi possível acessar os contatos: ' + err.message);
@@ -2109,8 +2126,9 @@ function renderTrendChart() {
   const h = 80 - pad.t - pad.b;
   const pts = data.map((v,i)=>[pad.l + (i/(data.length-1))*w, pad.t + h - ((v-minV)/(maxV-minV))*h]);
   const grad = ctx.createLinearGradient(0,pad.t,0,pad.t+h);
-  grad.addColorStop(0,'rgba(194,99,122,0.35)');
-  grad.addColorStop(1,'rgba(194,99,122,0.02)');
+  const rgb=(accent.match(/^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i)||[0,'a8','55','6b']).slice(1).map(x=>parseInt(x,16)).join(',');
+  grad.addColorStop(0,`rgba(${rgb},0.22)`);
+  grad.addColorStop(1,`rgba(${rgb},0)`);
   ctx.beginPath();
   ctx.moveTo(pts[0][0], pad.t+h);
   pts.forEach(p=>ctx.lineTo(p[0],p[1]));
@@ -2145,8 +2163,8 @@ function renderPnLTable() {
     {label:'Margem líquida', value: margem+'%',      cls:margem<0?'pnl-down':'pnl-up',   bold:false},
     {label:'Ticket médio',   value: fmt(d.ticket),   cls:'',         bold:false},
     {label:'Atendimentos',   value: d.atend+'',      cls:'',         bold:false},
-    {label:'💅 Esmalteria',  value: fmt(d.nail),    cls:'',         bold:false},
-    {label:'🦶 Podologia',   value: fmt(d.pod),     cls:'',         bold:false},
+    {label:'Esmalteria',  value: fmt(d.nail),    cls:'',         bold:false},
+    {label:'Podologia',   value: fmt(d.pod),     cls:'',         bold:false},
   ];
   const table = document.getElementById('pnlTable');
   table.innerHTML = `<thead><tr><th>Item</th><th style="text-align:right">Valor</th></tr></thead><tbody>` +
@@ -2155,57 +2173,11 @@ function renderPnLTable() {
 }
 
 // ── PORTFOLIO / GALLERY ───────────────────────────────────────────
-const GALLERY_EMOJIS = {
-  gel:        ['💎','💎','💅','✨','💅','💎'],
-  acrilico:   ['✨','💅','✨','💅'],
-  esmaltacao: ['💅','💅','💅','💅','💅'],
-  nailart:    ['🎨','🎨','🎨'],
-  podologia:  ['🦶','🦶','🦶','🦶'],
-  tratamentos:['💊','💊'],
-};
+// Fotos reais entram na próxima etapa (bucket 'portfolio' já existe no Supabase).
 function renderPortfolio() {
   const el = document.getElementById('galeriaGrid');
-  el.innerHTML = '';
-  const cats = portfolioFilter === 'todos'
-    ? PORTFOLIO_CATS
-    : PORTFOLIO_CATS.filter(c=>c.id===portfolioFilter);
-
-  if(galleryViewMode === 'grid') {
-    // single flat grid 3-col
-    const grid = document.createElement('div');
-    grid.className = 'gallery-grid';
-    cats.forEach(cat => {
-      const emojis = GALLERY_EMOJIS[cat.id] || [];
-      emojis.forEach(em => {
-        const item = document.createElement('div');
-        item.className = 'gallery-item';
-        item.style.background = cat.color + '22';
-        item.innerHTML = `<div class="gallery-placeholder" style="background:${cat.color}22;font-size:30px">${em}</div><div class="gallery-type"><span class="badge badge-neutral" style="font-size:9px">${cat.icon}</span></div>`;
-        grid.appendChild(item);
-      });
-    });
-    el.appendChild(grid);
-  } else {
-    // portfolio / categorized list
-    cats.forEach(cat => {
-      const emojis = GALLERY_EMOJIS[cat.id] || [];
-      const sec = document.createElement('div');
-      sec.className = 'portfolio-section';
-      sec.innerHTML = `
-        <div class="portfolio-section-header">
-          <div class="portfolio-section-title" style="color:${cat.color}">${cat.icon} ${cat.name}</div>
-          <span class="portfolio-section-count">${emojis.length} fotos</span>
-        </div>
-        <div style="font-size:11px;color:var(--fg-muted);margin-bottom:7px;display:flex;gap:5px;flex-wrap:wrap">${cat.tags.map(t=>`<span class="badge badge-neutral">${t}</span>`).join('')}</div>
-        <div class="gallery-grid-2">${emojis.map(em=>`
-          <div class="gallery-item-lg" style="background:${cat.color}22">
-            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px">${em}</div>
-            <span class="gallery-tag">${cat.icon} ${cat.name}</span>
-          </div>`).join('')}
-        </div>`;
-      el.appendChild(sec);
-    });
-  }
+  const cat = PORTFOLIO_CATS.find(c=>c.id===portfolioFilter);
+  el.innerHTML = `<div class="card empty-state">Nenhuma foto ainda${cat?' em '+esc(cat.name.toLowerCase()):''}.<br><span style="color:var(--fg-soft)">O envio de fotos do portfólio chega na próxima versão.</span></div>`;
 }
 function filterPortfolio(f, el) {
   portfolioFilter = f;
@@ -2267,3 +2239,5 @@ function closeDrawer(id){
   document.getElementById(id).classList.remove('open');document.body.style.overflow=''
 }
 </script>
+</body>
+</html>
