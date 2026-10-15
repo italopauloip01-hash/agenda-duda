@@ -1144,7 +1144,7 @@ async function loginGoogle(){
   try{
     const r=await fetch(SUPABASE_URL+'/auth/v1/settings',{headers:{apikey:SUPABASE_KEY}});
     const s=await r.json();
-    if(!s.external?.google){msg.innerHTML='<span style="color:var(--warn)">O login com Google ainda não foi ativado. Use o link por e-mail.</span>';return}
+    if(!s.external?.google){msg.innerHTML='<span style="color:var(--warn)">O login com Google ainda não foi ativado. Use e-mail e senha.</span>';return}
   }catch(e){}
   const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:REDIRECT}});
   if(error) msg.innerHTML=`<span style="color:var(--danger)">${esc(error.message)}</span>`;

@@ -13,6 +13,8 @@ insert into storage.buckets (id, name, public)
 values ('portfolio', 'portfolio', true)
 on conflict (id) do nothing;
 
+drop policy if exists "portfolio: dona envia" on storage.objects;
+drop policy if exists "portfolio: dona apaga" on storage.objects;
 create policy "portfolio: dona envia" on storage.objects for insert to authenticated
   with check (bucket_id = 'portfolio' and (storage.foldername(name))[1] = (select auth.uid())::text);
 create policy "portfolio: dona apaga" on storage.objects for delete to authenticated

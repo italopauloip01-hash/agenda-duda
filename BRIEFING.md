@@ -9,8 +9,14 @@
 - Chave publishable (pode ir no HTML): `sb_publishable_0FRlkE_cdq_RKIpX6pSjGA_boyTYEX0`
 - A service_role **nunca** vai no HTML; só nas credenciais do n8n
 - `supabase/001_schema.sql` aplicado em 2026-10-14: 10 tabelas + view `clientes_resumo`, RLS por `owner_id`. Testado: sem login não lê nem grava
-- `supabase/002_storage.sql`: bucket `portfolio` já criado; as 2 policies de upload/delete ainda não foram aplicadas
-- Login: só e-mail habilitado; Google ainda não configurado no Supabase
+- `supabase/002_storage.sql` aplicado em 2026-10-15: bucket `portfolio` + policies de upload/delete
+- Login: e-mail + senha. Google ainda não configurado (precisa Client ID do Google Cloud)
+- Auth → URL Configuration: Site URL e Redirect URL = endereço do GitHub Pages
+
+## Publicação
+- Site: https://italopauloip01-hash.github.io/agenda-duda/ (GitHub Pages, branch `main`, raiz)
+- Repo: https://github.com/italopauloip01-hash/agenda-duda — publicar = commit + `git push`
+- O app é um único `index.html` (antes se chamava `painel-duda.html`)
 
 ## Stack técnica
 - HTML/CSS/JS puro — sem frameworks
