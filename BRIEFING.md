@@ -14,7 +14,7 @@
 - Auth → URL Configuration: Site URL e Redirect URL = endereço do GitHub Pages
 
 ## Publicação
-- Vercel: https://agenda-duda-ruddy.vercel.app (projeto `agenda-duda`, ligado ao repo; o nome pode ser trocado em Settings → Domains)
+- Vercel: https://agenda-duda-ruddy.vercel.app (projeto `agenda-duda`, ligado ao repo: push em `main` publica sozinho; o nome pode ser trocado em Settings → Domains)
 - Site: https://italopauloip01-hash.github.io/agenda-duda/ (GitHub Pages, branch `main`, raiz)
 - Repo: https://github.com/italopauloip01-hash/agenda-duda — publicar = commit + `git push`
 - O app é um único `index.html` (antes se chamava `painel-duda.html`)
