@@ -14,25 +14,30 @@
 - Auth → URL Configuration: Site URL e Redirect URL = endereço do GitHub Pages
 
 ## Publicação
+- Vercel: https://agenda-duda-ruddy.vercel.app (projeto `agenda-duda`, ligado ao repo; o nome pode ser trocado em Settings → Domains)
 - Site: https://italopauloip01-hash.github.io/agenda-duda/ (GitHub Pages, branch `main`, raiz)
 - Repo: https://github.com/italopauloip01-hash/agenda-duda — publicar = commit + `git push`
 - O app é um único `index.html` (antes se chamava `painel-duda.html`)
 
+## Design (2026-10-15)
+- Visual discreto: fonte Geist, paleta neutra (tons de pedra) com acento rosé `--accent`, sem sombras, bordas de 1px, botões principais em preto (`--fg`)
+- Modo escuro automático pelo sistema; sem emojis na interface (só nas mensagens de WhatsApp para clientes)
+- Listas usam `.list-card` (linhas separadas por borda); avisos da agenda agrupados num cartão
+
 ## Stack técnica
 - HTML/CSS/JS puro — sem frameworks
-- Google Fonts: DM Serif Display + DM Sans
+- Google Fonts: Geist
+- Supabase JS v2 (CDN jsdelivr, versão fixa)
 - Canvas API nativo (gráfico de tendência)
 - SVG nativo (donut chart)
-- Web Contacts API (com fallback de simulação)
-- Google Identity Services (demo/fallback incluído)
-- Mobile-first, max-width 480px, dark mode completo
+- Web Contacts API (só Chrome Android)
+- Mobile-first, max-width 520px, dark mode completo
 
 ## Design System (tokens CSS em `:root`)
-- `--bg`, `--bg-card`, `--fg`, `--fg-muted`, `--fg-soft`
-- `--border`, `--accent: #C2637A`, `--accent-lt: #F5E3E8`
-- `--nail: #C2637A`, `--pod: #7A63C2`
-- `--ok: #3D9E6A`, `--warn: #D4860A`, `--danger: #C93B3B`, `--info: #2E86C1`
-- `--shadow`, `--shadow-md`, `--r: 14px`, `--r-sm: 9px`
+- `--bg`, `--bg-card`, `--bg-subtle`, `--fg`, `--fg-muted`, `--fg-soft`, `--on-fg`
+- `--border`, `--border-strong`, `--accent: #A8556B`, `--accent-lt`
+- `--nail: #B5637A`, `--pod: #7366B0`, `--ok`, `--warn`, `--danger`, `--info` (+ `-lt`)
+- `--r: 14px`, `--r-sm: 10px`, `--nav-h: 64px`
 - Dark mode: `prefers-color-scheme: dark` + `[data-theme="dark"]`
 
 ## Estrutura de páginas (bottom nav, 6 itens)
