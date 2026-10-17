@@ -1276,7 +1276,10 @@ async function initAuth(){
     if(ev==='SIGNED_OUT') mostrarLogin();
   });
   const {data:{session}}=await sb.auth.getSession();
-  if(session){SESSAO=session;entrar(session.user)} else mostrarLogin();
+  if(session){SESSAO=session;entrar(session.user);return}
+  // volta do "Entrar com Google": a sessão abre pelo listener acima
+  if(await concluirLoginGoogle()) return;
+  mostrarLogin();
 }
 function mostrarLogin(){
   USER=null;
@@ -1295,6 +1298,14 @@ async function entrar(user){
   const primeiro=nome.split(/[\s._-]/)[0];
   document.getElementById('topName').textContent=primeiro.charAt(0).toUpperCase()+primeiro.slice(1);
   await recarregar();
+  // entrou pelo Google: calendário e contatos já vieram vinculados
+  if(window._pendGoogle){
+    const g=window._pendGoogle;window._pendGoogle=null;
+    GOOGLE={...GOOGLE,conectado:true,email:g.email,calendarioId:g.calendarioId||GOOGLE.calendarioId,token:g.token,expira:g.expira};
+    try{await garantirCalendario()}catch(e){console.error(e)}
+    renderGoogleCard();renderConfig();
+    toast('Entrou com Google · calendário e contatos conectados');
+  }
   await concluirGoogle();
   // atalho do ícone do app: "Novo agendamento"
   const p=new URLSearchParams(location.search);
@@ -1310,12 +1321,33 @@ async function googleAtivo(){
   }catch(e){return true}
 }
 // Entrar com Google já pede contatos e calendário (offline = acesso continua depois)
-async function loginGoogle(){
+// Entrar com Google: consentimento no Google → função google-login abre a sessão
+// (cria a conta se for nova) e já vincula calendário e contatos.
+function loginGoogle(){
+  document.getElementById('loginMsg').innerHTML='<span style="color:var(--fg-muted)">Abrindo o Google…</span>';
+  conectarGoogle('login');
+}
+async function concluirLoginGoogle(){
+  const p=new URLSearchParams(location.search);
+  let estado=null,modo=null;try{estado=sessionStorage.getItem('g_estado');modo=sessionStorage.getItem('g_modo')}catch(e){}
+  if(modo!=='login'||!p.get('state')||(!p.has('code')&&!p.has('error'))) return false;
+  try{sessionStorage.removeItem('g_estado');sessionStorage.removeItem('g_modo')}catch(e){}
+  history.replaceState(history.state,'',location.pathname);
   const msg=document.getElementById('loginMsg');
-  if(!await googleAtivo()){msg.innerHTML='<span style="color:var(--warn)">Entre com e-mail e senha. Depois, em Ajustes → Conta Google, conecte seus contatos e seu calendário.</span>';return}
-  const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:REDIRECT,scopes:GOOGLE_SCOPES,
-    queryParams:{access_type:'offline',prompt:'consent'}}});
-  if(error) msg.innerHTML=`<span style="color:var(--danger)">${esc(error.message)}</span>`;
+  const erro=t=>{mostrarLogin();msg.innerHTML=`<span style="color:var(--danger)">${esc(t)}</span>`;return true};
+  if(p.get('error')) return erro(p.get('error')==='access_denied'?'Entrada com Google cancelada.':'Google: '+p.get('error'));
+  if(!estado||estado!==p.get('state')) return erro('Não foi possível confirmar o retorno do Google. Tente de novo.');
+  document.getElementById('loginScreen').hidden=false;
+  msg.innerHTML='<span style="color:var(--fg-muted)">Entrando com Google…</span>';
+  const r=await fetch(SUPABASE_URL+'/functions/v1/google-login',{method:'POST',
+    headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({code:p.get('code'),redirect_uri:RETORNO_GOOGLE})});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) return erro('Não deu para entrar com o Google ('+(j.detalhe||j.erro||r.status)+').');
+  if(j.google_vinculado) window._pendGoogle={token:j.access_token,expira:Date.now()+(j.expires_in-300)*1000,calendarioId:j.calendario_id,email:j.email};
+  const {error}=await sb.auth.verifyOtp({type:'magiclink',token_hash:j.token_hash});
+  if(error) return erro('Não deu para abrir a sessão: '+error.message);
+  return true;
 }
 // E-mail + senha não depende de URL de retorno configurada no Supabase.
 async function loginEmail(criar){
@@ -3013,9 +3045,10 @@ async function salvarConexaoGoogle(session){
 // código para esta página e a função google-token troca pelo acesso e guarda.
 const GOOGLE_CLIENT_ID='253374765254-e0fk9u1lv5pjm5k946iq3o5sons49kir.apps.googleusercontent.com';
 const RETORNO_GOOGLE=location.origin+location.pathname.replace(/index\.html$/,'');
-function conectarGoogle(){
+// modo 'conectar' = já logada, só vincula; modo 'login' = entra no app pelo Google
+function conectarGoogle(modo){
   const estado=crypto.randomUUID();
-  try{sessionStorage.setItem('g_estado',estado)}catch(e){}
+  try{sessionStorage.setItem('g_estado',estado);sessionStorage.setItem('g_modo',modo==='login'?'login':'conectar')}catch(e){}
   const p=new URLSearchParams({client_id:GOOGLE_CLIENT_ID,redirect_uri:RETORNO_GOOGLE,response_type:'code',
     scope:'openid email '+GOOGLE_SCOPES,access_type:'offline',prompt:'consent',include_granted_scopes:'true',state:estado});
   location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p;
@@ -3025,7 +3058,8 @@ async function concluirGoogle(){
   const p=new URLSearchParams(location.search);
   if(!p.has('code')&&!p.has('error')) return;
   if(!p.get('state')) return; // não é retorno nosso
-  let estado=null;try{estado=sessionStorage.getItem('g_estado');sessionStorage.removeItem('g_estado')}catch(e){}
+  let estado=null,modo=null;try{estado=sessionStorage.getItem('g_estado');modo=sessionStorage.getItem('g_modo');sessionStorage.removeItem('g_estado');sessionStorage.removeItem('g_modo')}catch(e){}
+  if(modo==='login') return; // tratado em concluirLoginGoogle
   history.replaceState(history.state,'',location.pathname);
   if(p.get('error')){toast(p.get('error')==='access_denied'?'Conexão com o Google cancelada':'Google: '+p.get('error'));return}
   if(!estado||estado!==p.get('state')){toast('Não foi possível confirmar o retorno do Google. Tente de novo.');return}
