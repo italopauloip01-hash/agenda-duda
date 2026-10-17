@@ -74,7 +74,8 @@ svg.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stro
 .capa p{margin-top:10px;font-size:15.5px;line-height:1.5;opacity:.92;max-width:420px;white-space:pre-line}
 
 .acoes{display:flex;gap:10px;margin:22px 0 4px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:15px 22px;border-radius:999px;border:1.5px solid transparent;font-size:16px;font-weight:600;text-decoration:none;transition:transform .15s,box-shadow .2s,background .2s,opacity .2s;width:100%;line-height:1.1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:15px 20px;border-radius:999px;border:1.5px solid transparent;font-size:16px;font-weight:600;text-decoration:none;transition:transform .15s,box-shadow .2s,background .2s,opacity .2s;width:100%;line-height:1.1;white-space:nowrap}
+@media (max-width:380px){.acoes .btn{font-size:15px;padding:14px 14px}}
 .btn:active{transform:scale(.97)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn-rosa{background:linear-gradient(135deg,var(--rose),var(--rose-2));color:#fff;box-shadow:var(--sombra)}
@@ -193,13 +194,13 @@ section{margin-top:46px}
 .assina{margin-top:26px;font-size:12.5px;color:var(--soft)}
 
 /* Sucesso */
-.ok{text-align:center;padding:64px 0 10px;position:relative}
-.ok-ic{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--rose-2));color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;box-shadow:var(--sombra);animation:surge .5s both}
-.ok-ic svg{width:40px;height:40px;stroke-width:2.4}
-.ok-ic path{stroke-dasharray:30;stroke-dashoffset:30;animation:traco .6s .35s ease forwards}
-.ok h1{font-size:36px;line-height:1.05}
-.ok h1 em{font-style:italic;color:var(--rose-2)}
-.ok p{color:var(--muted);margin-top:10px;line-height:1.5}
+.sucesso{text-align:center;padding:64px 0 10px;position:relative}
+.sucesso-ic{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--rose-2));color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;box-shadow:var(--sombra);animation:surge .5s both}
+.sucesso-ic svg{width:40px;height:40px;stroke-width:2.4}
+.sucesso-ic path{stroke-dasharray:30;stroke-dashoffset:30;animation:traco .6s .35s ease forwards}
+.sucesso h1{font-size:36px;line-height:1.05}
+.sucesso h1 em{font-style:italic;color:var(--rose-2)}
+.sucesso p{color:var(--muted);margin-top:10px;line-height:1.5}
 .cartao{background:var(--card);border-radius:var(--r);border:1px solid var(--line);padding:6px 18px;margin:26px 0 16px;box-shadow:var(--sombra-sm)}
 .cartao div{display:flex;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid var(--line);font-size:15px}
 .cartao div:last-child{border-bottom:none}
@@ -243,7 +244,7 @@ const DIAS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const DIAS_LONGOS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 const IC={
-  unha:'<svg class="i" viewBox="0 0 24 24"><path d="M8 21V10a4 4 0 0 1 8 0v11"/><path d="M8 14h8"/></svg>',
+  unha:'<svg class="i" viewBox="0 0 24 24"><path d="M10 2.5h4v4.5h-4z"/><path d="M8.5 7h7l1.5 3.5V19a2.5 2.5 0 0 1-2.5 2.5h-5A2.5 2.5 0 0 1 7 19v-8.5z"/><path d="M7 13h10"/></svg>',
   pe:'<svg class="i" viewBox="0 0 24 24"><path d="M8 3c2 0 3 2 3 5s-1 5-1 8 1 5-2 5-3-3-3-6 1-12 3-12z"/><circle cx="15" cy="5" r="1.4"/><circle cx="17.6" cy="8" r="1.2"/><circle cx="18.8" cy="11.2" r="1"/></svg>',
   cal:'<svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
   rel:'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
@@ -553,8 +554,8 @@ function sucesso(nome){
   const cal=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(escolha.svc.nome+' — '+A.nome)}&dates=${g(ini)}/${g(fim)}&details=${encodeURIComponent('Agendado pelo link')}`;
   const wa=telLink(A.whatsapp,`Oi! Acabei de agendar ${escolha.svc.nome} para ${dataLonga(escolha.dia).toLowerCase()} às ${escolha.hora}. Meu nome é ${nome} 😊`);
   document.getElementById('app').innerHTML=`
-    <div class="ok">
-      <div class="ok-ic"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <div class="sucesso">
+      <div class="sucesso-ic"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
       <h1 class="serif surge" style="animation-delay:.15s">Horário <em>reservado!</em></h1>
       <p class="surge" style="animation-delay:.25s">Obrigada, ${esc(nome.split(' ')[0])}! A confirmação chega pelo seu WhatsApp. 💕</p>
     </div>
