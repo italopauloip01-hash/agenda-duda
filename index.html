@@ -10,6 +10,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Agenda">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231C1917'/%3E%3Ccircle cx='32' cy='32' r='9' fill='%23D8A7B4'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -971,6 +974,18 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
   </div>
 </div></div>
 
+<!-- Instalar no iPhone -->
+<div class="modal-overlay" id="instalarIOSDrawer"><div class="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">Instalar no iPhone</div>
+  <ol style="padding-left:20px;font-size:15px;line-height:1.7;margin-bottom:18px">
+    <li>Abra este endereço no <strong>Safari</strong>.</li>
+    <li>Toque em <strong>Compartilhar</strong> (o quadrado com a seta para cima).</li>
+    <li>Escolha <strong>Adicionar à Tela de Início</strong> e confirme.</li>
+  </ol>
+  <button class="btn btn-ghost" onclick="closeDrawer('instalarIOSDrawer')">Entendi</button>
+</div></div>
+
 <!-- Notificações -->
 <div class="modal-overlay" id="notifDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
@@ -1212,6 +1227,12 @@ async function entrar(user){
   const primeiro=nome.split(/[\s._-]/)[0];
   document.getElementById('topName').textContent=primeiro.charAt(0).toUpperCase()+primeiro.slice(1);
   await recarregar();
+  // atalho do ícone do app: "Novo agendamento"
+  const p=new URLSearchParams(location.search);
+  if(p.get('acao')==='agendar'){
+    history.replaceState(history.state,'',location.pathname);
+    openDrawer('novoAgendDrawer');
+  }
 }
 async function loginGoogle(){
   const msg=document.getElementById('loginMsg');
@@ -1439,6 +1460,8 @@ function renderAlerts() {
   if(anivHoje.length) h+=`<div class="alert alert-info"><span>Aniversário hoje: ${anivHoje.map(x=>esc(x.name)).join(', ')}</span></div>`;
   if(anivAmanha.length) h+=`<div class="alert alert-info"><span>Aniversário amanhã: ${anivAmanha.map(x=>esc(x.name)).join(', ')}</span></div>`;
   if(baixo) h+=`<div class="alert alert-danger"><span>${baixo} produto${baixo>1?'s':''} com estoque baixo</span></div>`;
+  let dispensado=false;try{dispensado=localStorage.getItem('instalarDispensado')==='1'}catch(e){}
+  if(podeInstalar()&&!dispensado) h+=`<div class="alert alert-info"><span style="flex:1">Instale o app para abrir direto da tela inicial.</span><button class="btn btn-primary btn-sm" style="width:auto;padding:6px 12px" onclick="instalarApp()">Instalar</button><button class="icon-btn" style="width:28px;height:28px;margin:-4px -6px 0 0" title="Agora não" onclick="dispensarInstalar()">×</button></div>`;
   const venc=ALL_APPTS.filter(VENCIDO);
   if(venc.length) h+=`<div class="alert alert-danger" style="cursor:pointer" onclick="gotoPage('financeiro',document.querySelectorAll('.nav-item')[3]);document.getElementById('aReceberLabel').scrollIntoView({behavior:'smooth'})"><span>${venc.length} pagamento${venc.length>1?'s':''} vencido${venc.length>1?'s':''} · ${fmtR(venc.reduce((s,a)=>s+a.falta,0))}</span></div>`;
   c.innerHTML = h;
@@ -1466,12 +1489,13 @@ function openDetail(a) {
       <button class="btn btn-ok btn-sm" onclick="mudarStatus('${a.id}','confirmado')">Confirmar</button>
       <button class="btn btn-ghost btn-sm" onclick="remarcar('${a.id}')">Remarcar</button>
       <button class="btn btn-ghost btn-sm" onclick="mudarStatus('${a.id}','concluido')">Concluir</button>
-      <button class="btn btn-danger btn-sm" onclick="mudarStatus('${a.id}','cancelado')">Cancelar</button>
-      <button class="btn btn-ghost btn-sm" onclick="mudarStatus('${a.id}','faltou')">Faltou</button>
+      <button class="btn btn-danger btn-sm" onclick="if(confirm('Cancelar o horário de ${esc(a.name.split(' ')[0].replace(/'/g,''))} às ${a.time}?'))mudarStatus('${a.id}','cancelado')">Cancelar horário</button>
+      <button class="btn btn-ghost btn-sm" onclick="if(confirm('Marcar falta para ${esc(a.name.split(' ')[0].replace(/'/g,''))}?'))mudarStatus('${a.id}','faltou')">Faltou</button>
       ${lembrete?`<a class="btn btn-ghost btn-sm" style="text-decoration:none" href="${lembrete}" target="_blank" rel="noopener">Lembrete</a>`:'<button class="btn btn-ghost btn-sm" disabled title="Cliente sem WhatsApp">Lembrete</button>'}
     </div>
     <div style="font-size:13px;color:var(--fg-muted);font-weight:500;margin-bottom:6px">Histórico</div>
-    <div class="card" style="font-size:13px;color:var(--fg-muted)">${cli?`${cli.visits} visita${cli.visits===1?'':'s'} · última: ${esc(cli.last)} · ${fmtR(gasto)} gasto este ano${cli.faltou?` · ${cli.faltou} falta${cli.faltou>1?'s':''}`:''}`:'—'}</div>`;
+    <div class="card" style="font-size:13px;color:var(--fg-muted)">${cli?`${cli.visits} visita${cli.visits===1?'':'s'} · última: ${esc(cli.last)} · ${fmtR(gasto)} gasto este ano${cli.faltou?` · ${cli.faltou} falta${cli.faltou>1?'s':''}`:''}`:'—'}</div>
+    <button class="btn btn-ghost" style="margin-top:14px" onclick="closeDrawer('detailDrawer')">Fechar</button>`;
   openDrawer('detailDrawer');
 }
 async function mudarStatus(id,status){
@@ -2041,7 +2065,8 @@ function configGroups(){
     {icon:'🖼️',label:'Galeria & portfólio',sub:'Em breve: fotos reais',action:()=>{}},
     {icon:'📊',label:'Exportar relatório',sub:'Em breve',action:()=>{}},
     {icon:'👤',label:'Minha conta',sub:USER?USER.email:'',action:()=>openDrawer('perfilDrawer')},
-    {icon:'ℹ️',label:'Sobre o sistema',sub:'Versão 2.1 · Agenda da Duda',action:()=>{}},
+    {icon:'',label:'Instalar o app',sub:jaInstalado()?'Já instalado neste aparelho':podeInstalar()?'Ícone na tela inicial, abre em tela cheia':'No Android: Chrome → menu ⋮ → Instalar app',action:()=>instalarApp()},
+    {icon:'ℹ️',label:'Sobre o sistema',sub:'Versão 2.2 · Agenda da Duda',action:()=>{}},
   ],
   ];
 }
@@ -2415,26 +2440,81 @@ function renderGlobalSearch() {
 }
 
 // ── NAVIGATION ────────────────────────────────────────────────────
-function gotoPage(id, navEl) {
+let paginaAtual='agenda';
+function gotoPage(id, navEl, doVoltar) {
+  // botão "voltar" do celular: sair da agenda cria um passo no histórico
+  if(!doVoltar){
+    if(paginaAtual==='agenda'&&id!=='agenda') history.pushState({page:id},'');
+    else if(id!=='agenda') history.replaceState({page:id},'');
+    else if(history.state?.page){ignorarPop++;history.back();}
+  }
+  paginaAtual=id;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   navEl.classList.add('active');
   document.getElementById('mainFab').style.display=id==='agenda'?'flex':'none';
+  window.scrollTo(0,0);
   if(id==='financeiro') setTimeout(renderTrendChart,100);
   if(id==='config') { renderHorariosDetail(); }
   if(id==='calendario') { buildCalendar(); }
 }
 
 // ── DRAWERS ───────────────────────────────────────────────────────
+// Cada gaveta aberta ocupa um passo do histórico, para o "voltar" do
+// celular fechar a gaveta em vez de sair do app.
+let ignorarPop=0;
+const gavetasAbertas=()=>[...document.querySelectorAll('.modal-overlay.open')];
 function openDrawer(id){
   if(id==='novoAgendDrawer') loadSlots();
   if(id==='notifDrawer') marcarNotifsLidas();
-  document.getElementById(id).classList.add('open');document.body.style.overflow='hidden'
+  document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';
+  if(!history.state?.modal) history.pushState({modal:true},'');
 }
-function closeDrawer(id){
+function closeDrawer(id,doVoltar){
   if(id==='novoAgendDrawer') remarcandoId=null;
-  document.getElementById(id).classList.remove('open');document.body.style.overflow=''
+  document.getElementById(id).classList.remove('open');
+  if(gavetasAbertas().length) return;
+  document.body.style.overflow='';
+  if(!doVoltar&&history.state?.modal){ignorarPop++;history.back();}
+}
+window.addEventListener('popstate',()=>{
+  if(ignorarPop>0){
+    ignorarPop--;
+    // uma gaveta pode ter sido aberta enquanto o "voltar" acontecia
+    if(gavetasAbertas().length&&!history.state?.modal) history.pushState({modal:true},'');
+    return;
+  }
+  const abertas=gavetasAbertas();
+  if(abertas.length){
+    closeDrawer(abertas[abertas.length-1].id,true);
+    if(gavetasAbertas().length) history.pushState({modal:true},'');
+    return;
+  }
+  if(paginaAtual!=='agenda') gotoPage('agenda',document.querySelectorAll('.nav-item')[0],true);
+});
+
+// ── APP INSTALÁVEL ────────────────────────────────────────────────
+let pedidoInstalar=null;
+const jaInstalado=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const ehIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+if('serviceWorker' in navigator&&location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();pedidoInstalar=e;if(USER){renderConfig();renderAlerts()}});
+window.addEventListener('appinstalled',()=>{pedidoInstalar=null;toast('App instalado');if(USER){renderConfig();renderAlerts()}});
+function podeInstalar(){return !jaInstalado()&&(!!pedidoInstalar||ehIOS)}
+async function instalarApp(){
+  if(pedidoInstalar){
+    pedidoInstalar.prompt();
+    const {outcome}=await pedidoInstalar.userChoice;
+    if(outcome==='accepted') pedidoInstalar=null;
+    return;
+  }
+  if(ehIOS){openDrawer('instalarIOSDrawer');return}
+  toast('Abra no Chrome do celular e use o menu ⋮ → Instalar app');
+}
+function dispensarInstalar(){
+  try{localStorage.setItem('instalarDispensado','1')}catch(e){}
+  renderAlerts();
 }
 </script>
 </body>
