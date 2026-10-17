@@ -2329,11 +2329,13 @@ function abrirLembretesDia(){
   el.innerHTML=l.length?'':'<div class="empty-state">Ninguém marcado para amanhã.</div>';
   l.forEach(a=>{
     const link=waLink(a.phone,modelo('lembrete',varsAgendamento(a)));
-    el.insertAdjacentHTML('beforeend',`<div class="client-row" style="cursor:default">
-      <div class="client-info"><div class="client-name">${a.time} · ${esc(a.name)}</div>
-      <div class="client-sub">${esc(a.service)} · <span class="badge ${STATUS_MAP[a.status].cls}" style="font-size:10.5px;padding:1px 6px">${STATUS_MAP[a.status].label}</span>${a.lembreteEm?' · lembrete enviado':''}</div></div>
-      ${link?`<a class="btn ${a.lembreteEm?'btn-ghost':'btn-primary'} btn-sm" style="width:auto" href="${link}" target="_blank" rel="noopener" onclick="marcarLembrete('${a.id}')">${a.lembreteEm?'De novo':'Enviar'}</a>`:'<span class="client-sub">sem WhatsApp</span>'}
-      ${a.status==='agendado'?`<button class="btn btn-ghost btn-sm" style="width:auto" onclick="confirmarDaLista('${a.id}')">Confirmou</button>`:''}
+    el.insertAdjacentHTML('beforeend',`<div class="client-row" style="cursor:default;flex-wrap:wrap;row-gap:10px">
+      <div class="client-info" style="flex-basis:100%"><div class="client-name" style="white-space:normal">${a.time} · ${esc(a.name)}</div>
+      <div class="client-sub" style="white-space:normal">${esc(a.service)} · <span class="badge ${STATUS_MAP[a.status].cls}" style="font-size:10.5px;padding:1px 6px">${STATUS_MAP[a.status].label}</span>${a.lembreteEm?' · lembrete enviado':''}</div></div>
+      <div style="display:flex;gap:8px;width:100%">
+      ${link?`<a class="btn ${a.lembreteEm?'btn-ghost':'btn-primary'} btn-sm" style="flex:1" href="${link}" target="_blank" rel="noopener" onclick="marcarLembrete('${a.id}')">${a.lembreteEm?'Enviar de novo':'Enviar lembrete'}</a>`:'<span class="client-sub">sem WhatsApp</span>'}
+      ${a.status==='agendado'?`<button class="btn btn-ghost btn-sm" style="flex:1" onclick="confirmarDaLista('${a.id}')">Confirmou</button>`:''}
+      </div>
     </div>`);
   });
   openDrawer('lembretesDiaDrawer');
