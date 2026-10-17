@@ -18,17 +18,17 @@
 :root{
   --bg:#FFF8F6; --bg-2:#FCEFF0; --card:#FFFFFF; --ink:#3B2930; --muted:#8A7178; --soft:#B9A3A9;
   --line:#F1E2E5; --rose:#C9718A; --rose-2:#A44E68; --rose-lt:#F8E4E9; --blush:#F6D9DF; --gold:#C9A15A;
-  --ok:#4E8A68; --danger:#B4423F; --on:#FFFFFF;
+  --ok:#4E8A68; --danger:#B4423F; --on:#FFFFFF; --sobre-rosa:#FFFFFF;
   --sombra:0 10px 30px -12px rgba(164,78,104,.28); --sombra-sm:0 4px 14px -6px rgba(164,78,104,.22);
   --r:22px; --r-sm:14px; color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#1A1216; --bg-2:#22171C; --card:#261A20; --ink:#F7E9ED; --muted:#C4A9B1; --soft:#7E6870;
   --line:#3A2830; --rose:#E59AAE; --rose-2:#F0B3C3; --rose-lt:#3A2229; --blush:#4A2C35; --gold:#D9B26B;
-  --ok:#8CC9A5; --danger:#F09A93; --on:#2A1A20;
+  --ok:#8CC9A5; --danger:#F09A93; --on:#2A1A20; --sobre-rosa:#2A1A20;
   --sombra:0 10px 30px -12px rgba(0,0,0,.6); --sombra-sm:0 4px 14px -6px rgba(0,0,0,.5); color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#1A1216;--bg-2:#22171C;--card:#261A20;--ink:#F7E9ED;--muted:#C4A9B1;--soft:#7E6870;
-  --line:#3A2830;--rose:#E59AAE;--rose-2:#F0B3C3;--rose-lt:#3A2229;--blush:#4A2C35;--gold:#D9B26B;--ok:#8CC9A5;--danger:#F09A93;--on:#2A1A20;
+  --line:#3A2830;--rose:#E59AAE;--rose-2:#F0B3C3;--rose-lt:#3A2229;--blush:#4A2C35;--gold:#D9B26B;--ok:#8CC9A5;--danger:#F09A93;--on:#2A1A20;--sobre-rosa:#2A1A20;
   --sombra:0 10px 30px -12px rgba(0,0,0,.6);--sombra-sm:0 4px 14px -6px rgba(0,0,0,.5);color-scheme:dark}
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -78,7 +78,7 @@ svg.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stro
 @media (max-width:380px){.acoes .btn{font-size:15px;padding:14px 14px}}
 .btn:active{transform:scale(.97)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
-.btn-rosa{background:linear-gradient(135deg,var(--rose),var(--rose-2));color:#fff;box-shadow:var(--sombra)}
+.btn-rosa{background:linear-gradient(135deg,var(--rose),var(--rose-2));color:var(--sobre-rosa);box-shadow:var(--sombra)}
 .btn-linha{background:var(--card);border-color:var(--line);color:var(--ink)}
 .btn-zap{background:var(--card);border-color:var(--line);color:var(--ink)}
 .btn-zap svg{color:#25D366}
@@ -144,7 +144,7 @@ section{margin-top:46px}
 .svc:hover{border-color:var(--blush)}
 .svc.on{border-color:var(--rose);background:var(--rose-lt)}
 .svc .ic{width:44px;height:44px;border-radius:14px;background:var(--rose-lt);color:var(--rose-2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.svc.on .ic{background:var(--rose);color:#fff}
+.svc.on .ic{background:var(--rose);color:var(--sobre-rosa)}
 .svc .n{flex:1;min-width:0}
 .svc .n b{display:block;font-weight:600;font-size:15.5px}
 .svc .n span{font-size:13.5px;color:var(--muted)}
@@ -158,7 +158,7 @@ section{margin-top:46px}
 .dia b{font-size:21px;font-weight:600}
 .dia em{font-style:normal;font-size:10.5px;color:var(--soft);height:12px}
 .dia.on{background:linear-gradient(160deg,var(--rose),var(--rose-2));border-color:transparent;box-shadow:var(--sombra-sm);transform:translateY(-2px)}
-.dia.on small,.dia.on b,.dia.on em{color:#fff}
+.dia.on small,.dia.on b,.dia.on em{color:var(--sobre-rosa)}
 .dia:disabled{opacity:.38}
 .turno{font-size:13px;font-weight:600;color:var(--muted);margin:16px 0 8px;display:flex;align-items:center;gap:6px}
 .turno:first-child{margin-top:4px}
@@ -195,7 +195,7 @@ section{margin-top:46px}
 
 /* Sucesso */
 .sucesso{text-align:center;padding:64px 0 10px;position:relative}
-.sucesso-ic{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--rose-2));color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;box-shadow:var(--sombra);animation:surge .5s both}
+.sucesso-ic{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--rose-2));color:var(--sobre-rosa);display:flex;align-items:center;justify-content:center;margin:0 auto 22px;box-shadow:var(--sombra);animation:surge .5s both}
 .sucesso-ic svg{width:40px;height:40px;stroke-width:2.4}
 .sucesso-ic path{stroke-dasharray:30;stroke-dashoffset:30;animation:traco .6s .35s ease forwards}
 .sucesso h1{font-size:36px;line-height:1.05}
