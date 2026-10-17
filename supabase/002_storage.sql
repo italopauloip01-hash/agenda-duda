@@ -19,3 +19,7 @@ create policy "portfolio: dona envia" on storage.objects for insert to authentic
   with check (bucket_id = 'portfolio' and (storage.foldername(name))[1] = (select auth.uid())::text);
 create policy "portfolio: dona apaga" on storage.objects for delete to authenticated
   using (bucket_id = 'portfolio' and (storage.foldername(name))[1] = (select auth.uid())::text);
+-- sem esta, remove() responde "ok" mas não apaga nada (o Storage precisa enxergar o arquivo)
+drop policy if exists "portfolio: dona vê" on storage.objects;
+create policy "portfolio: dona vê" on storage.objects for select to authenticated
+  using (bucket_id = 'portfolio' and (storage.foldername(name))[1] = (select auth.uid())::text);

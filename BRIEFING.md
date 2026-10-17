@@ -27,6 +27,28 @@
 - Botão voltar do celular fecha a gaveta aberta / volta para a Agenda (histórico com `pushState`)
 - Google Play: possível depois empacotando o PWA (TWA/Bubblewrap); exige conta de desenvolvedor (US$ 25 uma vez)
 
+## Versão 3.0 (2026-10-16)
+- **Agendamento online**: `agendar.html?u=<slug>` — capa, book de fotos, avaliações (nota ≥ 4), serviço → dia → horário → dados. Funções `agenda_publica`, `horarios_ocupados`, `agendar_online` (SECURITY DEFINER, validam expediente, almoço, bloqueios, antecedência, prazo, máx. 3 futuros por telefone; conflito = 'ocupado'). Cria cliente se não existir, origem 'online', notificação. Ligar/desligar e prazo em Ajustes → Agendamento online (tabela `perfil`)
+- **Horários de funcionamento** por dia com almoço (`horarios`); padrão = `horario_do_dia()` (seg–sex 8–18, sáb 8–13, dom fechado, almoço 12–13). Painel tem "Ver horários fora do expediente"
+- **Portfólio**: upload reduzido a 1600px JPEG no bucket `portfolio/<uid>/`; foto de capa em `perfil.foto_capa`. Storage precisa da policy de SELECT para `remove()` funcionar
+- **Modelos de mensagem** (`perfil.modelos`): lembrete, cobrança, aniversário, avaliação, com {nome} {servico} {dia} {hora} {data} {valor}
+- **Lembretes de amanhã**: lista com Enviar (abre WhatsApp, grava `lembrete_enviado_em`) e Confirmou
+- **Exportar**: CSV (; e BOM) de atendimentos, pagamentos e despesas
+- **Google** (código pronto, falta credencial): login pede contatos + calendário; `google_conexao` guarda refresh token (sem SELECT da coluna para o app); função `google-token` renova; agendamentos vão para o calendário "Agenda da Duda"; freebusy do calendário pessoal bloqueia horários; importar contatos com seleção
+
+### Ativar o Google (falta fazer — precisa do login Google do dono)
+1. console.cloud.google.com → criar projeto "Agenda da Duda"
+2. APIs e serviços → ativar **Google People API** e **Google Calendar API**
+3. Google Auth Platform → Branding (nome, e-mail) → Público: Externo → **Publicar app** (fica "não verificado": a tela mostra um aviso, mas funciona e o acesso não expira em 7 dias como no modo teste)
+4. Data access → escopos: `contacts.readonly`, `calendar.app.created`, `calendar.freebusy`
+5. Clients → criar **Aplicativo da Web**: origens `https://agenda-duda-ruddy.vercel.app` e `https://italopauloip01-hash.github.io`; URI de redirecionamento `https://rsrpfwtrkpclscpccaok.supabase.co/auth/v1/callback`
+6. Supabase → Authentication → Sign In / Providers → Google: ativar, colar Client ID e Secret. Em Authentication → Settings, ligar "Allow manual linking"
+7. Guardar as credenciais para a função de renovação:
+   `insert into config_privada values ('google_client_id','...'),('google_client_secret','...') on conflict (chave) do update set valor = excluded.valor;`
+
+### Robô do WhatsApp (próxima etapa)
+Envio automático (lembrete 24h, confirmação, avaliação) precisa de Evolution API + n8n num servidor ligado 24h. Hoje: lembretes em um toque e link de agendamento.
+
 ## Publicação
 - Vercel: https://agenda-duda-ruddy.vercel.app (projeto `agenda-duda`, ligado ao repo: push em `main` publica sozinho; o nome pode ser trocado em Settings → Domains)
 - Site: https://italopauloip01-hash.github.io/agenda-duda/ (GitHub Pages, branch `main`, raiz)
