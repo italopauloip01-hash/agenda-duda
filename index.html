@@ -455,7 +455,7 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
     <button class="icon-btn" onclick="openDrawer('buscaDrawer')" title="Buscar">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     </button>
-    <div class="avatar" onclick="openDrawer('perfilDrawer')">D</div>
+    <div class="avatar" onclick="abrirPerfil(false)">D</div>
   </div>
 </header>
 
@@ -507,7 +507,7 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
   <div id="clientList" class="list-card"></div>
   <div class="btn-row" style="margin-top:14px">
     <button class="btn btn-primary" onclick="openDrawer('novoClienteDrawer')">Nova cliente</button>
-    <button class="btn btn-ghost" onclick="importContacts()" style="flex-shrink:0;width:auto;padding:12px 16px" title="Importar contatos do celular">Importar</button>
+    <button class="btn btn-ghost" onclick="GOOGLE.conectado?abrirContatosGoogle():importContacts()" style="flex-shrink:0;width:auto;padding:12px 16px" title="Importar contatos do celular">Importar</button>
   </div>
 </main>
 
@@ -685,6 +685,7 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
     </div>
     <span id="viewGrid" hidden></span><span id="viewList" hidden></span>
     <div id="galeriaGrid"></div>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="novaFoto()">Adicionar fotos</button>
   </div>
 </main>
 
@@ -728,6 +729,8 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
   <div class="card">
     <div id="configRows3"></div>
   </div>
+  <div class="section-label">Conta Google</div>
+  <div class="card" id="googleCard"></div>
   <div class="section-label">Lembretes automáticos</div>
   <div class="card" id="lembretesCard"></div>
 </main>
@@ -783,7 +786,7 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
   </div>
   <div class="form-group">
     <label class="form-label">Data</label>
-    <input class="form-input" type="date" id="inputData" onchange="loadSlots()">
+    <input class="form-input" type="date" id="inputData" onchange="foraDoExpediente=false;loadSlots()">
   </div>
   <div class="form-group">
     <label class="form-label">Horário</label>
@@ -974,6 +977,40 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
   </div>
 </div></div>
 
+<!-- Nova foto do portfólio -->
+<div class="modal-overlay" id="fotoDrawer"><div class="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">Adicionar fotos</div>
+  <div class="form-group"><label class="form-label">Categoria</label><select class="form-input" id="fotoCat"></select></div>
+  <div class="form-group"><label class="form-label">Legenda (opcional)</label><input class="form-input" id="fotoLegenda" placeholder="Ex: francesinha com glitter"></div>
+  <div class="form-group"><label class="form-label">Fotos</label><input class="form-input" type="file" id="fotoArquivo" accept="image/*" multiple></div>
+  <div class="client-sub" id="fotoStatus" style="margin-bottom:10px"></div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="closeDrawer('fotoDrawer')">Fechar</button>
+    <button class="btn btn-primary" id="fotoEnviarBtn" onclick="enviarFotos()">Enviar</button>
+  </div>
+</div></div>
+
+<!-- Ver foto -->
+<div class="modal-overlay" id="verFotoDrawer"><div class="drawer">
+  <div class="drawer-handle"></div>
+  <div id="verFotoBody"></div>
+</div></div>
+
+<!-- Contatos do Google -->
+<div class="modal-overlay" id="googleContatosDrawer"><div class="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">Contatos do Google</div>
+  <div class="drawer-subtitle" id="gContatosInfo">Marque quem é cliente.</div>
+  <div class="search-bar"><span class="search-icon"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><input type="text" id="gContatosBusca" placeholder="Buscar contato" oninput="renderContatosGoogle()"></div>
+  <div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn btn-ghost btn-sm" style="width:auto" onclick="marcarTodosContatos(true)">Marcar todos</button><button class="btn btn-ghost btn-sm" style="width:auto" onclick="marcarTodosContatos(false)">Desmarcar</button></div>
+  <div class="list-card" id="gContatosLista" style="max-height:48vh;overflow:auto"></div>
+  <div class="btn-row" style="margin-top:12px">
+    <button class="btn btn-ghost" onclick="closeDrawer('googleContatosDrawer')">Fechar</button>
+    <button class="btn btn-primary" onclick="importarContatosGoogle()">Importar marcados</button>
+  </div>
+</div></div>
+
 <!-- Instalar no iPhone -->
 <div class="modal-overlay" id="instalarIOSDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
@@ -1010,83 +1047,97 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
 <div class="modal-overlay" id="perfilDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
   <div class="drawer-title">Meu perfil</div>
-  <div class="form-group"><label class="form-label">Nome</label><input class="form-input" value="Eduarda Silva"></div>
-  <div class="form-group"><label class="form-label">WhatsApp</label><input class="form-input" value="(31) 99999-0000"></div>
-  <div class="form-group"><label class="form-label">Bio / Apresentação</label><input class="form-input" type="text" placeholder="Descrição para o link de agendamento…"></div>
-  <div class="section-label" style="margin-top:10px">Login &amp; Segurança</div>
+  <div class="form-group"><label class="form-label">Nome do studio ou profissional</label><input class="form-input" id="perfNome" placeholder="Ex: Studio da Duda"></div>
+  <div class="form-group"><label class="form-label">WhatsApp do studio</label><input class="form-input" type="tel" id="perfWhats" placeholder="(00) 00000-0000"></div>
+  <div class="form-group"><label class="form-label">Apresentação</label><textarea class="form-input" id="perfBio" rows="2" placeholder="Aparece na página de agendamento"></textarea></div>
+  <div class="form-group"><label class="form-label">Foto de capa (aparece no link de agendamento)</label>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div id="perfFotoPrev" style="width:56px;height:56px;border-radius:12px;background:var(--bg-subtle);background-size:cover;background-position:center;flex-shrink:0"></div>
+      <input class="form-input" type="file" id="perfFoto" accept="image/*" onchange="enviarFotoCapa(this)">
+    </div>
+  </div>
+
+  <div class="section-label" id="perfOnlineSec">Agendamento online</div>
   <div class="card" style="margin-bottom:14px">
-    <div style="display:flex;align-items:center;gap:10px;padding:4px 0">
-      <div id="contaAvatar" style="width:38px;height:38px;border-radius:50%;background:var(--ok);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px">?</div>
-      <div style="min-width:0"><div id="contaNome" style="font-size:13px;font-weight:600">—</div><div id="contaEmail" style="font-size:11px;color:var(--fg-muted);overflow:hidden;text-overflow:ellipsis">—</div></div>
+    <div class="toggle-row" style="padding-top:0">
+      <div class="toggle-info"><div class="toggle-label">Aceitar agendamentos pelo link</div><div class="toggle-sub">As clientes escolhem serviço, dia e horário livre</div></div>
+      <label class="toggle"><input type="checkbox" id="perfOnline" onchange="atualizarLinkPerfil()"><div class="toggle-track"></div></label>
+    </div>
+    <div id="perfOnlineCampos">
+      <div class="form-group"><label class="form-label">Endereço do link</label><input class="form-input" id="perfSlug" placeholder="duda" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'');atualizarLinkPerfil()"></div>
+      <div class="client-sub" id="perfLink" style="white-space:normal;word-break:break-all;margin:-6px 0 12px"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Agendar com até</label>
+          <select class="form-input" id="perfDias"><option value="7">1 semana à frente</option><option value="14">2 semanas à frente</option><option value="30">1 mês à frente</option><option value="60">2 meses à frente</option><option value="90">3 meses à frente</option></select></div>
+        <div class="form-group"><label class="form-label">Antecedência mínima</label>
+          <select class="form-input" id="perfAntec"><option value="0">Nenhuma</option><option value="60">1 hora</option><option value="120">2 horas</option><option value="240">4 horas</option><option value="720">12 horas</option><option value="1440">1 dia</option></select></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="copiarLink()">Compartilhar link</button>
+    </div>
+  </div>
+
+  <div class="section-label">Conta</div>
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:10px;padding:2px 0">
+      <div id="contaAvatar" style="width:38px;height:38px;border-radius:50%;background:var(--bg-subtle);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px">?</div>
+      <div style="min-width:0"><div id="contaNome" style="font-size:14px;font-weight:500">—</div><div id="contaEmail" style="font-size:12px;color:var(--fg-muted);overflow:hidden;text-overflow:ellipsis">—</div></div>
       <button class="btn btn-danger btn-sm" style="margin-left:auto;width:auto;padding:7px 12px" onclick="sair()">Sair</button>
     </div>
   </div>
-  <div class="section-label">Horário de trabalho</div>
-  <div style="display:flex;flex-direction:column;gap:8px" id="horariosConfig"></div>
-  <div class="btn-row" style="margin-top:16px">
-    <button class="btn btn-ghost" onclick="closeDrawer('perfilDrawer')">Cancelar</button>
-    <button class="btn btn-primary">Salvar perfil</button>
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="closeDrawer('perfilDrawer')">Fechar</button>
+    <button class="btn btn-primary" onclick="salvarPerfil()">Salvar</button>
   </div>
 </div></div>
 
-<!-- Config horários detalhado -->
+<!-- Horários de funcionamento -->
 <div class="modal-overlay" id="horariosDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
   <div class="drawer-title">Horários de funcionamento</div>
   <div id="horariosDetail"></div>
-  <div class="section-label" style="margin-top:10px">Intervalos do dia</div>
-  <div class="card" style="margin-bottom:10px">
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Início</label><input class="form-input" type="time" value="11:30"></div>
-      <div class="form-group"><label class="form-label">Fim</label><input class="form-input" type="time" value="12:30"></div>
-    </div>
-    <input class="form-input" type="text" placeholder="Descrição (ex: Almoço)" value="Almoço">
-  </div>
-  <div class="btn-row">
-    <button class="btn btn-ghost" onclick="closeDrawer('horariosDrawer')">Cancelar</button>
-    <button class="btn btn-primary" onclick="closeDrawer('horariosDrawer')">Salvar</button>
+  <div class="btn-row" style="margin-top:14px">
+    <button class="btn btn-ghost" onclick="closeDrawer('horariosDrawer')">Fechar</button>
+    <button class="btn btn-primary" onclick="salvarHorarios()">Salvar</button>
   </div>
 </div></div>
 
-<!-- Config lembretes detalhado -->
-<div class="modal-overlay" id="lembretesDrawer"><div class="drawer">
+<!-- Lembretes de amanhã -->
+<div class="modal-overlay" id="lembretesDiaDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
-  <div class="drawer-title">Lembretes</div>
-  <div class="card" style="margin-bottom:10px">
-    <div class="toggle-row">
-      <div class="toggle-info"><div class="toggle-label">Confirmação imediata</div><div class="toggle-sub">Mensagem ao confirmar agendamento</div></div>
-      <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label>
-    </div>
-    <div class="toggle-row">
-      <div class="toggle-info"><div class="toggle-label">Lembrete — horas antes</div>
-        <div class="toggle-sub"><select class="form-input" style="width:auto;padding:4px 8px;font-size:12px;display:inline"><option>12h antes</option><option selected>24h antes</option><option>48h antes</option></select></div>
-      </div>
-      <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label>
-    </div>
-    <div class="toggle-row">
-      <div class="toggle-info"><div class="toggle-label">Lembrete — horário fixo</div>
-        <div class="toggle-sub">Dia anterior às <input type="time" value="15:00" style="font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--fg)"></div>
-      </div>
-      <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label>
-    </div>
-    <div class="toggle-row">
-      <div class="toggle-info"><div class="toggle-label">Lembrete — minutos antes</div>
-        <div class="toggle-sub"><select class="form-input" style="width:auto;padding:4px 8px;font-size:12px;display:inline"><option>15 min</option><option>20 min</option><option selected>30 min</option><option>60 min</option></select> antes</div>
-      </div>
-      <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label>
-    </div>
-    <div class="toggle-row">
-      <div class="toggle-info"><div class="toggle-label">Pedido de avaliação</div>
-        <div class="toggle-sub"><select class="form-input" style="width:auto;padding:4px 8px;font-size:12px;display:inline"><option selected>2h depois</option><option>4h depois</option><option>1 dia depois</option></select></div>
-      </div>
-      <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label>
-    </div>
-  </div>
+  <div class="drawer-title">Lembretes de amanhã</div>
+  <div class="drawer-subtitle">Toque em Enviar: o WhatsApp abre com a mensagem pronta. Quando a cliente responder, marque Confirmou.</div>
+  <div class="list-card" id="lembretesDiaLista"></div>
+  <button class="btn btn-ghost" style="margin-top:12px" onclick="closeDrawer('lembretesDiaDrawer')">Fechar</button>
+</div></div>
+
+<!-- Modelos de mensagem -->
+<div class="modal-overlay" id="modelosDrawer"><div class="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">Modelos de mensagem</div>
+  <div class="drawer-subtitle">Use {nome}, {servico}, {dia}, {hora}, {data} e {valor} — são trocados automaticamente.</div>
+  <div id="modelosCampos"></div>
+  <button class="btn btn-ghost btn-sm" style="width:auto;margin-bottom:12px" onclick="restaurarModelos()">Voltar ao texto padrão</button>
   <div class="btn-row">
-    <button class="btn btn-ghost" onclick="closeDrawer('lembretesDrawer')">Cancelar</button>
-    <button class="btn btn-primary" onclick="closeDrawer('lembretesDrawer')">Salvar</button>
+    <button class="btn btn-ghost" onclick="closeDrawer('modelosDrawer')">Fechar</button>
+    <button class="btn btn-primary" onclick="salvarModelos()">Salvar</button>
   </div>
 </div></div>
+
+<!-- Exportar relatório -->
+<div class="modal-overlay" id="exportarDrawer"><div class="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">Exportar relatório</div>
+  <div class="drawer-subtitle">Planilhas que abrem no Excel ou no Google Planilhas.</div>
+  <div class="form-group"><label class="form-label">Período</label>
+    <select class="form-input" id="expPeriodo"><option value="mes">Este mês</option><option value="passado">Mês passado</option><option value="ano">Este ano</option></select></div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <button class="btn btn-ghost" onclick="exportarAtendimentos()">Atendimentos</button>
+    <button class="btn btn-ghost" onclick="exportarPagamentos()">Pagamentos recebidos</button>
+    <button class="btn btn-ghost" onclick="exportarDespesas()">Despesas</button>
+  </div>
+  <button class="btn btn-ghost" style="margin-top:14px" onclick="closeDrawer('exportarDrawer')">Fechar</button>
+</div></div>
+
 
 <!-- ================================================================ JS ================================================================ -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -1097,7 +1148,13 @@ const SUPABASE_URL = 'https://rsrpfwtrkpclscpccaok.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_0FRlkE_cdq_RKIpX6pSjGA_boyTYEX0';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const REDIRECT = location.origin + location.pathname;
-let USER = null;
+let USER = null, SESSAO = null;
+const GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/contacts.readonly',      // ler contatos
+  'https://www.googleapis.com/auth/calendar.app.created',   // calendário próprio "Agenda da Duda"
+  'https://www.googleapis.com/auth/calendar.freebusy',      // ver horários ocupados (sem ver detalhes)
+].join(' ');
+let GOOGLE = {conectado:false,email:null,calendarioId:null,contatosSyncEm:null,token:null,expira:0};
 
 // ── DATA (preenchido pelo banco) ──────────────────────────────────
 let ALL_APPTS = [];   // agendamentos deste ano e do próximo
@@ -1166,6 +1223,7 @@ const CORES_CLIENTE = ['#B5637A','#7366B0','#5E8C7A','#A07F5C','#6F7F99','#9A6B8
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function pad2(n){return String(n).padStart(2,'0')}
 function hhmm(d){return pad2(d.getHours())+':'+pad2(d.getMinutes())}
+function toMin(t){const [h,m]=String(t).split(':').map(Number);return h*60+m}
 function ymd(d){return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())}
 function hoje0(){const d=new Date();d.setHours(0,0,0,0);return d}
 function addDias(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
@@ -1204,11 +1262,14 @@ async function q(req){
 async function initAuth(){
   sb.auth.onAuthStateChange((ev,session)=>{
     // não chamar o Supabase direto dentro do callback (trava a sessão)
+    if(session) SESSAO=session;
+    // volta do Google com permissão nova: guarda a conexão
+    if(session?.provider_refresh_token) setTimeout(()=>salvarConexaoGoogle(session),0);
     if(session&&(!USER||USER.id!==session.user.id)) setTimeout(()=>entrar(session.user),0);
     if(ev==='SIGNED_OUT') mostrarLogin();
   });
   const {data:{session}}=await sb.auth.getSession();
-  if(session) entrar(session.user); else mostrarLogin();
+  if(session){SESSAO=session;entrar(session.user)} else mostrarLogin();
 }
 function mostrarLogin(){
   USER=null;
@@ -1234,14 +1295,18 @@ async function entrar(user){
     openDrawer('novoAgendDrawer');
   }
 }
-async function loginGoogle(){
-  const msg=document.getElementById('loginMsg');
+async function googleAtivo(){
   try{
     const r=await fetch(SUPABASE_URL+'/auth/v1/settings',{headers:{apikey:SUPABASE_KEY}});
-    const s=await r.json();
-    if(!s.external?.google){msg.innerHTML='<span style="color:var(--warn)">O login com Google ainda não foi ativado. Use e-mail e senha.</span>';return}
-  }catch(e){}
-  const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:REDIRECT}});
+    return !!(await r.json()).external?.google;
+  }catch(e){return true}
+}
+// Entrar com Google já pede contatos e calendário (offline = acesso continua depois)
+async function loginGoogle(){
+  const msg=document.getElementById('loginMsg');
+  if(!await googleAtivo()){msg.innerHTML='<span style="color:var(--warn)">O login com Google ainda não foi ativado. Use e-mail e senha.</span>';return}
+  const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:REDIRECT,scopes:GOOGLE_SCOPES,
+    queryParams:{access_type:'offline',prompt:'consent'}}});
   if(error) msg.innerHTML=`<span style="color:var(--danger)">${esc(error.message)}</span>`;
 }
 // E-mail + senha não depende de URL de retorno configurada no Supabase.
@@ -1297,7 +1362,8 @@ async function carregarAgendamentos(){
       service:r.servico_nome,type:r.tipo,status:r.status,price,
       dur:Math.round((f-i)/6e4),obs:r.observacoes,local:r.local,
       pagos,pago,falta:Math.max(0,Math.round((price-pago)*100)/100),
-      pagarAte:r.pagar_ate?new Date(r.pagar_ate+'T12:00:00'):null};
+      pagarAte:r.pagar_ate?new Date(r.pagar_ate+'T12:00:00'):null,
+      lembreteEm:r.lembrete_enviado_em?new Date(r.lembrete_enviado_em):null,origem:r.origem};
   });
 }
 async function recarregar(){
@@ -1314,6 +1380,20 @@ async function recarregar(){
       q(sb.from('bloqueios').select('*').gte('fim',new Date(Date.now()-90*864e5).toISOString()).order('inicio')),
       carregarAgendamentos(),
     ]);
+    const [{data:fotos},{data:hors},{data:perf}]=await Promise.all([
+      sb.from('portfolio_fotos').select('*').order('criado_em',{ascending:false}),
+      sb.from('horarios').select('*'),
+      sb.from('perfil').select('*').maybeSingle(),
+    ]);
+    FOTOS=fotos||[];
+    PERFIL=perf||{};
+    HORARIOS=[0,1,2,3,4,5,6].map(d=>{
+      const h=(hors||[]).find(x=>x.dia_semana===d);
+      return h?{dia:d,aberto:!!h.abre,abre:hm(h.abre),fecha:hm(h.fecha),almIni:hm(h.almoco_inicio),almFim:hm(h.almoco_fim)}:horarioPadrao(d);
+    });
+    const {data:gc}=await sb.from('google_conexao').select('email_google,calendario_id,contatos_sync_em').maybeSingle();
+    GOOGLE.conectado=!!gc;
+    if(gc){GOOGLE.email=gc.email_google;GOOGLE.calendarioId=gc.calendario_id;GOOGLE.contatosSyncEm=gc.contatos_sync_em}
     CLIENTS=cli.map(c=>({id:c.id,name:c.nome,type:c.tipo,visits:Number(c.visitas),last:relDia(c.ultima_visita),
       color:c.cor,phone:c.telefone||'',bday:c.nascimento,vip:c.vip,faltou:Number(c.faltas),pref:c.preferencias,obs:c.observacoes}));
     const mapSvc=s=>({id:s.id,name:s.nome,tipo:s.tipo,dur:s.duracao_min,int:s.intervalo_min,price:Number(s.preco),
@@ -1345,7 +1425,8 @@ function renderTudo(){
   renderNotifs();
   renderConfig();
   renderLembretesCard();
-  renderHorariosConfig();
+
+  renderGoogleCard();
   buildCalendar();
   document.getElementById('clientesDatalist').innerHTML=CLIENTS.map(c=>`<option value="${esc(c.name)}">`).join('');
   loadServicesForm();
@@ -1436,7 +1517,7 @@ function renderAppointments() {
       <div class="appt-body">
         <div class="appt-name">${esc(a.name)}</div>
         <div class="appt-service">${esc(a.service)} · até ${a.end}</div>
-        <div class="appt-meta">${typeB}${stB}${pagBadge(a)}</div>
+        <div class="appt-meta">${typeB}${stB}${pagBadge(a)}${a.origem==='online'?'<span class="badge badge-info">Online</span>':''}</div>
       </div>
       <div class="appt-price">${fmtR(a.price)}</div>`;
     card.onclick = ()=>openDetail(a);
@@ -1462,6 +1543,8 @@ function renderAlerts() {
   if(baixo) h+=`<div class="alert alert-danger"><span>${baixo} produto${baixo>1?'s':''} com estoque baixo</span></div>`;
   let dispensado=false;try{dispensado=localStorage.getItem('instalarDispensado')==='1'}catch(e){}
   if(podeInstalar()&&!dispensado) h+=`<div class="alert alert-info"><span style="flex:1">Instale o app para abrir direto da tela inicial.</span><button class="btn btn-primary btn-sm" style="width:auto;padding:6px 12px" onclick="instalarApp()">Instalar</button><button class="icon-btn" style="width:28px;height:28px;margin:-4px -6px 0 0" title="Agora não" onclick="dispensarInstalar()">×</button></div>`;
+  const semLembrete=paraLembrar().filter(a=>!a.lembreteEm&&a.phone).length;
+  if(semLembrete) h+=`<div class="alert alert-warn" style="cursor:pointer" onclick="abrirLembretesDia()"><span>${semLembrete} lembrete${semLembrete>1?'s':''} de amanhã para enviar</span></div>`;
   const venc=ALL_APPTS.filter(VENCIDO);
   if(venc.length) h+=`<div class="alert alert-danger" style="cursor:pointer" onclick="gotoPage('financeiro',document.querySelectorAll('.nav-item')[3]);document.getElementById('aReceberLabel').scrollIntoView({behavior:'smooth'})"><span>${venc.length} pagamento${venc.length>1?'s':''} vencido${venc.length>1?'s':''} · ${fmtR(venc.reduce((s,a)=>s+a.falta,0))}</span></div>`;
   c.innerHTML = h;
@@ -1469,7 +1552,7 @@ function renderAlerts() {
 function openDetail(a) {
   const cli=CLIENTS.find(c=>c.id===a.cliente_id);
   const gasto=ALL_APPTS.filter(x=>x.cliente_id===a.cliente_id&&x.status==='concluido').reduce((s,x)=>s+x.price,0);
-  const lembrete=waLink(a.phone,`Olá ${a.name.split(' ')[0]}! Lembrando do seu horário de ${a.service} ${labelDia(new Date(a.ini.getFullYear(),a.ini.getMonth(),a.ini.getDate())).toLowerCase()} às ${a.time}. Posso confirmar? 💅`);
+  const lembrete=waLink(a.phone,modelo('lembrete',varsAgendamento(a)));
   document.getElementById('detailTitle').textContent = a.name;
   document.getElementById('detailBody').innerHTML = `
     <div class="card" style="margin-bottom:12px">
@@ -1500,6 +1583,7 @@ function openDetail(a) {
 }
 async function mudarStatus(id,status){
   try{await q(sb.from('agendamentos').update({status}).eq('id',id))}catch(e){return}
+  syncEmSegundoPlano(id);
   await recarregar();
   const a=ALL_APPTS.find(x=>x.id===id);
   // ao concluir com valor em aberto, deixa o detalhe aberto para registrar o pagamento
@@ -1518,7 +1602,8 @@ function pagamentoHTML(a){
   if(!a.price&&!a.pagos.length) return '';
   const pct=a.price?Math.min(100,Math.round(a.pago/a.price*100)):100;
   const linha=(rot,val,cor)=>`<div style="display:flex;justify-content:space-between;font-size:14px;padding:3px 0"><span style="color:var(--fg-muted)">${rot}</span><span style="font-weight:500;font-variant-numeric:tabular-nums${cor?';color:'+cor:''}">${val}</span></div>`;
-  const cobrar=a.falta>0&&EM_ABERTO(a)?waLink(a.phone,`Oi ${a.name.split(' ')[0]}! Tudo bem? Passando para lembrar do valor de ${fmtR(a.falta)} do ${a.service} do dia ${a.ini.toLocaleDateString('pt-BR')}. Pode ser por Pix 😊`):null;
+  const cobrar=a.falta>0&&EM_ABERTO(a)?waLink(a.phone,modelo('cobranca',varsAgendamento(a))):null;
+  const avaliar=a.status==='concluido'?waLink(a.phone,modelo('avaliacao',varsAgendamento(a))):null;
   return `
     <div style="font-size:13px;color:var(--fg-muted);font-weight:500;margin-bottom:8px">Pagamento</div>
     <div class="card" style="margin-bottom:12px">
@@ -1539,6 +1624,7 @@ function pagamentoHTML(a){
         <button class="btn btn-primary btn-sm" onclick="registrarPagamento('${a.id}')">Registrar pagamento</button>
         <div class="form-group" style="margin:12px 0 0"><label class="form-label">Combinado para pagar o restante em</label><input class="form-input" type="date" value="${a.pagarAte?ymd(a.pagarAte):''}" onchange="salvarPagarAte('${a.id}',this.value)"></div>
         ${cobrar?`<a class="btn btn-ghost btn-sm" style="margin-top:10px" href="${cobrar}" target="_blank" rel="noopener">Cobrar pelo WhatsApp</a>`:''}`:''}
+      ${avaliar?`<a class="btn btn-ghost btn-sm" style="margin-top:10px" href="${avaliar}" target="_blank" rel="noopener">Pedir avaliação</a>`:''}
     </div>`;
 }
 async function reabrirDetalhe(id){
@@ -1675,7 +1761,7 @@ function renderAniversarios() {
   if(!sorted.length) el.innerHTML='<div class="empty-state">Nenhuma cliente com data de nascimento.</div>';
   sorted.forEach(c => {
     const bday = new Date(c.bday+'T12:00:00');
-    const wa=waLink(c.phone,`Feliz aniversário, ${c.name.split(' ')[0]}! 🎂🎉 Um beijo da Duda ✨`);
+    const wa=waLink(c.phone,modelo('aniversario',{nome:c.name.split(' ')[0]}));
     const row = document.createElement('div');
     row.className = 'birthday-row';
     row.innerHTML = `
@@ -2049,24 +2135,25 @@ async function salvarBloqueio(tipo){
 // ── CONFIG ────────────────────────────────────────────────────────
 function configGroups(){
   const folgas=BLOQUEIOS.filter(b=>b.tipo==='folga'&&b.fim>new Date()).length;
+  const abertos=HORARIOS.filter(h=>h.aberto).length;
   return [
   [
-    {icon:'🗓️',label:'Horários de funcionamento',sub:`Agenda das ${pad2(HORA_ABRE)}:00 às ${pad2(HORA_FECHA)}:00`,action:()=>openDrawer('horariosDrawer')},
-    {icon:'🌴',label:'Dias de folga',sub:folgas?`${folgas} folga${folgas>1?'s':''} programada${folgas>1?'s':''}`:'Nenhuma folga programada',action:()=>openDrawer('folga2Drawer')},
-    {icon:'🔒',label:'Bloquear horário',sub:'Bloquear horário específico',action:()=>openDrawer('bloquearDrawer')},
-    {icon:'📅',label:'Agendamento online',sub:'Em breve (robô do WhatsApp)',action:()=>{}},
+    {icon:'',label:'Horários de funcionamento',sub:abertos?`${abertos} dia${abertos>1?'s':''} por semana · ${resumoHorarios()}`:'Nenhum dia aberto',action:()=>abrirHorarios()},
+    {icon:'',label:'Dias de folga',sub:folgas?`${folgas} folga${folgas>1?'s':''} programada${folgas>1?'s':''}`:'Nenhuma folga programada',action:()=>openDrawer('folga2Drawer')},
+    {icon:'',label:'Bloquear horário',sub:'Bloquear horário específico',action:()=>openDrawer('bloquearDrawer')},
+    {icon:'',label:'Agendamento online',sub:PERFIL.agendamento_online&&PERFIL.slug?'Ativo · '+linkAgendamento().replace(/^https?:\/\//,''):'Link para as clientes marcarem sozinhas',action:()=>abrirPerfil(true)},
   ],
   [
-    {icon:'🤖',label:'Robô WhatsApp',sub:'Em breve · Evolution API + n8n',action:()=>{}},
-    {icon:'🔔',label:'Lembretes automáticos',sub:'Configuração (ativa com o robô)',action:()=>openDrawer('lembretesDrawer')},
-    {icon:'💬',label:'Templates de mensagem',sub:'Em breve',action:()=>{}},
+    {icon:'',label:'Lembretes de amanhã',sub:resumoLembretes(),action:()=>abrirLembretesDia()},
+    {icon:'',label:'Modelos de mensagem',sub:'Lembrete, cobrança, aniversário e avaliação',action:()=>abrirModelos()},
+    {icon:'',label:'Robô do WhatsApp',sub:'Envio automático precisa de um servidor (próxima etapa)',action:()=>toast('Por enquanto os lembretes são enviados com um toque, em “Lembretes de amanhã”.')},
   ],
   [
-    {icon:'🖼️',label:'Galeria & portfólio',sub:'Em breve: fotos reais',action:()=>{}},
-    {icon:'📊',label:'Exportar relatório',sub:'Em breve',action:()=>{}},
-    {icon:'👤',label:'Minha conta',sub:USER?USER.email:'',action:()=>openDrawer('perfilDrawer')},
+    {icon:'',label:'Portfólio',sub:FOTOS.length?`${FOTOS.length} foto${FOTOS.length>1?'s':''}`:'Adicione fotos dos trabalhos',action:()=>{gotoPage('financeiro',document.querySelectorAll('.nav-item')[3]);setFinTab('galeria',document.querySelectorAll('#page-financeiro .tab-item')[3])}},
+    {icon:'',label:'Exportar relatório',sub:'Planilha de atendimentos, pagamentos e despesas',action:()=>openDrawer('exportarDrawer')},
+    {icon:'',label:'Meu perfil e conta',sub:USER?USER.email:'',action:()=>abrirPerfil(false)},
     {icon:'',label:'Instalar o app',sub:jaInstalado()?'Já instalado neste aparelho':podeInstalar()?'Ícone na tela inicial, abre em tela cheia':'No Android: Chrome → menu ⋮ → Instalar app',action:()=>instalarApp()},
-    {icon:'ℹ️',label:'Sobre o sistema',sub:'Versão 2.2 · Agenda da Duda',action:()=>{}},
+    {icon:'',label:'Sobre o sistema',sub:'Versão 3.0 · Agenda da Duda',action:()=>{}},
   ],
   ];
 }
@@ -2077,47 +2164,227 @@ function renderConfig() {
     group.forEach((c,i) => {
       const d = document.createElement('div');
       d.className = 'settings-row';
-      d.innerHTML = `<span class="settings-icon">${c.icon}</span><div class="settings-text"><div class="settings-label">${c.label}</div><div class="settings-sub">${esc(c.sub)}</div></div><span class="chevron">›</span>`;
+      d.innerHTML = `<div class="settings-text"><div class="settings-label">${c.label}</div><div class="settings-sub">${esc(c.sub)}</div></div><span class="chevron">›</span>`;
       d.onclick = c.action;
       el.appendChild(d);
     });
   });
 }
 
-function renderLembretesCard() {
-  document.getElementById('lembretesCard').innerHTML = `
-    <div class="alert alert-info" style="margin-bottom:6px"><span>Os lembretes automáticos começam a funcionar quando o robô do WhatsApp for ligado. Por enquanto, use o botão Lembrete em cada agendamento.</span></div>
-    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Confirmação imediata</div><div class="toggle-sub">Mensagem ao criar agendamento</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label></div>
-    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">24h antes</div><div class="toggle-sub">Lembrete no dia anterior</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label></div>
-    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Pedido de avaliação</div><div class="toggle-sub">2 horas após o atendimento</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label></div>
-    <div style="margin-top:12px"><button class="btn btn-primary btn-sm" style="width:auto" onclick="openDrawer('lembretesDrawer')">Configurar</button></div>`;
+// ── HORÁRIOS DE FUNCIONAMENTO ─────────────────────────────────────
+// Mesmo padrão da função horario_do_dia() do banco.
+const DIAS_SEMANA=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const horarioPadrao=d=>({dia:d,aberto:d!==0,abre:'08:00',fecha:d===6?'13:00':'18:00',almIni:d===6?null:'12:00',almFim:d===6?null:'13:00'});
+let HORARIOS=[0,1,2,3,4,5,6].map(horarioPadrao);
+const hm=t=>t?String(t).slice(0,5):null;
+function resumoHorarios(){
+  const seg=HORARIOS[1];
+  return seg.aberto?`seg ${seg.abre}–${seg.fecha}`:'';
 }
-function renderHorariosConfig() {
-  const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-  const el = document.getElementById('horariosConfig');
-  if(!el)return;
-  el.innerHTML='';
-  dias.forEach((d,i)=>{
-    const row = document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:10px;font-size:13px';
-    const active = i>=1&&i<=6;
-    row.innerHTML=`<span style="width:32px;font-weight:600;color:var(--fg-muted)">${d}</span><label class="toggle"><input type="checkbox" ${active?'checked':''}><div class="toggle-track"></div></label>${active?`<input type="time" value="08:00" class="form-input" style="flex:1;padding:6px 9px;font-size:12px"><span style="color:var(--fg-muted)">–</span><input type="time" value="18:00" class="form-input" style="flex:1;padding:6px 9px;font-size:12px">`:'<span style="color:var(--fg-soft);font-size:12px">Fechado</span>'}`;
-    el.appendChild(row);
+function abrirHorarios(){
+  const el=document.getElementById('horariosDetail');
+  el.innerHTML=HORARIOS.map(h=>`
+    <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="flex:1;font-weight:500">${DIAS_SEMANA[h.dia]}</span>
+        <label class="toggle"><input type="checkbox" id="hAb${h.dia}" ${h.aberto?'checked':''} onchange="document.getElementById('hRow${h.dia}').hidden=!this.checked"><div class="toggle-track"></div></label>
+      </div>
+      <div id="hRow${h.dia}" ${h.aberto?'':'hidden'} style="margin-top:8px">
+        <div class="form-row"><div class="form-group" style="margin:0"><label class="form-label">Abre</label><input class="form-input" type="time" id="hA${h.dia}" value="${h.abre||'08:00'}"></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Fecha</label><input class="form-input" type="time" id="hF${h.dia}" value="${h.fecha||'18:00'}"></div></div>
+        <div class="form-row" style="margin-top:8px"><div class="form-group" style="margin:0"><label class="form-label">Almoço de</label><input class="form-input" type="time" id="hLi${h.dia}" value="${h.almIni||''}"></div>
+        <div class="form-group" style="margin:0"><label class="form-label">até</label><input class="form-input" type="time" id="hLf${h.dia}" value="${h.almFim||''}"></div></div>
+      </div>
+    </div>`).join('')+'<div class="client-sub" style="padding:10px 0 4px;white-space:normal">Deixe o almoço em branco nos dias sem pausa. Esses horários valem para a agenda e para o link de agendamento online.</div>';
+  openDrawer('horariosDrawer');
+}
+async function salvarHorarios(){
+  const v=id=>document.getElementById(id).value||null;
+  const rows=[];
+  for(const d of [0,1,2,3,4,5,6]){
+    const aberto=document.getElementById('hAb'+d).checked;
+    const abre=v('hA'+d), fecha=v('hF'+d), li=v('hLi'+d), lf=v('hLf'+d);
+    if(aberto&&(!abre||!fecha||abre>=fecha)){toast(`${DIAS_SEMANA[d]}: o horário de fechar precisa ser depois do de abrir`);return}
+    if(aberto&&(!!li!==!!lf||(li&&(li>=lf||li<abre||lf>fecha)))){toast(`${DIAS_SEMANA[d]}: confira o horário de almoço`);return}
+    rows.push({dia_semana:d,abre:aberto?abre:null,fecha:aberto?fecha:null,almoco_inicio:aberto?li:null,almoco_fim:aberto?lf:null});
+  }
+  try{await q(sb.from('horarios').upsert(rows,{onConflict:'owner_id,dia_semana'}))}catch(e){return}
+  closeDrawer('horariosDrawer');
+  toast('Horários salvos');
+  await recarregar();
+}
+
+// ── PERFIL E AGENDAMENTO ONLINE ───────────────────────────────────
+let PERFIL={};
+const BASE_SITE=location.origin+location.pathname.replace(/[^/]*$/,'');
+const linkAgendamento=()=>PERFIL.slug?`${BASE_SITE}agendar.html?u=${PERFIL.slug}`:'';
+function abrirPerfil(focarOnline){
+  const p=PERFIL;
+  document.getElementById('perfNome').value=p.nome||'';
+  document.getElementById('perfWhats').value=p.whatsapp?fmtTel(p.whatsapp):'';
+  document.getElementById('perfBio').value=p.bio||'';
+  document.getElementById('perfOnline').checked=!!p.agendamento_online;
+  document.getElementById('perfSlug').value=p.slug||'';
+  document.getElementById('perfAntec').value=String(p.antecedencia_min??120);
+  document.getElementById('perfDias').value=String(p.dias_frente??30);
+  document.getElementById('perfFotoPrev').style.backgroundImage=p.foto_capa?`url("${urlFoto(p.foto_capa)}")`:'';
+  atualizarLinkPerfil();
+  openDrawer('perfilDrawer');
+  if(focarOnline) setTimeout(()=>document.getElementById('perfOnlineSec').scrollIntoView({behavior:'smooth'}),300);
+}
+function atualizarLinkPerfil(){
+  const slug=document.getElementById('perfSlug').value.trim().toLowerCase();
+  const on=document.getElementById('perfOnline').checked;
+  document.getElementById('perfOnlineCampos').hidden=!on;
+  document.getElementById('perfLink').textContent=slug?`${BASE_SITE}agendar.html?u=${slug}`:'Escolha um endereço curto, ex: duda';
+}
+async function salvarPerfil(){
+  const slug=document.getElementById('perfSlug').value.trim().toLowerCase();
+  const on=document.getElementById('perfOnline').checked;
+  if(on&&!/^[a-z0-9-]{3,40}$/.test(slug)){toast('Endereço: só letras minúsculas, números e hífen (mín. 3)');return}
+  const row={nome:document.getElementById('perfNome').value.trim()||null,whatsapp:normTel(document.getElementById('perfWhats').value),
+    bio:document.getElementById('perfBio').value.trim()||null,agendamento_online:on,slug:slug||null,
+    antecedencia_min:parseInt(document.getElementById('perfAntec').value),dias_frente:parseInt(document.getElementById('perfDias').value),
+    atualizado_em:new Date().toISOString()};
+  const {error}=await sb.from('perfil').upsert(row,{onConflict:'owner_id'});
+  if(error){toast(error.code==='23505'?'Esse endereço já está em uso. Escolha outro.':'Erro: '+error.message);return}
+  closeDrawer('perfilDrawer');
+  toast('Perfil salvo');
+  await recarregar();
+}
+async function enviarFotoCapa(input){
+  const a=input.files[0];if(!a)return;
+  toast('Enviando foto…');
+  try{
+    const blob=await reduzirImagem(a);
+    const caminho=`${USER.id}/capa-${crypto.randomUUID()}.jpg`;
+    const up=await sb.storage.from('portfolio').upload(caminho,blob,{contentType:'image/jpeg',cacheControl:'31536000'});
+    if(up.error) throw up.error;
+    const antiga=PERFIL.foto_capa;
+    await q(sb.from('perfil').upsert({foto_capa:caminho,atualizado_em:new Date().toISOString()},{onConflict:'owner_id'}));
+    if(antiga) sb.storage.from('portfolio').remove([antiga]);
+    PERFIL.foto_capa=caminho;
+    document.getElementById('perfFotoPrev').style.backgroundImage=`url("${urlFoto(caminho)}")`;
+    toast('Foto de capa salva');
+  }catch(e){toast('Foto: '+e.message)}
+  input.value='';
+}
+async function copiarLink(){
+  const l=linkAgendamento()||document.getElementById('perfLink').textContent;
+  if(navigator.share){try{await navigator.share({title:'Agende seu horário',url:l});return}catch(e){}}
+  try{await navigator.clipboard.writeText(l);toast('Link copiado')}catch(e){toast(l)}
+}
+
+// ── MODELOS DE MENSAGEM ───────────────────────────────────────────
+const MODELOS_PADRAO={
+  lembrete:'Oi {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora}. Posso confirmar? 💅',
+  cobranca:'Oi {nome}! Tudo bem? Passando para lembrar do valor de {valor} do {servico} do dia {data}. Pode ser por Pix 😊',
+  aniversario:'Feliz aniversário, {nome}! 🎂🎉 Um beijo da Duda ✨',
+  avaliacao:'Oi {nome}! Obrigada pela visita hoje 💖 Se puder, me conta de 1 a 5 o que achou do atendimento?',
+};
+const ROTULOS_MODELOS={lembrete:'Lembrete do horário',cobranca:'Cobrança',aniversario:'Aniversário',avaliacao:'Pedido de avaliação'};
+function modelo(tipo,vars){
+  let t=(PERFIL.modelos&&PERFIL.modelos[tipo])||MODELOS_PADRAO[tipo];
+  return t.replace(/\{(\w+)\}/g,(m,k)=>vars[k]??m);
+}
+function varsAgendamento(a){
+  const dia=labelDia(new Date(a.ini.getFullYear(),a.ini.getMonth(),a.ini.getDate())).toLowerCase();
+  return {nome:a.name.split(' ')[0],servico:a.service,dia:/^(hoje|amanhã|ontem)$/.test(dia)?dia:'dia '+a.ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}),
+    hora:a.time,data:a.ini.toLocaleDateString('pt-BR'),valor:fmtR(a.falta||a.price)};
+}
+function abrirModelos(){
+  document.getElementById('modelosCampos').innerHTML=Object.keys(MODELOS_PADRAO).map(k=>`
+    <div class="form-group"><label class="form-label">${ROTULOS_MODELOS[k]}</label>
+    <textarea class="form-input" id="mod_${k}" rows="3" style="resize:vertical">${esc((PERFIL.modelos&&PERFIL.modelos[k])||MODELOS_PADRAO[k])}</textarea></div>`).join('');
+  openDrawer('modelosDrawer');
+}
+async function salvarModelos(){
+  const modelos={};
+  Object.keys(MODELOS_PADRAO).forEach(k=>{const v=document.getElementById('mod_'+k).value.trim();if(v&&v!==MODELOS_PADRAO[k])modelos[k]=v});
+  const {error}=await sb.from('perfil').upsert({modelos,atualizado_em:new Date().toISOString()},{onConflict:'owner_id'});
+  if(error){toast('Erro: '+error.message);return}
+  PERFIL.modelos=modelos;
+  closeDrawer('modelosDrawer');toast('Modelos salvos');
+}
+function restaurarModelos(){Object.keys(MODELOS_PADRAO).forEach(k=>document.getElementById('mod_'+k).value=MODELOS_PADRAO[k])}
+
+// ── LEMBRETES DE AMANHÃ (um toque cada) ───────────────────────────
+function paraLembrar(){
+  const amanha=ymd(addDias(hoje0(),1));
+  return ALL_APPTS.filter(a=>ATIVOS(a)&&ymd(a.ini)===amanha&&a.status!=='concluido');
+}
+function resumoLembretes(){
+  const l=paraLembrar(), env=l.filter(a=>a.lembreteEm).length;
+  return l.length?`${l.length} cliente${l.length>1?'s':''} amanhã · ${env} lembrete${env===1?'':'s'} enviado${env===1?'':'s'}`:'Ninguém marcado para amanhã';
+}
+function renderLembretesCard(){
+  const l=paraLembrar(), faltam=l.filter(a=>!a.lembreteEm&&a.phone).length;
+  document.getElementById('lembretesCard').innerHTML=`
+    <div class="toggle-sub" style="font-size:13.5px;padding:4px 0 12px">${l.length?`${l.length} cliente${l.length>1?'s':''} amanhã${faltam?` · ${faltam} sem lembrete`:' · todos lembrados'}.`:'Ninguém marcado para amanhã.'} Cada lembrete abre o WhatsApp com a mensagem pronta.</div>
+    <button class="btn btn-primary btn-sm" onclick="abrirLembretesDia()">Abrir lembretes de amanhã</button>`;
+}
+function abrirLembretesDia(){
+  const l=paraLembrar();
+  const el=document.getElementById('lembretesDiaLista');
+  el.innerHTML=l.length?'':'<div class="empty-state">Ninguém marcado para amanhã.</div>';
+  l.forEach(a=>{
+    const link=waLink(a.phone,modelo('lembrete',varsAgendamento(a)));
+    el.insertAdjacentHTML('beforeend',`<div class="client-row" style="cursor:default">
+      <div class="client-info"><div class="client-name">${a.time} · ${esc(a.name)}</div>
+      <div class="client-sub">${esc(a.service)} · <span class="badge ${STATUS_MAP[a.status].cls}" style="font-size:10.5px;padding:1px 6px">${STATUS_MAP[a.status].label}</span>${a.lembreteEm?' · lembrete enviado':''}</div></div>
+      ${link?`<a class="btn ${a.lembreteEm?'btn-ghost':'btn-primary'} btn-sm" style="width:auto" href="${link}" target="_blank" rel="noopener" onclick="marcarLembrete('${a.id}')">${a.lembreteEm?'De novo':'Enviar'}</a>`:'<span class="client-sub">sem WhatsApp</span>'}
+      ${a.status==='agendado'?`<button class="btn btn-ghost btn-sm" style="width:auto" onclick="confirmarDaLista('${a.id}')">Confirmou</button>`:''}
+    </div>`);
   });
+  openDrawer('lembretesDiaDrawer');
 }
-function renderHorariosDetail() {
-  const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-  const el = document.getElementById('horariosDetail');
-  if(!el)return;
-  el.innerHTML='';
-  dias.forEach((d,i)=>{
-    const active=i>=1&&i<=6;
-    const row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px';
-    row.innerHTML=`<span style="width:36px;font-weight:600">${d}</span><label class="toggle"><input type="checkbox" ${active?'checked':''}><div class="toggle-track"></div></label>${active?`<input type="time" value="08:00" class="form-input" style="flex:1;padding:6px;font-size:12px"><span style="color:var(--fg-muted)">–</span><input type="time" value="18:00" class="form-input" style="flex:1;padding:6px;font-size:12px">`:'<span style="color:var(--fg-soft)">Fechado</span>'}`;
-    el.appendChild(row);
-  });
+async function marcarLembrete(id){
+  const a=ALL_APPTS.find(x=>x.id===id);if(a)a.lembreteEm=new Date();
+  await sb.from('agendamentos').update({lembrete_enviado_em:new Date().toISOString()}).eq('id',id);
+  setTimeout(()=>{if(document.getElementById('lembretesDiaDrawer').classList.contains('open'))abrirLembretesDia()},800);
 }
+async function confirmarDaLista(id){
+  try{await q(sb.from('agendamentos').update({status:'confirmado'}).eq('id',id))}catch(e){return}
+  syncEmSegundoPlano(id);
+  await recarregar();
+  abrirLembretesDia();
+}
+
+// ── EXPORTAR RELATÓRIO (CSV para Excel/Planilhas) ─────────────────
+function periodoExport(){
+  const v=document.getElementById('expPeriodo').value, n=hoje0();
+  if(v==='mes') return [new Date(n.getFullYear(),n.getMonth(),1),new Date(n.getFullYear(),n.getMonth()+1,1),'mes-atual'];
+  if(v==='passado') return [new Date(n.getFullYear(),n.getMonth()-1,1),new Date(n.getFullYear(),n.getMonth(),1),'mes-passado'];
+  return [new Date(n.getFullYear(),0,1),new Date(n.getFullYear()+1,0,1),'ano-'+n.getFullYear()];
+}
+function baixarCSV(nome,linhas){
+  const cel=v=>{v=v==null?'':String(v);return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const csv='﻿'+linhas.map(l=>l.map(cel).join(';')).join('\r\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=nome;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+const num=v=>Number(v||0).toFixed(2).replace('.',',');
+function exportarAtendimentos(){
+  const [i,f,rot]=periodoExport();
+  const l=ALL_APPTS.filter(a=>a.ini>=i&&a.ini<f);
+  baixarCSV(`atendimentos-${rot}.csv`,[['Data','Hora','Cliente','Telefone','Serviço','Tipo','Status','Valor','Pago','Falta','Formas de pagamento','Local','Observações'],
+    ...l.map(a=>[a.ini.toLocaleDateString('pt-BR'),a.time,a.name,fmtTel(a.phone),a.service,a.type,STATUS_MAP[a.status].label,num(a.price),num(a.pago),num(ATIVOS(a)?a.falta:0),
+      [...new Set(a.pagos.map(p=>FORMAS[p.forma]))].join(', '),a.local,a.obs||''])]);
+}
+function exportarPagamentos(){
+  const [i,f,rot]=periodoExport();
+  const l=ALL_APPTS.flatMap(a=>a.pagos.map(p=>({...p,a}))).filter(p=>p.em>=i&&p.em<f).sort((x,y)=>x.em-y.em);
+  baixarCSV(`pagamentos-${rot}.csv`,[['Data do pagamento','Cliente','Serviço','Data do atendimento','Forma','Valor'],
+    ...l.map(p=>[p.em.toLocaleDateString('pt-BR'),p.a.name,p.a.service,p.a.ini.toLocaleDateString('pt-BR'),FORMAS[p.forma],num(p.valor)])]);
+}
+function exportarDespesas(){
+  const [i,f,rot]=periodoExport();
+  const l=EXPENSES.filter(e=>e.dataD>=i&&e.dataD<f);
+  baixarCSV(`despesas-${rot}.csv`,[['Data','Descrição','Categoria','Valor'],...l.map(e=>[e.dataD.toLocaleDateString('pt-BR'),e.desc,e.cat,num(e.valor)])]);
+}
+
 
 // ── FORM / SLOTS ──────────────────────────────────────────────────
 function svcSelecionado(){
@@ -2135,6 +2402,7 @@ function loadServicesForm() {
 }
 // Um horário está livre se [início, início+duração+intervalo) não encosta em
 // nenhum agendamento ativo nem bloqueio, e cabe no expediente.
+let foraDoExpediente=false;
 function loadSlots() {
   const grid = document.getElementById('slotGrid');
   grid.innerHTML = '';
@@ -2142,15 +2410,27 @@ function loadSlots() {
   if(!dataStr)return;
   const svc=svcSelecionado();
   const durMin=svc?svc.dur+svc.int:30;
+  const hor=HORARIOS[new Date(dataStr+'T12:00').getDay()];
+  const busyG=BUSY_GOOGLE[dataStr]||[];
+  if(GOOGLE.conectado&&!BUSY_GOOGLE[dataStr]) ocupadoGoogle(dataStr).then(()=>{if(document.getElementById('inputData').value===dataStr)loadSlots()});
   const ocupados=[
     ...ALL_APPTS.filter(a=>ATIVOS(a)&&a.id!==remarcandoId).map(a=>[a.ini,a.fim]),
     ...BLOQUEIOS.map(b=>[b.ini,b.fim]),
+    ...busyG,
   ];
-  const fimDia=new Date(dataStr+'T'+pad2(HORA_FECHA)+':00');
+  // expediente do dia (ou 7h–21h quando a Duda pede para marcar fora do horário)
+  const abre=foraDoExpediente||!hor.aberto?'07:00':hor.abre, fecha=foraDoExpediente||!hor.aberto?'21:00':hor.fecha;
+  if(!foraDoExpediente&&hor.aberto&&hor.almIni) ocupados.push([new Date(dataStr+'T'+hor.almIni),new Date(dataStr+'T'+hor.almFim)]);
+  if(!hor.aberto&&!foraDoExpediente){
+    grid.innerHTML=`<div style="grid-column:1/-1;font-size:13px;color:var(--fg-muted);text-align:center;padding:8px">${DIAS_SEMANA[hor.dia]} o studio está fechado. <a href="#" onclick="foraDoExpediente=true;loadSlots();return false" style="color:var(--fg)">Marcar mesmo assim</a></div>`;
+    return;
+  }
+  const fimDia=new Date(dataStr+'T'+fecha);
   const agora=new Date();
   let livres=0;
-  for(let h=HORA_ABRE;h<HORA_FECHA;h++) for(let m=0;m<60;m+=30){
-    const t=pad2(h)+':'+pad2(m);
+  const [ah,am]=abre.split(':').map(Number);
+  for(let min=ah*60+Math.ceil(am/30)*30;min<toMin(fecha);min+=30){
+    const t=pad2(Math.floor(min/60))+':'+pad2(min%60);
     const ini=new Date(dataStr+'T'+t), fim=new Date(ini.getTime()+durMin*6e4);
     const taken = ini<agora || fim>fimDia || ocupados.some(([oi,of])=>ini<of&&fim>oi);
     if(!taken)livres++;
@@ -2165,6 +2445,7 @@ function loadSlots() {
     grid.appendChild(d);
   }
   if(!livres) grid.insertAdjacentHTML('beforeend','<div style="grid-column:1/-1;font-size:12px;color:var(--fg-muted);text-align:center;padding:4px">Nenhum horário livre neste dia.</div>');
+  if(!foraDoExpediente) grid.insertAdjacentHTML('beforeend','<a href="#" onclick="foraDoExpediente=true;loadSlots();return false" style="grid-column:1/-1;font-size:12px;color:var(--fg-soft);text-align:center;padding:2px">Ver horários fora do expediente</a>');
   document.getElementById('inputDuracao').value='';
   calcSlotDuration();
 }
@@ -2225,6 +2506,7 @@ async function salvarAgendamento() {
   }
   ['pagValor','pagarAte'].forEach(id=>document.getElementById(id).value='');
   setPagModo('depois');
+  syncEmSegundoPlano(novo.id,remarcandoId);
   const foiRemarcacao=!!remarcandoId;
   remarcandoId=null;
   closeDrawer('novoAgendDrawer');
@@ -2396,11 +2678,89 @@ function renderPnLTable() {
 }
 
 // ── PORTFOLIO / GALLERY ───────────────────────────────────────────
-// Fotos reais entram na próxima etapa (bucket 'portfolio' já existe no Supabase).
+// Fotos no bucket 'portfolio' (pasta = id da usuária) + linha em portfolio_fotos.
+let FOTOS=[];
+const urlFoto=caminho=>sb.storage.from('portfolio').getPublicUrl(caminho).data.publicUrl;
 function renderPortfolio() {
   const el = document.getElementById('galeriaGrid');
   const cat = PORTFOLIO_CATS.find(c=>c.id===portfolioFilter);
-  el.innerHTML = `<div class="card empty-state">Nenhuma foto ainda${cat?' em '+esc(cat.name.toLowerCase()):''}.<br><span style="color:var(--fg-soft)">O envio de fotos do portfólio chega na próxima versão.</span></div>`;
+  const fotos = FOTOS.filter(f=>portfolioFilter==='todos'||f.categoria===portfolioFilter);
+  if(!fotos.length){el.innerHTML=`<div class="card empty-state">Nenhuma foto${cat?' em '+esc(cat.name.toLowerCase()):''} ainda.<br><span style="color:var(--fg-soft)">Toque em “Adicionar fotos” para montar o portfólio.</span></div>`;return}
+  el.innerHTML='<div class="gallery-grid">'+fotos.map(f=>`<div class="gallery-item" onclick="verFoto('${f.id}')"><img src="${esc(urlFoto(f.caminho))}" alt="${esc(f.legenda||'')}" loading="lazy"></div>`).join('')+'</div>';
+}
+function novaFoto(){
+  const sel=document.getElementById('fotoCat');
+  sel.innerHTML=PORTFOLIO_CATS.map(c=>`<option value="${c.id}"${c.id===portfolioFilter?' selected':''}>${c.name}</option>`).join('');
+  document.getElementById('fotoArquivo').value='';
+  document.getElementById('fotoStatus').textContent='';
+  openDrawer('fotoDrawer');
+}
+// Reduz para no máx. 1600px em JPEG — foto de celular cai de ~4MB para ~300KB
+function reduzirImagem(arquivo){
+  return new Promise((ok,erro)=>{
+    const img=new Image(), url=URL.createObjectURL(arquivo);
+    img.onload=()=>{
+      const k=Math.min(1,1600/Math.max(img.width,img.height));
+      const c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(b=>b?ok(b):erro(new Error('falha ao converter')),'image/jpeg',.82);
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);erro(new Error('arquivo não é uma imagem'))};
+    img.src=url;
+  });
+}
+async function enviarFotos(){
+  const arqs=[...document.getElementById('fotoArquivo').files];
+  if(!arqs.length){toast('Escolha as fotos');return}
+  const cat=document.getElementById('fotoCat').value, legenda=document.getElementById('fotoLegenda').value.trim()||null;
+  const st=document.getElementById('fotoStatus'), btn=document.getElementById('fotoEnviarBtn');
+  btn.disabled=true;let ok=0;
+  for(const [i,a] of arqs.entries()){
+    st.textContent=`Enviando ${i+1} de ${arqs.length}…`;
+    try{
+      const blob=await reduzirImagem(a);
+      const caminho=`${USER.id}/${crypto.randomUUID()}.jpg`;
+      const up=await sb.storage.from('portfolio').upload(caminho,blob,{contentType:'image/jpeg',cacheControl:'31536000'});
+      if(up.error) throw up.error;
+      await q(sb.from('portfolio_fotos').insert({categoria:cat,caminho,legenda}));
+      ok++;
+    }catch(e){toast(`Foto ${i+1}: ${e.message}`)}
+  }
+  btn.disabled=false;
+  document.getElementById('fotoLegenda').value='';
+  closeDrawer('fotoDrawer');
+  if(ok) toast(`${ok} foto${ok>1?'s':''} no portfólio`);
+  await recarregar();
+}
+function verFoto(id){
+  const f=FOTOS.find(x=>x.id===id);if(!f)return;
+  const cat=PORTFOLIO_CATS.find(c=>c.id===f.categoria);
+  document.getElementById('verFotoBody').innerHTML=`
+    <img src="${esc(urlFoto(f.caminho))}" alt="" style="width:100%;border-radius:12px;display:block;margin-bottom:12px">
+    <div style="font-weight:500">${esc(cat?.name||'')}</div>
+    ${f.legenda?`<div class="client-sub" style="margin-top:2px;white-space:normal">${esc(f.legenda)}</div>`:''}
+    <div class="btn-row" style="margin-top:14px">
+      ${navigator.share?`<button class="btn btn-ghost" onclick="compartilharFoto('${f.id}')">Compartilhar</button>`:''}
+      <button class="btn btn-danger" onclick="apagarFoto('${f.id}')">Apagar</button>
+    </div>
+    <button class="btn btn-ghost" style="margin-top:10px" onclick="closeDrawer('verFotoDrawer')">Fechar</button>`;
+  openDrawer('verFotoDrawer');
+}
+async function compartilharFoto(id){
+  const f=FOTOS.find(x=>x.id===id);if(!f)return;
+  try{
+    const blob=await fetch(urlFoto(f.caminho)).then(r=>r.blob());
+    const arq=new File([blob],'portfolio.jpg',{type:'image/jpeg'});
+    if(navigator.canShare?.({files:[arq]})) await navigator.share({files:[arq],text:f.legenda||''});
+    else await navigator.share({url:urlFoto(f.caminho)});
+  }catch(e){}
+}
+async function apagarFoto(id){
+  const f=FOTOS.find(x=>x.id===id);if(!f||!confirm('Apagar esta foto do portfólio?'))return;
+  await sb.storage.from('portfolio').remove([f.caminho]);
+  try{await q(sb.from('portfolio_fotos').delete().eq('id',id))}catch(e){return}
+  closeDrawer('verFotoDrawer');toast('Foto apagada');await recarregar();
 }
 function filterPortfolio(f, el) {
   portfolioFilter = f;
@@ -2456,7 +2816,7 @@ function gotoPage(id, navEl, doVoltar) {
   document.getElementById('mainFab').style.display=id==='agenda'?'flex':'none';
   window.scrollTo(0,0);
   if(id==='financeiro') setTimeout(renderTrendChart,100);
-  if(id==='config') { renderHorariosDetail(); }
+  if(id==='config') { renderConfig(); }
   if(id==='calendario') { buildCalendar(); }
 }
 
@@ -2466,7 +2826,7 @@ function gotoPage(id, navEl, doVoltar) {
 let ignorarPop=0;
 const gavetasAbertas=()=>[...document.querySelectorAll('.modal-overlay.open')];
 function openDrawer(id){
-  if(id==='novoAgendDrawer') loadSlots();
+  if(id==='novoAgendDrawer'){foraDoExpediente=false;loadSlots();}
   if(id==='notifDrawer') marcarNotifsLidas();
   document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';
   if(!history.state?.modal) history.pushState({modal:true},'');
@@ -2493,6 +2853,189 @@ window.addEventListener('popstate',()=>{
   }
   if(paginaAtual!=='agenda') gotoPage('agenda',document.querySelectorAll('.nav-item')[0],true);
 });
+
+// ── GOOGLE: CONEXÃO ───────────────────────────────────────────────
+async function salvarConexaoGoogle(session){
+  const ident=session.user.identities?.find(i=>i.provider==='google');
+  const {error}=await sb.from('google_conexao').upsert({owner_id:session.user.id,refresh_token:session.provider_refresh_token,
+    email_google:ident?.identity_data?.email||session.user.email,atualizado_em:new Date().toISOString()},{onConflict:'owner_id'});
+  if(error){console.error(error);toast('Não consegui salvar a conexão com o Google: '+error.message);return}
+  GOOGLE={...GOOGLE,conectado:true,email:ident?.identity_data?.email||session.user.email,
+    token:session.provider_token,expira:Date.now()+50*6e4};
+  try{await garantirCalendario()}catch(e){console.error(e)}
+  toast('Google conectado');
+  if(USER){renderConfig();renderGoogleCard()}
+}
+// Conecta o Google numa conta já logada (ou entra com Google)
+async function conectarGoogle(){
+  if(!await googleAtivo()){toast('O Google ainda não foi configurado no sistema. Veja o BRIEFING.');return}
+  const opts={redirectTo:REDIRECT,scopes:GOOGLE_SCOPES,queryParams:{access_type:'offline',prompt:'consent'}};
+  const {error}=await sb.auth.linkIdentity({provider:'google',options:opts});
+  // vínculo manual desativado ou identidade já ligada: entra com Google (mesmo e-mail vira a mesma conta)
+  if(error) await sb.auth.signInWithOAuth({provider:'google',options:opts});
+}
+async function desconectarGoogle(){
+  if(!confirm('Desconectar o Google? Os agendamentos param de ir para o Google Agenda.'))return;
+  try{
+    const t=await googleToken();
+    if(t) fetch('https://oauth2.googleapis.com/revoke?token='+encodeURIComponent(t),{method:'POST'}).catch(()=>{});
+  }catch(e){}
+  await sb.from('google_conexao').delete().eq('owner_id',USER.id);
+  GOOGLE={conectado:false,email:null,calendarioId:null,contatosSyncEm:null,token:null,expira:0};
+  toast('Google desconectado');
+  renderConfig();renderGoogleCard();
+}
+// Access token válido (renova pela função google-token quando vence)
+async function googleToken(){
+  if(GOOGLE.token&&Date.now()<GOOGLE.expira) return GOOGLE.token;
+  if(!GOOGLE.conectado) return null;
+  const {data:{session}}=await sb.auth.getSession();
+  const r=await fetch(SUPABASE_URL+'/functions/v1/google-token',{method:'POST',
+    headers:{Authorization:'Bearer '+session.access_token,apikey:SUPABASE_KEY}});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){
+    if(j.erro==='reconectar'||j.erro==='nao_conectado'){GOOGLE.conectado=false;renderConfig();toast('Reconecte o Google em Ajustes')}
+    return null;
+  }
+  GOOGLE.token=j.access_token;GOOGLE.expira=Date.now()+(j.expires_in-300)*1000;
+  if(j.calendario_id) GOOGLE.calendarioId=j.calendario_id;
+  return GOOGLE.token;
+}
+async function gapi(url,opts={},tentativa=0){
+  const t=await googleToken();
+  if(!t) throw new Error('Google não conectado');
+  const r=await fetch(url,{...opts,headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',...(opts.headers||{})}});
+  if(r.status===401&&!tentativa){GOOGLE.token=null;return gapi(url,opts,1)}
+  if(r.status===204) return null;
+  const j=await r.json().catch(()=>null);
+  if(!r.ok){const e=new Error(j?.error?.message||('Google '+r.status));e.status=r.status;throw e}
+  return j;
+}
+
+// ── GOOGLE: AGENDA ────────────────────────────────────────────────
+const CAL='https://www.googleapis.com/calendar/v3';
+async function garantirCalendario(){
+  if(GOOGLE.calendarioId) return GOOGLE.calendarioId;
+  const c=await gapi(CAL+'/calendars',{method:'POST',body:JSON.stringify({summary:'Agenda da Duda',timeZone:'America/Sao_Paulo',description:'Agendamentos do studio (criado pelo app Agenda da Duda)'})});
+  GOOGLE.calendarioId=c.id;
+  await sb.from('google_conexao').update({calendario_id:c.id}).eq('owner_id',(USER||SESSAO?.user).id);
+  return c.id;
+}
+// Cria, atualiza ou apaga o evento do agendamento no Google Agenda
+async function syncEvento(id){
+  if(!GOOGLE.conectado) return;
+  const {data:a}=await sb.from('agendamentos').select('*, clientes(nome,telefone)').eq('id',id).single();
+  if(!a) return;
+  const cal=await garantirCalendario();
+  const url=CAL+'/calendars/'+encodeURIComponent(cal)+'/events';
+  if(a.status==='cancelado'||a.status==='faltou'){
+    if(a.google_event_id){
+      try{await gapi(url+'/'+a.google_event_id,{method:'DELETE'})}catch(e){if(e.status!==404&&e.status!==410)throw e}
+      await sb.from('agendamentos').update({google_event_id:null}).eq('id',id);
+    }
+    return;
+  }
+  const marca={confirmado:'✓ ',em_atendimento:'● ',concluido:'✔ '}[a.status]||'';
+  const ev={
+    summary:`${marca}${a.clientes?.nome||'Cliente'} — ${a.servico_nome}`,
+    description:[a.clientes?.telefone?'WhatsApp: '+fmtTel(a.clientes.telefone):'',`Valor: R$ ${Number(a.valor).toFixed(2).replace('.',',')}`,a.observacoes||'','Criado pelo app Agenda da Duda'].filter(Boolean).join('\n'),
+    start:{dateTime:a.inicio,timeZone:'America/Sao_Paulo'},end:{dateTime:a.fim,timeZone:'America/Sao_Paulo'},
+    colorId:a.tipo==='podologia'?'3':'4',
+    reminders:{useDefault:false,overrides:[{method:'popup',minutes:30}]},
+  };
+  if(a.google_event_id){
+    try{await gapi(url+'/'+a.google_event_id,{method:'PATCH',body:JSON.stringify(ev)});return}
+    catch(e){if(e.status!==404&&e.status!==410)throw e}
+  }
+  const novo=await gapi(url,{method:'POST',body:JSON.stringify(ev)});
+  await sb.from('agendamentos').update({google_event_id:novo.id}).eq('id',id);
+}
+function syncEmSegundoPlano(...ids){
+  if(!GOOGLE.conectado) return;
+  (async()=>{for(const id of ids.filter(Boolean)){try{await syncEvento(id)}catch(e){console.error(e);toast('Google Agenda: '+e.message);return}}})();
+}
+// Envia todos os agendamentos futuros que ainda não estão no Google
+async function sincronizarAgendaGoogle(){
+  const btn=document.getElementById('gSyncAgendaBtn');if(btn){btn.disabled=true;btn.textContent='Enviando…'}
+  const {data}=await sb.from('agendamentos').select('id').gte('inicio',new Date(Date.now()-864e5).toISOString())
+    .not('status','in','(cancelado,faltou)');
+  let ok=0;
+  try{for(const r of data||[]){await syncEvento(r.id);ok++}}
+  catch(e){toast('Google Agenda: '+e.message)}
+  if(btn){btn.disabled=false;btn.textContent='Enviar agenda para o Google'}
+  toast(`${ok} agendamento${ok===1?'':'s'} no Google Agenda`);
+}
+// Horários ocupados no calendário pessoal (só início/fim, sem detalhes)
+const BUSY_GOOGLE={};
+async function ocupadoGoogle(dataStr){
+  if(!GOOGLE.conectado) return [];
+  if(BUSY_GOOGLE[dataStr]) return BUSY_GOOGLE[dataStr];
+  const ini=new Date(dataStr+'T00:00'), fim=addDias(ini,1);
+  try{
+    const j=await gapi(CAL+'/freeBusy',{method:'POST',body:JSON.stringify({timeMin:ini.toISOString(),timeMax:fim.toISOString(),items:[{id:'primary'}]})});
+    BUSY_GOOGLE[dataStr]=(j.calendars?.primary?.busy||[]).map(b=>[new Date(b.start),new Date(b.end)]);
+  }catch(e){BUSY_GOOGLE[dataStr]=[]}
+  return BUSY_GOOGLE[dataStr];
+}
+
+// ── GOOGLE: CONTATOS ──────────────────────────────────────────────
+let CONTATOS_G=[];
+async function abrirContatosGoogle(){
+  openDrawer('googleContatosDrawer');
+  const el=document.getElementById('gContatosLista');
+  el.innerHTML='<div class="empty-state">Buscando seus contatos…</div>';
+  try{
+    let token='',todos=[];
+    do{
+      const j=await gapi(`https://people.googleapis.com/v1/people/me/connections?personFields=names,phoneNumbers,birthdays&pageSize=1000&sortOrder=FIRST_NAME_ASCENDING${token?'&pageToken='+token:''}`);
+      todos=todos.concat(j.connections||[]);token=j.nextPageToken||'';
+    }while(token);
+    CONTATOS_G=todos.map(p=>{
+      const b=p.birthdays?.find(x=>x.date?.month)?.date;
+      return {resource:p.resourceName,nome:p.names?.[0]?.displayName||'',tel:normTel(p.phoneNumbers?.[0]?.value),
+        nasc:b&&b.month?`${b.year||1900}-${pad2(b.month)}-${pad2(b.day||1)}`:null};
+    }).filter(c=>c.nome&&c.tel);
+    renderContatosGoogle();
+  }catch(e){el.innerHTML=`<div class="empty-state">Não consegui ler os contatos: ${esc(e.message)}</div>`}
+}
+function renderContatosGoogle(){
+  const q=(document.getElementById('gContatosBusca').value||'').toLowerCase();
+  const el=document.getElementById('gContatosLista');
+  const jaTem=c=>CLIENTS.some(x=>x.phone===c.tel);
+  const lista=CONTATOS_G.filter(c=>!q||c.nome.toLowerCase().includes(q)||c.tel.includes(q));
+  document.getElementById('gContatosInfo').textContent=`${CONTATOS_G.length} contatos com telefone · ${CONTATOS_G.filter(jaTem).length} já são clientes`;
+  el.innerHTML=lista.length?'':'<div class="empty-state">Nenhum contato encontrado.</div>';
+  el.insertAdjacentHTML('beforeend',lista.slice(0,300).map(c=>{
+    const tem=jaTem(c);
+    return `<label class="client-row" style="cursor:${tem?'default':'pointer'}">
+      <input type="checkbox" class="gContatoCk" value="${esc(c.resource)}" ${tem?'disabled checked':''} style="width:18px;height:18px;accent-color:var(--fg)">
+      <div class="client-info"><div class="client-name">${esc(c.nome)}</div><div class="client-sub">${esc(fmtTel(c.tel))}${tem?' · já é cliente':''}</div></div></label>`;
+  }).join(''));
+  if(lista.length>300) el.insertAdjacentHTML('beforeend','<div class="client-sub" style="padding:10px 4px">Mostrando 300 — use a busca para achar os outros.</div>');
+}
+function marcarTodosContatos(v){document.querySelectorAll('.gContatoCk:not(:disabled)').forEach(c=>c.checked=v)}
+async function importarContatosGoogle(){
+  const sel=[...document.querySelectorAll('.gContatoCk:checked:not(:disabled)')].map(c=>c.value);
+  const rows=CONTATOS_G.filter(c=>sel.includes(c.resource)).map((c,i)=>({nome:c.nome,telefone:c.tel,nascimento:c.nasc,
+    tipo:'esmalteria',origem:'Outro',google_resource:c.resource,cor:CORES_CLIENTE[(CLIENTS.length+i)%CORES_CLIENTE.length]}));
+  if(!rows.length){toast('Marque os contatos que são clientes');return}
+  const {error}=await sb.from('clientes').upsert(rows,{onConflict:'owner_id,telefone',ignoreDuplicates:true});
+  if(error){toast('Erro: '+error.message);return}
+  await sb.from('google_conexao').update({contatos_sync_em:new Date().toISOString()}).eq('owner_id',USER.id);
+  closeDrawer('googleContatosDrawer');
+  toast(`${rows.length} cliente${rows.length>1?'s':''} importada${rows.length>1?'s':''} do Google`);
+  await recarregar();
+}
+function renderGoogleCard(){
+  const el=document.getElementById('googleCard');if(!el)return;
+  el.innerHTML=GOOGLE.conectado?`
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Conectado</div><div class="toggle-sub">${esc(GOOGLE.email||'')}</div></div><span class="badge badge-ok">Ativo</span></div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Google Agenda</div><div class="toggle-sub">Cada agendamento vai para o calendário “Agenda da Duda”. Compromissos pessoais bloqueiam horários.</div></div></div>
+    <div class="btn-row" style="flex-wrap:wrap"><button class="btn btn-ghost btn-sm" id="gSyncAgendaBtn" onclick="sincronizarAgendaGoogle()">Enviar agenda para o Google</button><button class="btn btn-ghost btn-sm" onclick="abrirContatosGoogle()">Importar contatos</button></div>
+    <button class="btn btn-danger btn-sm" style="margin-top:10px" onclick="desconectarGoogle()">Desconectar Google</button>`
+  :`<div class="toggle-sub" style="padding:6px 0 12px;font-size:13.5px">Conecte sua conta Google para importar os contatos e mandar os agendamentos para o Google Agenda do celular.</div>
+    <button class="btn btn-primary btn-sm" onclick="conectarGoogle()">Conectar Google</button>`;
+}
 
 // ── APP INSTALÁVEL ────────────────────────────────────────────────
 let pedidoInstalar=null;
