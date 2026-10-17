@@ -48,14 +48,32 @@ Deno.serve(async (req) => {
   catch (_) { return json(400, { erro: "id_token" }); }
   if (info.aud !== clientId || !info.email || !info.email_verified || (info.exp ?? 0) * 1000 < Date.now())
     return json(401, { erro: "identidade" });
-  const email = info.email.toLowerCase();
+  const emailGoogle = info.email.toLowerCase();
 
-  // 3. conta + token de uso único
-  const criado = await admin.auth.admin.createUser({
-    email, email_confirm: true, user_metadata: { full_name: info.name, avatar_url: info.picture },
-  });
-  if (criado.error && !/already|registered|exists/i.test(criado.error.message))
-    return json(500, { erro: "criar_conta", detalhe: criado.error.message });
+  // 3. conta existente? No Gmail, pontos e "+apelido" não mudam a caixa de e-mail
+  //    (italo.paulo@gmail.com = italopaulo@gmail.com), então comparamos normalizado.
+  const norm = (e: string) => {
+    const [u, d] = e.toLowerCase().split("@");
+    return d === "gmail.com" || d === "googlemail.com" ? u.split("+")[0].replace(/\./g, "") + "@gmail.com" : e.toLowerCase();
+  };
+  let email = "";
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) break;
+    const u = data.users.find((x) => x.email && norm(x.email) === norm(emailGoogle));
+    if (u) { email = u.email!; break; }
+    if (data.users.length < 1000) break;
+  }
+  let novo = false;
+  if (!email) {
+    email = emailGoogle;
+    const criado = await admin.auth.admin.createUser({
+      email, email_confirm: true, user_metadata: { full_name: info.name, avatar_url: info.picture },
+    });
+    if (criado.error && !/already|registered|exists/i.test(criado.error.message))
+      return json(500, { erro: "criar_conta", detalhe: criado.error.message });
+    novo = !criado.error;
+  }
   const link = await admin.auth.admin.generateLink({ type: "magiclink", email });
   if (link.error || !link.data?.properties?.hashed_token) return json(500, { erro: "sessao", detalhe: link.error?.message });
   const userId = link.data.user.id;
@@ -63,13 +81,13 @@ Deno.serve(async (req) => {
   // 4. calendário e contatos já ficam vinculados
   if (t.refresh_token) {
     await admin.from("google_conexao").upsert({
-      owner_id: userId, refresh_token: t.refresh_token, email_google: email, atualizado_em: new Date().toISOString(),
+      owner_id: userId, refresh_token: t.refresh_token, email_google: emailGoogle, atualizado_em: new Date().toISOString(),
     }, { onConflict: "owner_id" });
   }
   const { data: c } = await admin.from("google_conexao").select("calendario_id").eq("owner_id", userId).maybeSingle();
 
   return json(200, {
-    token_hash: link.data.properties.hashed_token, email, novo: !criado.error,
+    token_hash: link.data.properties.hashed_token, email: emailGoogle, novo,
     access_token: t.access_token, expires_in: t.expires_in, calendario_id: c?.calendario_id ?? null,
     google_vinculado: !!t.refresh_token || !!c,
   });
