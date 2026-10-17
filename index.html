@@ -1295,6 +1295,7 @@ async function entrar(user){
   const primeiro=nome.split(/[\s._-]/)[0];
   document.getElementById('topName').textContent=primeiro.charAt(0).toUpperCase()+primeiro.slice(1);
   await recarregar();
+  await concluirGoogle();
   // atalho do ícone do app: "Novo agendamento"
   const p=new URLSearchParams(location.search);
   if(p.get('acao')==='agendar'){
@@ -1311,7 +1312,7 @@ async function googleAtivo(){
 // Entrar com Google já pede contatos e calendário (offline = acesso continua depois)
 async function loginGoogle(){
   const msg=document.getElementById('loginMsg');
-  if(!await googleAtivo()){msg.innerHTML='<span style="color:var(--warn)">O login com Google ainda não foi ativado. Use e-mail e senha.</span>';return}
+  if(!await googleAtivo()){msg.innerHTML='<span style="color:var(--warn)">Entre com e-mail e senha. Depois, em Ajustes → Conta Google, conecte seus contatos e seu calendário.</span>';return}
   const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:REDIRECT,scopes:GOOGLE_SCOPES,
     queryParams:{access_type:'offline',prompt:'consent'}}});
   if(error) msg.innerHTML=`<span style="color:var(--danger)">${esc(error.message)}</span>`;
@@ -3007,13 +3008,39 @@ async function salvarConexaoGoogle(session){
   toast('Google conectado');
   if(USER){renderConfig();renderGoogleCard()}
 }
-// Conecta o Google numa conta já logada (ou entra com Google)
-async function conectarGoogle(){
-  if(!await googleAtivo()){toast('O Google ainda não foi configurado no sistema. Veja o BRIEFING.');return}
-  const opts={redirectTo:REDIRECT,scopes:GOOGLE_SCOPES,queryParams:{access_type:'offline',prompt:'consent'}};
-  const {error}=await sb.auth.linkIdentity({provider:'google',options:opts});
-  // vínculo manual desativado ou identidade já ligada: entra com Google (mesmo e-mail vira a mesma conta)
-  if(error) await sb.auth.signInWithOAuth({provider:'google',options:opts});
+// Conecta contatos e calendário do Google na conta já logada.
+// Fluxo próprio (não depende do provedor Google do Supabase): o Google devolve um
+// código para esta página e a função google-token troca pelo acesso e guarda.
+const GOOGLE_CLIENT_ID='253374765254-e0fk9u1lv5pjm5k946iq3o5sons49kir.apps.googleusercontent.com';
+const RETORNO_GOOGLE=location.origin+location.pathname.replace(/index\.html$/,'');
+function conectarGoogle(){
+  const estado=crypto.randomUUID();
+  try{sessionStorage.setItem('g_estado',estado)}catch(e){}
+  const p=new URLSearchParams({client_id:GOOGLE_CLIENT_ID,redirect_uri:RETORNO_GOOGLE,response_type:'code',
+    scope:'openid email '+GOOGLE_SCOPES,access_type:'offline',prompt:'consent',include_granted_scopes:'true',state:estado});
+  location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p;
+}
+// Volta do Google: ?code=...&state=... (ou ?error=access_denied)
+async function concluirGoogle(){
+  const p=new URLSearchParams(location.search);
+  if(!p.has('code')&&!p.has('error')) return;
+  if(!p.get('state')) return; // não é retorno nosso
+  let estado=null;try{estado=sessionStorage.getItem('g_estado');sessionStorage.removeItem('g_estado')}catch(e){}
+  history.replaceState(history.state,'',location.pathname);
+  if(p.get('error')){toast(p.get('error')==='access_denied'?'Conexão com o Google cancelada':'Google: '+p.get('error'));return}
+  if(!estado||estado!==p.get('state')){toast('Não foi possível confirmar o retorno do Google. Tente de novo.');return}
+  toast('Conectando ao Google…');
+  const {data:{session}}=await sb.auth.getSession();
+  const r=await fetch(SUPABASE_URL+'/functions/v1/google-token',{method:'POST',
+    headers:{Authorization:'Bearer '+session.access_token,apikey:SUPABASE_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({acao:'trocar',code:p.get('code'),redirect_uri:RETORNO_GOOGLE})});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){toast(j.erro==='sem_refresh_token'?'O Google não liberou o acesso contínuo. Tente conectar de novo.':'Não deu para conectar o Google ('+(j.detalhe||j.erro||r.status)+')');return}
+  GOOGLE={...GOOGLE,conectado:true,email:j.email,calendarioId:j.calendario_id,token:j.access_token,expira:Date.now()+(j.expires_in-300)*1000};
+  try{await garantirCalendario()}catch(e){console.error(e);toast('Google conectado, mas o calendário não foi criado: '+e.message);return}
+  toast('Google conectado');
+  renderConfig();renderGoogleCard();
+  gotoPage('config',document.querySelectorAll('.nav-item')[5]);
 }
 async function desconectarGoogle(){
   if(!confirm('Desconectar o Google? Os agendamentos param de ir para o Google Agenda.'))return;
