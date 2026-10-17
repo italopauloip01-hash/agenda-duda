@@ -1113,14 +1113,21 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
 <!-- Modelos de mensagem -->
 <div class="modal-overlay" id="modelosDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
-  <div class="drawer-title">Modelos de mensagem</div>
-  <div class="drawer-subtitle">Use {nome}, {servico}, {dia}, {hora}, {data} e {valor} — são trocados automaticamente.</div>
+  <div class="drawer-title">Mensagens prontas</div>
+  <div class="drawer-subtitle">Todas as mensagens num lugar só. Toque para editar. Palavras entre chaves, como {nome}, viram os dados da cliente na hora de enviar.</div>
   <div id="modelosCampos"></div>
-  <button class="btn btn-ghost btn-sm" style="width:auto;margin-bottom:12px" onclick="restaurarModelos()">Voltar ao texto padrão</button>
-  <div class="btn-row">
-    <button class="btn btn-ghost" onclick="closeDrawer('modelosDrawer')">Fechar</button>
-    <button class="btn btn-primary" onclick="salvarModelos()">Salvar</button>
-  </div>
+  <button class="btn btn-primary" style="margin-top:4px" onclick="novaMensagem()">Nova mensagem</button>
+  <button class="btn btn-ghost btn-sm" id="modelosRestaurar" style="margin-top:8px" onclick="restaurarOcultas()" hidden>Trazer de volta as mensagens removidas</button>
+  <button class="btn btn-ghost" style="margin-top:10px" onclick="closeDrawer('modelosDrawer')">Fechar</button>
+</div></div>
+
+<!-- Enviar mensagem pronta -->
+<div class="modal-overlay" id="enviarMsgDrawer"><div class="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title" id="enviarMsgTitulo">Enviar mensagem</div>
+  <div class="drawer-subtitle">Toque numa mensagem: o WhatsApp abre com ela pronta. <a href="#" style="color:var(--fg)" onclick="closeDrawer('enviarMsgDrawer');abrirModelos();return false">Editar mensagens</a></div>
+  <div class="list-card" id="enviarMsgLista"></div>
+  <button class="btn btn-ghost" style="margin-top:12px" onclick="closeDrawer('enviarMsgDrawer')">Fechar</button>
 </div></div>
 
 <!-- Exportar relatório -->
@@ -1575,6 +1582,7 @@ function openDetail(a) {
       <button class="btn btn-danger btn-sm" onclick="if(confirm('Cancelar o horário de ${esc(a.name.split(' ')[0].replace(/'/g,''))} às ${a.time}?'))mudarStatus('${a.id}','cancelado')">Cancelar horário</button>
       <button class="btn btn-ghost btn-sm" onclick="if(confirm('Marcar falta para ${esc(a.name.split(' ')[0].replace(/'/g,''))}?'))mudarStatus('${a.id}','faltou')">Faltou</button>
       ${lembrete?`<a class="btn btn-ghost btn-sm" style="text-decoration:none" href="${lembrete}" target="_blank" rel="noopener">Lembrete</a>`:'<button class="btn btn-ghost btn-sm" disabled title="Cliente sem WhatsApp">Lembrete</button>'}
+      <button class="btn btn-ghost btn-sm" style="grid-column:1/-1" onclick="enviarMensagem(null,'${a.id}')" ${a.phone?'':'disabled'}>Enviar mensagem pronta</button>
     </div>
     <div style="font-size:13px;color:var(--fg-muted);font-weight:500;margin-bottom:6px">Histórico</div>
     <div class="card" style="font-size:13px;color:var(--fg-muted)">${cli?`${cli.visits} visita${cli.visits===1?'':'s'} · última: ${esc(cli.last)} · ${fmtR(gasto)} gasto este ano${cli.faltou?` · ${cli.faltou} falta${cli.faltou>1?'s':''}`:''}`:'—'}</div>
@@ -1747,6 +1755,7 @@ function openFicha(c) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px">
       <button class="btn btn-primary btn-sm" onclick="closeDrawer('fichaClienteDrawer');novoAgendamentoPara(window._fichaNome)">Agendar</button>
       ${wa?`<a class="btn btn-ghost btn-sm" style="text-decoration:none" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>`:'<button class="btn btn-ghost btn-sm" disabled>Sem WhatsApp</button>'}
+      ${wa?`<button class="btn btn-ghost btn-sm" style="grid-column:1/-1" onclick="enviarMensagem('${c.id}')">Enviar mensagem pronta</button>`:''}
     </div>
     <button class="btn btn-ghost" onclick="closeDrawer('fichaClienteDrawer')">Fechar</button>`;
   openDrawer('fichaClienteDrawer');
@@ -2145,7 +2154,7 @@ function configGroups(){
   ],
   [
     {icon:'',label:'Lembretes de amanhã',sub:resumoLembretes(),action:()=>abrirLembretesDia()},
-    {icon:'',label:'Modelos de mensagem',sub:'Lembrete, cobrança, aniversário e avaliação',action:()=>abrirModelos()},
+    {icon:'',label:'Mensagens prontas',sub:`${todasMensagens().length} mensagens · editar, criar e enviar`,action:()=>abrirModelos()},
     {icon:'',label:'Robô do WhatsApp',sub:'Envio automático precisa de um servidor (próxima etapa)',action:()=>toast('Por enquanto os lembretes são enviados com um toque, em “Lembretes de amanhã”.')},
   ],
   [
@@ -2275,38 +2284,168 @@ async function copiarLink(){
   try{await navigator.clipboard.writeText(l);toast('Link copiado')}catch(e){toast(l)}
 }
 
-// ── MODELOS DE MENSAGEM ───────────────────────────────────────────
-const MODELOS_PADRAO={
-  lembrete:'Oi {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora}. Posso confirmar? 💅',
-  cobranca:'Oi {nome}! Tudo bem? Passando para lembrar do valor de {valor} do {servico} do dia {data}. Pode ser por Pix 😊',
-  aniversario:'Feliz aniversário, {nome}! 🎂🎉 Um beijo da Duda ✨',
-  avaliacao:'Oi {nome}! Obrigada pela visita hoje 💖 Se puder, me conta de 1 a 5 o que achou do atendimento?',
-};
-const ROTULOS_MODELOS={lembrete:'Lembrete do horário',cobranca:'Cobrança',aniversario:'Aniversário',avaliacao:'Pedido de avaliação'};
+// ── CENTRAL DE MENSAGENS PRONTAS ──────────────────────────────────
+// Todas as mensagens num lugar só (Ajustes → Mensagens prontas).
+// perfil.modelos = { textos:{id:texto editado}, extras:[{id,titulo,texto}], ocultas:[id] }
+// As de "uso" são chamadas pelos botões do app (lembrete, cobrança…).
+const MSGS_PADRAO=[
+  {id:'lembrete',titulo:'Lembrete do horário',uso:'Botão Lembrete e Lembretes de amanhã',
+    texto:'Oi {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora}. Posso confirmar? 💅'},
+  {id:'confirmacao',titulo:'Confirmação de agendamento',
+    texto:'Oi {nome}! Seu horário de {servico} está confirmado para {dia} às {hora}. Te espero! 💖'},
+  {id:'boas_vindas',titulo:'Boas-vindas (cliente nova)',
+    texto:'Oi {nome}, seja muito bem-vinda! 💕 Qualquer dúvida sobre o atendimento é só me chamar por aqui. Para agendar online: {link}'},
+  {id:'remarcar',titulo:'Remarcação',
+    texto:'Oi {nome}! Precisei ajustar a agenda — podemos remarcar seu {servico} de {dia} às {hora}? Me diz o melhor horário para você 🙏'},
+  {id:'atraso',titulo:'Aviso de atraso',
+    texto:'Oi {nome}! Estou com um pequeno atraso, em uns 10 minutinhos te atendo. Obrigada pela paciência 💕'},
+  {id:'falta',titulo:'Faltou ao horário',
+    texto:'Oi {nome}, sentimos sua falta hoje no horário de {servico}. Aconteceu alguma coisa? Quer remarcar? {link}'},
+  {id:'cuidados_unhas',titulo:'Cuidados pós-unhas',
+    texto:'Oi {nome}! Para seu {servico} durar mais: evite água quente nas primeiras horas, use luvas para limpeza e passe óleo de cutícula todo dia 💅'},
+  {id:'cuidados_pes',titulo:'Cuidados pós-podologia',
+    texto:'Oi {nome}! Depois da podologia: mantenha os pés secos, hidrate todos os dias (menos entre os dedos) e evite sapatos apertados nas próximas 48h 🦶'},
+  {id:'avaliacao',titulo:'Pedido de avaliação',uso:'Botão Pedir avaliação',
+    texto:'Oi {nome}! Obrigada pela visita 💖 Se puder, me conta de 1 a 5 o que achou do atendimento?'},
+  {id:'cobranca',titulo:'Cobrança',uso:'Botão Cobrar pelo WhatsApp',
+    texto:'Oi {nome}! Tudo bem? Passando para lembrar do valor de {valor} do {servico} do dia {data}. Pode ser por Pix 😊'},
+  {id:'saudade',titulo:'Faz tempo que não vem',
+    texto:'Oi {nome}, que saudade! 💕 Já faz um tempinho desde o seu último horário. Que tal agendar? {link}'},
+  {id:'aniversario',titulo:'Aniversário',uso:'Botão Parabéns',
+    texto:'Feliz aniversário, {nome}! 🎂🎉 Um beijo de {studio} ✨'},
+  {id:'promocao',titulo:'Promoção',
+    texto:'Oi {nome}! Essa semana tem condição especial em {servico}. Garanta seu horário: {link} ✨'},
+  {id:'link',titulo:'Link para agendar',
+    texto:'Oi {nome}! Para agendar é só escolher o dia e o horário por aqui: {link} 💅'},
+];
+const VARIAVEIS=[['{nome}','nome da cliente'],['{servico}','serviço'],['{dia}','dia'],['{hora}','hora'],['{data}','data'],['{valor}','valor'],['{link}','link de agendamento'],['{studio}','nome do studio']];
+function modelosCfg(){
+  const m=PERFIL.modelos||{};
+  // formato antigo: {lembrete:'...', cobranca:'...'}
+  if(!m.textos&&!m.extras){const textos={};Object.entries(m).forEach(([k,v])=>{if(typeof v==='string')textos[k]=v});return {textos,extras:[],ocultas:[]}}
+  return {textos:m.textos||{},extras:m.extras||[],ocultas:m.ocultas||[]};
+}
+function todasMensagens(){
+  const c=modelosCfg();
+  return [
+    ...MSGS_PADRAO.filter(p=>!c.ocultas.includes(p.id)).map(p=>({...p,texto:c.textos[p.id]||p.texto,editada:!!c.textos[p.id],padrao:true})),
+    ...c.extras.map(e=>({...e,padrao:false})),
+  ];
+}
 function modelo(tipo,vars){
-  let t=(PERFIL.modelos&&PERFIL.modelos[tipo])||MODELOS_PADRAO[tipo];
-  return t.replace(/\{(\w+)\}/g,(m,k)=>vars[k]??m);
+  const m=todasMensagens().find(x=>x.id===tipo)||MSGS_PADRAO.find(x=>x.id===tipo);
+  return preencher(m.texto,vars);
+}
+function preencher(texto,vars){
+  const base={studio:PERFIL.nome||'Duda',link:PERFIL.agendamento_online&&PERFIL.slug?linkAgendamento():''};
+  return texto.replace(/\{(\w+)\}/g,(m,k)=>(vars?.[k]??base[k]??m)).replace(/\s+([.!?,])/g,'$1').replace(/ {2,}/g,' ').trim();
 }
 function varsAgendamento(a){
   const dia=labelDia(new Date(a.ini.getFullYear(),a.ini.getMonth(),a.ini.getDate())).toLowerCase();
   return {nome:a.name.split(' ')[0],servico:a.service,dia:/^(hoje|amanhã|ontem)$/.test(dia)?dia:'dia '+a.ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}),
     hora:a.time,data:a.ini.toLocaleDateString('pt-BR'),valor:fmtR(a.falta||a.price)};
 }
-function abrirModelos(){
-  document.getElementById('modelosCampos').innerHTML=Object.keys(MODELOS_PADRAO).map(k=>`
-    <div class="form-group"><label class="form-label">${ROTULOS_MODELOS[k]}</label>
-    <textarea class="form-input" id="mod_${k}" rows="3" style="resize:vertical">${esc((PERFIL.modelos&&PERFIL.modelos[k])||MODELOS_PADRAO[k])}</textarea></div>`).join('');
-  openDrawer('modelosDrawer');
+async function gravarModelos(c){
+  const {error}=await sb.from('perfil').upsert({modelos:c,atualizado_em:new Date().toISOString()},{onConflict:'owner_id'});
+  if(error){toast('Erro: '+error.message);return false}
+  PERFIL.modelos=c;return true;
 }
-async function salvarModelos(){
-  const modelos={};
-  Object.keys(MODELOS_PADRAO).forEach(k=>{const v=document.getElementById('mod_'+k).value.trim();if(v&&v!==MODELOS_PADRAO[k])modelos[k]=v});
-  const {error}=await sb.from('perfil').upsert({modelos,atualizado_em:new Date().toISOString()},{onConflict:'owner_id'});
-  if(error){toast('Erro: '+error.message);return}
-  PERFIL.modelos=modelos;
-  closeDrawer('modelosDrawer');toast('Modelos salvos');
+
+// Tela de edição
+let msgAberta=null;
+function abrirModelos(){msgAberta=null;renderMensagens();openDrawer('modelosDrawer')}
+function renderMensagens(){
+  const el=document.getElementById('modelosCampos');
+  const lista=todasMensagens();
+  el.innerHTML=lista.map(m=>{
+    const aberta=msgAberta===m.id;
+    return `<div class="card" style="margin-bottom:8px;padding:14px 16px">
+      <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="msgAberta=${aberta?'null':`'${m.id}'`};renderMensagens()">
+        <div style="flex:1;min-width:0"><div style="font-weight:500">${esc(m.titulo)}${m.editada?' <span class="badge badge-neutral">editada</span>':''}${!m.padrao?' <span class="badge badge-info">sua</span>':''}</div>
+        ${aberta?'':`<div class="client-sub" style="margin-top:3px">${esc(m.texto)}</div>`}</div>
+        <span class="chevron" style="transform:rotate(${aberta?90:0}deg);transition:transform .2s">›</span>
+      </div>
+      ${aberta?`<div style="margin-top:12px">
+        ${m.padrao?'':`<div class="form-group"><label class="form-label">Nome da mensagem</label><input class="form-input" id="msgTitulo" value="${esc(m.titulo)}"></div>`}
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">Texto</label><textarea class="form-input" id="msgTexto" rows="4" style="resize:vertical">${esc(m.texto)}</textarea></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">${VARIAVEIS.map(([v,d])=>`<button type="button" class="pill" style="padding:4px 10px;font-size:12px" title="${d}" onclick="inserirVariavel('${v}')">${v}</button>`).join('')}</div>
+        <div class="client-sub" style="white-space:normal;margin-bottom:12px">Exemplo: ${esc(preencher(m.texto,{nome:'Ana',servico:'Unhas em Gel',dia:'amanhã',hora:'14:00',data:new Date().toLocaleDateString('pt-BR'),valor:'R$ 60'}))}</div>
+        ${m.uso?`<div class="client-sub" style="white-space:normal;margin-bottom:12px">Usada em: ${esc(m.uso)}</div>`:''}
+        <div class="btn-row" style="flex-wrap:wrap">
+          ${m.padrao?(m.editada?`<button class="btn btn-ghost btn-sm" onclick="restaurarMensagem('${m.id}')">Texto original</button>`:'')+(m.uso?'':`<button class="btn btn-danger btn-sm" onclick="ocultarMensagem('${m.id}')">Remover</button>`)
+            :`<button class="btn btn-danger btn-sm" onclick="excluirMensagem('${m.id}')">Excluir</button>`}
+          <button class="btn btn-primary btn-sm" onclick="salvarMensagem('${m.id}')">Salvar</button>
+        </div>
+      </div>`:''}
+    </div>`;
+  }).join('');
+  const c=modelosCfg();
+  document.getElementById('modelosRestaurar').hidden=!c.ocultas.length;
 }
-function restaurarModelos(){Object.keys(MODELOS_PADRAO).forEach(k=>document.getElementById('mod_'+k).value=MODELOS_PADRAO[k])}
+function inserirVariavel(v){
+  const t=document.getElementById('msgTexto');if(!t)return;
+  const i=t.selectionStart??t.value.length;
+  t.value=t.value.slice(0,i)+v+t.value.slice(t.selectionEnd??i);
+  t.focus();t.selectionStart=t.selectionEnd=i+v.length;
+}
+async function salvarMensagem(id){
+  const texto=document.getElementById('msgTexto').value.trim();
+  if(!texto){toast('Escreva o texto da mensagem');return}
+  const c=modelosCfg();
+  const pad=MSGS_PADRAO.find(p=>p.id===id);
+  if(pad){ if(texto===pad.texto) delete c.textos[id]; else c.textos[id]=texto; }
+  else{
+    const e=c.extras.find(x=>x.id===id);if(!e)return;
+    e.texto=texto;e.titulo=document.getElementById('msgTitulo').value.trim()||'Mensagem';
+  }
+  if(await gravarModelos(c)){msgAberta=null;renderMensagens();toast('Mensagem salva')}
+}
+async function novaMensagem(){
+  const c=modelosCfg();
+  const id='m'+Date.now().toString(36);
+  c.extras.push({id,titulo:'Nova mensagem',texto:'Oi {nome}! '});
+  if(await gravarModelos(c)){msgAberta=id;renderMensagens();setTimeout(()=>document.getElementById('msgTitulo')?.select(),50)}
+}
+async function excluirMensagem(id){
+  if(!confirm('Excluir esta mensagem?'))return;
+  const c=modelosCfg();c.extras=c.extras.filter(e=>e.id!==id);
+  if(await gravarModelos(c)){msgAberta=null;renderMensagens();toast('Mensagem excluída')}
+}
+async function ocultarMensagem(id){
+  const c=modelosCfg();if(!c.ocultas.includes(id))c.ocultas.push(id);delete c.textos[id];
+  if(await gravarModelos(c)){msgAberta=null;renderMensagens();toast('Mensagem removida da lista')}
+}
+async function restaurarMensagem(id){
+  const c=modelosCfg();delete c.textos[id];
+  if(await gravarModelos(c)){renderMensagens();toast('Texto original de volta')}
+}
+async function restaurarOcultas(){
+  const c=modelosCfg();c.ocultas=[];
+  if(await gravarModelos(c)){renderMensagens();toast('Mensagens padrão de volta')}
+}
+
+// Escolher e enviar (da ficha da cliente ou do agendamento)
+let envioCtx=null;
+function enviarMensagem(clienteId,apptId){
+  const a=apptId?ALL_APPTS.find(x=>x.id===apptId):null;
+  const c=CLIENTS.find(x=>x.id===(clienteId||a?.cliente_id));
+  const tel=a?.phone||c?.phone;
+  if(!tel){toast('Essa cliente não tem WhatsApp cadastrado');return}
+  // sem agendamento, usa o próximo dela (ou o último) para preencher serviço/dia/hora
+  const ref=a||ALL_APPTS.filter(x=>x.cliente_id===c?.id&&ATIVOS(x)&&x.ini>=hoje0()).sort((x,y)=>x.ini-y.ini)[0]
+    ||ALL_APPTS.filter(x=>x.cliente_id===c?.id).sort((x,y)=>y.ini-x.ini)[0];
+  const vars=ref?varsAgendamento(ref):{nome:(c?.name||'').split(' ')[0]};
+  if(!ref) vars.nome=(c?.name||'').split(' ')[0];
+  envioCtx={tel,vars,nome:a?.name||c?.name};
+  document.getElementById('enviarMsgTitulo').textContent='Mensagem para '+(envioCtx.nome||'').split(' ')[0];
+  document.getElementById('enviarMsgLista').innerHTML=todasMensagens().map(m=>{
+    const txt=preencher(m.texto,vars);
+    return `<a class="client-row" style="text-decoration:none;color:inherit;align-items:flex-start" href="${waLink(tel,txt)}" target="_blank" rel="noopener">
+      <div class="client-info"><div class="client-name">${esc(m.titulo)}</div><div class="client-sub" style="white-space:normal;margin-top:3px">${esc(txt)}</div></div>
+      <span class="chevron" style="margin-top:2px">›</span></a>`;
+  }).join('');
+  openDrawer('enviarMsgDrawer');
+}
 
 // ── LEMBRETES DE AMANHÃ (um toque cada) ───────────────────────────
 function paraLembrar(){
