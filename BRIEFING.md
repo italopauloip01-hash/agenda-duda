@@ -45,7 +45,9 @@
 
 ### Status do Google (2026-10-17)
 - FEITO: projeto Google Cloud `agenda-da-duda-511919` (conta italopauloip01@gmail.com, com 2SV), People + Calendar API ativas, consentimento Externo **em produção** (não verificado, até 100 usuários), nome provisório "Agenda Beleza", página inicial + `privacidade.html`, domínios autorizados (vercel, github.io, supabase), escopos salvos (calendário = não confidenciais; contatos = confidencial), cliente OAuth web "Marquei web" com origens e redirect do Supabase. Client ID e secret gravados em `config_privada`
-- FALTA: Supabase → Authentication → Providers → Google (ativar e colar Client ID/Secret — ver `config_privada`) e ligar "Allow manual linking"; depois testar login
+- FUNCIONANDO (testado 2026-10-17 com italopauloip01@gmail.com): "Conectar Google" em Ajustes usa fluxo próprio — consentimento direto no Google (`GOOGLE_CLIENT_ID` no index.html, retorno = página do app), a função `google-token` v2 (`acao:'trocar'`) troca o código pelo refresh token e grava em `google_conexao`. Renovação, criação do calendário, envio de evento, freebusy e leitura de contatos ok. Os redirect URIs autorizados no Google: as duas páginas do app + callback do Supabase
+- OPCIONAL: botão "Entrar com Google" na tela de login depende do provedor Google no Supabase (Authentication → Providers → Google, colar o Client ID/Secret de `config_privada`) — o conector MCP não acessa essa configuração; precisa do login no dashboard
+- Tela "app não verificado" aparece para todos até a verificação do Google (precisa de domínio próprio)
 - Nome do produto: "Marquei" e "Mimo" já existem no mercado; opções livres sugeridas: Hora do Mimo, Hora Linda, Bela Vez
 
 ### Ativar o Google (passo a passo original)
