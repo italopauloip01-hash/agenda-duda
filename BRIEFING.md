@@ -36,6 +36,13 @@
 - **Exportar**: CSV (; e BOM) de atendimentos, pagamentos e despesas
 - **Google** (código pronto, falta credencial): login pede contatos + calendário; `google_conexao` guarda refresh token (sem SELECT da coluna para o app); função `google-token` renova; agendamentos vão para o calendário "Agenda da Duda"; freebusy do calendário pessoal bloqueia horários; importar contatos com seleção
 
+### Página da cliente — visual (2026-10-16)
+- Identidade própria, separada do painel: paleta rosê/creme (`--rose #C9718A`, `--rose-2 #A44E68`, `--blush`, `--gold`), títulos Fraunces (serifada, itálico nos destaques), corpo DM Sans, botões pílula; modo escuro ameixa (`--sobre-rosa` escuro para contraste)
+- Animações: capa com aproximação lenta, `.reveal` com IntersectionObserver, etapas com `surge`, pétalas na confirmação; tudo desliga com prefers-reduced-motion
+- Carrossel de avaliações automático (5s, pausa ao tocar), pontos clicáveis
+- Fluxo: barra de passos, resumo com "alterar", abas Unhas / Pés & podologia, horários por turno, "lembrar meus dados" (localStorage), fotos com setas/deslize, rodapé com horários (destaca hoje)
+- Só a área de agendamento re-renderiza a cada escolha (carrossel e animações não reiniciam)
+
 ### Ativar o Google (falta fazer — precisa do login Google do dono)
 1. console.cloud.google.com → criar projeto "Agenda da Duda"
 2. APIs e serviços → ativar **Google People API** e **Google Calendar API**
