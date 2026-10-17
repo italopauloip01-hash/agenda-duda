@@ -13,6 +13,13 @@
 - Login: e-mail + senha. Google ainda não configurado (precisa Client ID do Google Cloud)
 - Auth → URL Configuration: Site URL e Redirect URL = endereço do GitHub Pages
 
+## Pagamentos (2026-10-16)
+- Tabela `pagamentos` (vários por agendamento: entrada + restante) + coluna `agendamentos.pagar_ate` — `supabase/003_pagamentos.sql`
+- Pago = soma ≥ valor; "a receber" = já atendido (concluído ou passou do horário) e com saldo; "vencido" = `pagar_ate` < hoje
+- Financeiro: Receita = concluídos no período (competência); Recebido = pagamentos no período (caixa); A receber = todo saldo em aberto
+- Remarcar move os pagamentos para o novo agendamento
+- O conector Supabase só enxerga UMA organização por autorização; o projeto fica na org "Agenda"
+
 ## Publicação
 - Vercel: https://agenda-duda-ruddy.vercel.app (projeto `agenda-duda`, ligado ao repo: push em `main` publica sozinho; o nome pode ser trocado em Settings → Domains)
 - Site: https://italopauloip01-hash.github.io/agenda-duda/ (GitHub Pages, branch `main`, raiz)
@@ -21,7 +28,7 @@
 
 ## Dados de demonstração (2026-10-15)
 - Conta italo.pauloip01@gmail.com recebeu: 40 clientes, ~334 agendamentos (1º/ago até +14 dias), estoque, despesas, avaliações, notificações, 1 folga e 1 bloqueio
-- Gerar de novo: `SB_KEY=<service_role> OWNER=<uuid> node supabase/demo/gerar_demo.mjs` (usa os serviços já cadastrados)
+- Gerar de novo: `SB_KEY=<service_role> OWNER=<uuid> node supabase/demo/gerar_demo.mjs` (usa os serviços já cadastrados) e depois `gerar_pagamentos_demo.mjs`
 - Apagar: `supabase/demo/limpar_demo.sql` no SQL Editor
 
 ## Design (2026-10-15)
