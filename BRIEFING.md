@@ -43,7 +43,12 @@
 - Fluxo: barra de passos, resumo com "alterar", abas Unhas / Pés & podologia, horários por turno, "lembrar meus dados" (localStorage), fotos com setas/deslize, rodapé com horários (destaca hoje)
 - Só a área de agendamento re-renderiza a cada escolha (carrossel e animações não reiniciam)
 
-### Ativar o Google (falta fazer — precisa do login Google do dono)
+### Status do Google (2026-10-17)
+- FEITO: projeto Google Cloud `agenda-da-duda-511919` (conta italopauloip01@gmail.com, com 2SV), People + Calendar API ativas, consentimento Externo **em produção** (não verificado, até 100 usuários), nome provisório "Agenda Beleza", página inicial + `privacidade.html`, domínios autorizados (vercel, github.io, supabase), escopos salvos (calendário = não confidenciais; contatos = confidencial), cliente OAuth web "Marquei web" com origens e redirect do Supabase. Client ID e secret gravados em `config_privada`
+- FALTA: Supabase → Authentication → Providers → Google (ativar e colar Client ID/Secret — ver `config_privada`) e ligar "Allow manual linking"; depois testar login
+- Nome do produto: "Marquei" e "Mimo" já existem no mercado; opções livres sugeridas: Hora do Mimo, Hora Linda, Bela Vez
+
+### Ativar o Google (passo a passo original)
 1. console.cloud.google.com → criar projeto "Agenda da Duda"
 2. APIs e serviços → ativar **Google People API** e **Google Calendar API**
 3. Google Auth Platform → Branding (nome, e-mail) → Público: Externo → **Publicar app** (fica "não verificado": a tela mostra um aviso, mas funciona e o acesso não expira em 7 dias como no modo teste)
