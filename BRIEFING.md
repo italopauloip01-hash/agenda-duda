@@ -20,6 +20,13 @@
 - Remarcar move os pagamentos para o novo agendamento
 - O conector Supabase só enxerga UMA organização por autorização; o projeto fica na org "Agenda"
 
+## App instalável (2026-10-16)
+- PWA: `manifest.webmanifest`, `sw.js` (página rede-primeiro, CDN cache-primeiro, API do Supabase nunca em cache), ícones em `icons/` gerados por `node tools/gerar_icones.mjs`
+- Android/Chrome: aviso "Instalar" na agenda (dispensável) + Ajustes → Instalar o app; iPhone: instruções do Safari
+- Ao mudar `sw.js`, trocar `VERSAO` para limpar o cache antigo
+- Botão voltar do celular fecha a gaveta aberta / volta para a Agenda (histórico com `pushState`)
+- Google Play: possível depois empacotando o PWA (TWA/Bubblewrap); exige conta de desenvolvedor (US$ 25 uma vez)
+
 ## Publicação
 - Vercel: https://agenda-duda-ruddy.vercel.app (projeto `agenda-duda`, ligado ao repo: push em `main` publica sozinho; o nome pode ser trocado em Settings → Domains)
 - Site: https://italopauloip01-hash.github.io/agenda-duda/ (GitHub Pages, branch `main`, raiz)
