@@ -3731,9 +3731,20 @@ async function abrirImportarAgenda(){
     EVENTOS_G=evs.filter(e=>e.start?.dateTime&&e.end?.dateTime&&e.status!=='cancelled').map(e=>{
       const i=new Date(e.start.dateTime), f=new Date(e.end.dateTime), titulo=e.summary||'(sem título)';
       const txt=titulo+' '+(e.description||'');
-      const cli=acharPorNome(CLIENTS,titulo,'name'), svc=acharPorNome(svcs,txt,'name');
+      const svc=acharPorNome(svcs,txt,'name');
+      // nome da cliente = título sem o nome do serviço e sem separadores ("Carla - design de sobrancelha" → "Carla")
+      let nomeCli=titulo;
+      if(svc){const re=new RegExp(svc.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'); nomeCli=nomeCli.replace(re,'')}
+      nomeCli=nomeCli.replace(/[-–—|:,/()]+/g,' ').replace(/\s+/g,' ').trim()||titulo;
+      // cliente: nome completo no título; senão o primeiro nome, se só uma cliente tiver esse nome
+      let cli=acharPorNome(CLIENTS,titulo,'name');
+      if(!cli){
+        const p1=semAcento(nomeCli.split(' ')[0]);
+        const mesmos=p1.length>=3?CLIENTS.filter(c=>semAcento(c.name.split(' ')[0])===p1):[];
+        if(mesmos.length===1) cli=mesmos[0];
+      }
       const jaTem=ALL_APPTS.some(a=>ATIVOS(a)&&a.ini<f&&a.fim>i);
-      return {id:e.id,ini:i,fim:f,titulo,cli,svc,jaTem,sel:!jaTem};
+      return {id:e.id,ini:i,fim:f,titulo,nomeCli,cli,svc,jaTem,sel:!jaTem};
     });
     renderEventosG();
   }catch(e){
@@ -3753,7 +3764,7 @@ function renderEventosG(){
       <input type="checkbox" ${e.sel?'checked':''} onchange="EVENTOS_G[${k}].sel=this.checked;renderEventosG()" style="width:18px;height:18px;margin-top:3px;accent-color:var(--fg)">
       <div class="client-info"><div class="client-name" style="white-space:normal">${esc(e.titulo)}</div>
         <div class="client-sub" style="white-space:normal">${dia} · ${hhmm(e.ini)}–${hhmm(e.fim)}${e.jaTem?' · <b style="color:var(--warn)">já tem horário na agenda</b>':''}</div>
-        <div class="client-sub" style="white-space:normal">Cliente: ${e.cli?esc(e.cli.name):'<i>nova — '+esc(e.titulo)+'</i>'} · Serviço: ${e.svc?esc(e.svc.name)+' ('+fmtR(e.svc.promo??e.svc.price)+')':'<i>não identificado</i>'}</div></div></label>`;
+        <div class="client-sub" style="white-space:normal">Cliente: ${e.cli?esc(e.cli.name):'<i>nova — '+esc(e.nomeCli)+'</i>'} · Serviço: ${e.svc?esc(e.svc.name)+' ('+fmtR(e.svc.promo??e.svc.price)+')':'<i>não identificado</i>'}</div></div></label>`;
   }).join('');
 }
 function marcarEventosG(v){EVENTOS_G.forEach(e=>e.sel=v&&!e.jaTem);renderEventosG()}
@@ -3766,7 +3777,7 @@ async function importarEventosG(){
     try{
       let cliId=e.cli?.id;
       if(!cliId){
-        const r=await sb.from('clientes').insert({nome:e.titulo.slice(0,80),tipo:e.svc?.tipo||'esmalteria',origem:'Google',cor:CORES_CLIENTE[(CLIENTS.length+ok)%CORES_CLIENTE.length]}).select('id').single();
+        const r=await sb.from('clientes').insert({nome:e.nomeCli.slice(0,80),tipo:e.svc?.tipo||'esmalteria',origem:'Google',cor:CORES_CLIENTE[(CLIENTS.length+ok)%CORES_CLIENTE.length]}).select('id').single();
         if(r.error) throw r.error; cliId=r.data.id;
       }
       const {error}=await sb.from('agendamentos').insert({cliente_id:cliId,servico_id:e.svc?.id||null,servico_nome:e.svc?.name||e.titulo.slice(0,80),
