@@ -1457,12 +1457,14 @@ async function entrar(user){
   if(USER&&USER.id===user.id)return;
   USER=user;
   document.getElementById('loginScreen').hidden=true;
-  const nome=user.user_metadata?.full_name||user.user_metadata?.name||user.email.split('@')[0];
+  // nome que a pessoa usa no Google (primeiro nome = given_name); e-mail só se não houver nome
+  const md=user.user_metadata||{};
+  const nome=md.full_name||md.name||md.given_name||user.email.split('@')[0];
   document.getElementById('contaNome').textContent=nome;
   document.getElementById('contaEmail').textContent=user.email;
   document.getElementById('contaAvatar').textContent=(nome[0]||'?').toUpperCase();
   document.querySelector('.avatar').textContent=(nome[0]||'D').toUpperCase();
-  const primeiro=nome.split(/[\s._-]/)[0];
+  const primeiro=md.given_name||nome.split(/[\s._-]/)[0];
   document.getElementById('topName').textContent=primeiro.charAt(0).toUpperCase()+primeiro.slice(1);
   await recarregar();
   // entrou pelo Google: calendário e contatos já vieram vinculados
@@ -3421,7 +3423,7 @@ function conectarGoogle(modo){
   const estado=crypto.randomUUID();
   try{sessionStorage.setItem('g_estado',estado);sessionStorage.setItem('g_modo',modo==='login'?'login':'conectar')}catch(e){}
   const p=new URLSearchParams({client_id:GOOGLE_CLIENT_ID,redirect_uri:RETORNO_GOOGLE,response_type:'code',
-    scope:'openid email '+GOOGLE_SCOPES,access_type:'offline',prompt:'consent',include_granted_scopes:'true',state:estado});
+    scope:'openid email profile '+GOOGLE_SCOPES,access_type:'offline',prompt:'consent',include_granted_scopes:'true',state:estado});
   location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p;
 }
 // Volta do Google: ?code=...&state=... (ou ?error=access_denied)

@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
   if (!r.ok || !t.id_token) return json(400, { erro: "troca_falhou", detalhe: t.error_description || t.error });
 
   // 2. identidade (o id_token veio direto do Google por HTTPS com o nosso secret; conferimos destino e validade)
-  let info: { email?: string; email_verified?: boolean; aud?: string; exp?: number; name?: string; picture?: string };
+  let info: { email?: string; email_verified?: boolean; aud?: string; exp?: number; name?: string; given_name?: string; picture?: string };
   try { info = JSON.parse(atob(t.id_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); }
   catch (_) { return json(400, { erro: "id_token" }); }
   if (info.aud !== clientId || !info.email || !info.email_verified || (info.exp ?? 0) * 1000 < Date.now())
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
   if (!email) {
     email = emailGoogle;
     const criado = await admin.auth.admin.createUser({
-      email, email_confirm: true, user_metadata: { full_name: info.name, avatar_url: info.picture },
+      email, email_confirm: true, user_metadata: { full_name: info.name, given_name: info.given_name, avatar_url: info.picture },
     });
     if (criado.error && !/already|registered|exists/i.test(criado.error.message))
       return json(500, { erro: "criar_conta", detalhe: criado.error.message });
@@ -79,6 +79,12 @@ Deno.serve(async (req) => {
   const link = await admin.auth.admin.generateLink({ type: "magiclink", email });
   if (link.error || !link.data?.properties?.hashed_token) return json(500, { erro: "sessao", detalhe: link.error?.message });
   const userId = link.data.user.id;
+  // mantém o nome igual ao que a pessoa usa no Google (vale também para contas antigas)
+  if (info.name || info.given_name) {
+    await admin.auth.admin.updateUserById(userId, {
+      user_metadata: { ...(link.data.user.user_metadata || {}), full_name: info.name, given_name: info.given_name, avatar_url: info.picture },
+    });
+  }
 
   // 4. calendário e contatos já ficam vinculados
   if (t.refresh_token) {
