@@ -1492,25 +1492,29 @@ function mostrarLogin(){
   document.getElementById('loginScreen').hidden=false;
   if(location.protocol==='file:') document.getElementById('loginMsg').innerHTML='<span style="color:var(--warn)">Abra pelo endereço do site para conseguir entrar.</span>';
 }
-async function entrar(user){
-  if(USER&&USER.id===user.id)return;
-  USER=user;
-  document.getElementById('loginScreen').hidden=true;
-  // nome que a pessoa usa no Google (primeiro nome = given_name); e-mail só se não houver nome
+// nome que a pessoa usa no Google (primeiro nome = given_name; e-mail só se não houver nome) e foto do perfil
+function mostrarConta(user){
   const md=user.user_metadata||{};
   const nome=md.full_name||md.name||md.given_name||user.email.split('@')[0];
   document.getElementById('contaNome').textContent=nome;
   document.getElementById('contaEmail').textContent=user.email;
-  document.getElementById('contaAvatar').textContent=(nome[0]||'?').toUpperCase();
-  document.querySelector('.avatar').textContent=(nome[0]||'D').toUpperCase();
-  // foto do perfil do Google (se a pessoa entrou com o Google); se falhar, fica a inicial
+  const alvos=[document.getElementById('contaAvatar'),document.querySelector('.avatar')];
+  alvos.forEach(el=>el.textContent=(nome[0]||'?').toUpperCase());
   const foto=md.avatar_url||md.picture;
-  if(foto) ['contaAvatar'].map(id=>document.getElementById(id)).concat([document.querySelector('.avatar')]).forEach(el=>{
+  if(foto) alvos.forEach(el=>{
     const img=new Image(); img.referrerPolicy='no-referrer'; img.alt=''; img.className='avatar-foto';
     img.onload=()=>{el.textContent='';el.appendChild(img)}; img.src=foto;
   });
   const primeiro=md.given_name||nome.split(/[\s._-]/)[0];
   document.getElementById('topName').textContent=primeiro.charAt(0).toUpperCase()+primeiro.slice(1);
+}
+async function entrar(user){
+  if(USER&&USER.id===user.id)return;
+  USER=user;
+  document.getElementById('loginScreen').hidden=true;
+  mostrarConta(user);
+  // a sessão guardada no celular pode ter nome/foto antigos: busca a versão atual da conta
+  sb.auth.getUser().then(({data})=>{ if(data?.user&&USER&&data.user.id===USER.id){USER=data.user;mostrarConta(data.user)} }).catch(()=>{});
   await recarregar();
   // entrou pelo Google: calendário e contatos já vieram vinculados
   if(window._pendGoogle){
