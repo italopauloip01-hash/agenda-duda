@@ -651,7 +651,7 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
   </div>
   <div id="clientList" class="list-card"></div>
   <div class="btn-row" style="margin-top:14px">
-    <button class="btn btn-primary" onclick="openDrawer('novoClienteDrawer')">Nova cliente</button>
+    <button class="btn btn-primary" onclick="novaCliente()">Nova cliente</button>
     <button class="btn btn-ghost" onclick="GOOGLE.conectado?abrirContatosGoogle():importContacts()" style="flex-shrink:0;width:auto;padding:12px 16px" title="Importar contatos do celular">Importar</button>
   </div>
 </main>
@@ -1024,7 +1024,7 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
 <!-- Novo cliente -->
 <div class="modal-overlay" id="novoClienteDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
-  <div class="drawer-title">Novo cliente</div>
+  <div class="drawer-title" id="cliTitulo">Nova cliente</div>
   <div class="form-group"><label class="form-label">Nome completo</label><input class="form-input" type="text" id="cliNome" placeholder="Nome da cliente"></div>
   <div class="form-row">
     <div class="form-group"><label class="form-label">WhatsApp</label><input class="form-input" type="tel" id="cliTel" placeholder="(00) 00000-0000"></div>
@@ -1047,7 +1047,7 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
   <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:13px"><input type="checkbox" id="cliVip"> ⭐ Cliente VIP</label>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="closeDrawer('novoClienteDrawer')">Cancelar</button>
-    <button class="btn btn-primary" onclick="salvarCliente()">Cadastrar</button>
+    <button class="btn btn-primary" id="cliBtn" onclick="salvarCliente()">Cadastrar</button>
   </div>
 </div></div>
 
@@ -1588,7 +1588,7 @@ async function recarregar(){
     GOOGLE.conectado=!!gc;
     if(gc){GOOGLE.email=gc.email_google;GOOGLE.calendarioId=gc.calendario_id;GOOGLE.contatosSyncEm=gc.contatos_sync_em}
     CLIENTS=cli.map(c=>({id:c.id,name:c.nome,type:c.tipo,visits:Number(c.visitas),last:relDia(c.ultima_visita),
-      color:c.cor,phone:c.telefone||'',bday:c.nascimento,cpf:c.cpf||'',vip:c.vip,faltou:Number(c.faltas),pref:c.preferencias,obs:c.observacoes}));
+      color:c.cor,phone:c.telefone||'',bday:c.nascimento,cpf:c.cpf||'',origem:c.origem,vip:c.vip,faltou:Number(c.faltas),pref:c.preferencias,obs:c.observacoes}));
     const mapSvc=s=>({id:s.id,name:s.nome,tipo:s.tipo,dur:s.duracao_min,int:s.intervalo_min,price:Number(s.preco),
       promo:s.preco_promo!=null?Number(s.preco_promo):null,color:s.cor});
     SVCS_NAIL=svc.filter(s=>s.tipo==='esmalteria').map(mapSvc);
@@ -1945,6 +1945,7 @@ function openFicha(c) {
       <button class="btn btn-primary btn-sm" onclick="closeDrawer('fichaClienteDrawer');novoAgendamentoPara(window._fichaNome)">Agendar</button>
       ${wa?`<a class="btn btn-ghost btn-sm" style="text-decoration:none" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>`:'<button class="btn btn-ghost btn-sm" disabled>Sem WhatsApp</button>'}
       ${wa?`<button class="btn btn-ghost btn-sm" style="grid-column:1/-1" onclick="enviarMensagem('${c.id}')">Enviar mensagem pronta</button>`:''}
+      <button class="btn btn-ghost btn-sm" style="grid-column:1/-1" onclick="editarCliente('${c.id}')">✎ Editar dados</button>
     </div>
     <button class="btn btn-ghost" onclick="closeDrawer('fichaClienteDrawer')">Fechar</button>`;
   openDrawer('fichaClienteDrawer');
@@ -1987,22 +1988,43 @@ function renderAniversarios() {
     el.appendChild(row);
   });
 }
+// o mesmo formulário serve para cadastrar e para editar (CLI_EDIT = id da cliente em edição)
+let CLI_EDIT=null;
+function preencherFormCliente(c){
+  const set=(id,val)=>document.getElementById(id).value=val||'';
+  set('cliNome',c&&c.name); set('cliTel',c&&c.phone?fmtTel(c.phone):''); set('cliNasc',c&&c.bday);
+  set('cliCpf',c&&fmtCpf(c.cpf)); set('cliPref',c&&c.pref); set('cliObs',c&&c.obs);
+  document.getElementById('cliTipo').value=(c&&c.type)||'esmalteria';
+  const orig=document.getElementById('cliOrigem');
+  orig.value=(c&&c.origem)||'WhatsApp'; if(!orig.value) orig.value='Outro';
+  document.getElementById('cliVip').checked=!!(c&&c.vip);
+  document.getElementById('cliTitulo').textContent=c?'Editar cliente':'Nova cliente';
+  document.getElementById('cliBtn').textContent=c?'Salvar':'Cadastrar';
+}
+function novaCliente(){ CLI_EDIT=null; preencherFormCliente(null); openDrawer('novoClienteDrawer'); }
+function editarCliente(id){
+  const c=CLIENTS.find(x=>x.id===id); if(!c) return;
+  CLI_EDIT=id; preencherFormCliente(c);
+  closeDrawer('fichaClienteDrawer'); openDrawer('novoClienteDrawer');
+}
 async function salvarCliente(){
   const v=id=>document.getElementById(id).value.trim();
   const nome=v('cliNome');
   if(!nome){document.getElementById('cliNome').focus();return}
   const cpf=v('cliCpf').replace(/\D/g,'')||null;
   if(cpf&&!cpfValido(cpf)){toast('CPF inválido — confira os números');document.getElementById('cliCpf').focus();return}
-  const {error}=await sb.from('clientes').insert({
-    nome,telefone:normTel(v('cliTel')),nascimento:v('cliNasc')||null,cpf,tipo:v('cliTipo'),origem:v('cliOrigem'),
-    preferencias:v('cliPref')||null,observacoes:v('cliObs')||null,vip:document.getElementById('cliVip').checked,
-    cor:CORES_CLIENTE[CLIENTS.length%CORES_CLIENTE.length]});
+  const dados={nome,telefone:normTel(v('cliTel')),nascimento:v('cliNasc')||null,cpf,tipo:v('cliTipo'),origem:v('cliOrigem'),
+    preferencias:v('cliPref')||null,observacoes:v('cliObs')||null,vip:document.getElementById('cliVip').checked};
+  const editando=CLI_EDIT;
+  const {error}=editando
+    ? await sb.from('clientes').update(dados).eq('id',editando)
+    : await sb.from('clientes').insert({...dados,cor:CORES_CLIENTE[CLIENTS.length%CORES_CLIENTE.length]});
   if(error){toast(error.code==='23505'?'Já existe uma cliente com esse WhatsApp':'Erro: '+error.message);return}
-  ['cliNome','cliTel','cliNasc','cliCpf','cliPref','cliObs'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('cliVip').checked=false;
+  CLI_EDIT=null; preencherFormCliente(null);
   closeDrawer('novoClienteDrawer');
-  toast('Cliente cadastrada');
+  toast(editando?'Dados atualizados':'Cliente cadastrada');
   await recarregar();
+  if(editando){const c=CLIENTS.find(x=>x.id===editando); if(c) openFicha(c);}
 }
 
 // ── SERVICES ──────────────────────────────────────────────────────
