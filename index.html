@@ -2934,7 +2934,7 @@ function buildCalendar() {
   const titulo=sem[0].toUpperCase()+sem.slice(1)+', '+calSel.toLocaleDateString('pt-BR',{day:'numeric',month:'long'});
   const tp=tempoDoDia(calSel);
   const resumo=tp.trab?`${fmtHoras(tp.ocup)} de ${fmtHoras(tp.trab)} ocupadas`:(folga?'':'Fechado neste dia');
-  el.innerHTML=`<div class="section-header" style="margin:18px 0 10px"><div><div class="section-title">${titulo}</div>${resumo?`<div style="font-size:12px;color:var(--fg-muted);margin-top:2px">${resumo}</div>`:''}</div>
+  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 0 10px"><div><div class="section-title">${titulo}</div>${resumo?`<div style="font-size:12px;color:var(--fg-muted);margin-top:2px">${resumo}</div>`:''}</div>
       <button class="btn btn-ghost btn-sm" style="width:auto;padding:6px 12px" onclick="agendarNoDiaCal()">+ Agendar</button></div>
     ${folga?`<div class="alert alert-info"><span>Folga${folga.motivo?': '+esc(folga.motivo):''}</span></div>`:''}
     ${lista.length?'':'<div class="empty-state" style="padding:18px 0">Nenhum compromisso neste dia.</div>'}`;
