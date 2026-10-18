@@ -1,4 +1,11 @@
-# Briefing — Painel Agenda da Duda
+# Briefing — Bellisa (antes "Painel Agenda da Duda")
+
+## Marca Bellisa (2026-10-17)
+- Nome do produto: **Bellisa** (wordmark "Bell" + "isa" em itálico #A44E68). Slogan: "Beleza com hora marcada."
+- Ícone: lírio de três pétalas, `icons/bellisa.svg` (fonte). PNGs (192, 512, maskable, apple-touch, favicon-32) gerados por `tools/gerar_icones.ps1`; ao mudar o SVG, rodar o script de novo.
+- Endereço principal: https://bellisa.vercel.app (o antigo agenda-duda-ruddy.vercel.app continua funcionando). Liberado na função `google-token` (RETORNOS) e no cliente OAuth do Google Cloud; tela de consentimento renomeada para "Bellisa".
+- Calendário criado no Google a partir de agora se chama "Bellisa"; os que já existem mantêm o nome antigo.
+- Celular: para trocar ícone/nome de um app já instalado, remover da tela inicial e instalar de novo.
 
 - **Arquivo local:** `painel-duda.html` (nesta pasta; fonte original, 1801 linhas — idêntico ao artifact publicado, sem a casca doctype que a publicação adiciona)
 - **Artifact publicado:** https://claude.ai/artifact/D1awmgVDn2MRuARGmAZtsM

@@ -9,7 +9,7 @@
 <meta property="og:description" content="Esmalteria e podologia — agende online em menos de um minuto.">
 <meta name="theme-color" content="#FFF8F6" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1A1216" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/bellisa.svg" type="image/svg+xml"><link rel="icon" href="icons/favicon-32.png" sizes="32x32"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400;1,9..144,500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap">
@@ -332,7 +332,7 @@ function renderPagina(){
       <div class="sec-tit reveal" style="justify-content:center"><h2 class="serif" style="font-size:22px">Horários de <em>atendimento</em></h2></div>
       <div class="horas reveal">${[1,2,3,4,5,6,0].map(d=>{const h=A.horarios.find(x=>x.dia===d);return `<div class="${d===hojeDow?'hoje':''}">${DIAS_LONGOS[d]}${d===hojeDow?' · hoje':''}<span>${h?.abre?`${h.abre.slice(0,5)} – ${h.fecha.slice(0,5)}`:'Fechado'}</span></div>`}).join('')}</div>
       ${wa?`<a class="btn btn-zap reveal" style="margin-top:16px" href="${wa}" target="_blank" rel="noopener">${IC.zap}Dúvidas? Fale no WhatsApp</a>`:''}
-      <p class="assina">Seus dados são usados só para o seu atendimento.</p>
+      <p class="assina">Seus dados são usados só para o seu atendimento.</p><p class="assina" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px"><img src="icons/bellisa.svg" alt="" width="16" height="16" style="border-radius:5px">Agendamento por <span style="font-family:Fraunces,serif">Bell<em>isa</em></span></p>
     </footer>`;
   if(A.fotos.length) renderBook();
   renderAgendamento();

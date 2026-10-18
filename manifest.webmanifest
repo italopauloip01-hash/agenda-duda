@@ -1,7 +1,7 @@
 {
-  "name": "Agenda da Duda",
-  "short_name": "Agenda",
-  "description": "Agenda, clientes, pagamentos e financeiro do studio.",
+  "name": "Bellisa",
+  "short_name": "Bellisa",
+  "description": "Bellisa — beleza com hora marcada. Agenda, clientes e pagamentos do seu studio.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

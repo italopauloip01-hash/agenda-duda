@@ -15,6 +15,7 @@ const json = (status: number, body: unknown) =>
 
 // Só aceita voltar para os endereços do próprio app
 const RETORNOS = new Set([
+  "https://bellisa.vercel.app/",
   "https://agenda-duda-ruddy.vercel.app/",
   "https://italopauloip01-hash.github.io/agenda-duda/",
 ]);

@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Agenda da Duda</title>
+<title>Bellisa</title>
 <meta name="description" content="Agenda, clientes e financeiro do studio.">
 <meta name="theme-color" content="#FAFAF9" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0C0A09" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Agenda">
+<meta name="apple-mobile-web-app-title" content="Bellisa">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231C1917'/%3E%3Ccircle cx='32' cy='32' r='9' fill='%23D8A7B4'/%3E%3C/svg%3E">
+<link rel="icon" href="icons/bellisa.svg" type="image/svg+xml"><link rel="icon" href="icons/favicon-32.png" sizes="32x32">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap">
@@ -397,7 +397,7 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
 /* Login */
 #loginScreen{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px 20px}
 .login-box{width:100%;max-width:340px}
-.login-mark{width:44px;height:44px;border-radius:13px;background:var(--fg);display:flex;align-items:center;justify-content:center;margin-bottom:22px}
+.login-mark{width:56px;height:56px;display:block;margin-bottom:20px;border-radius:16px;box-shadow:0 8px 24px -10px rgba(164,78,104,.45)}
 .login-mark span{width:12px;height:12px;border-radius:50%;background:var(--accent)}
 .login-title{font-size:24px;font-weight:600;letter-spacing:-.03em;margin-bottom:4px}
 .login-sub{font-size:14px;color:var(--fg-muted);margin-bottom:28px}
@@ -559,8 +559,8 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
 <!-- ================================================================ LOGIN ================================================================ -->
 <div id="loginScreen">
   <div class="login-box">
-    <div class="login-mark"><span></span></div>
-    <div class="login-title">Agenda da Duda</div>
+    <img class="login-mark" src="icons/bellisa.svg" alt="">
+    <div class="login-title">Bell<em style="font-style:italic;color:var(--accent)">isa</em></div>
     <div class="login-sub">Entre para ver sua agenda.</div>
     <button class="btn btn-ghost" onclick="loginGoogle()">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
@@ -1308,7 +1308,7 @@ const REDIRECT = location.origin + location.pathname;
 let USER = null, SESSAO = null;
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/contacts.readonly',      // ler contatos
-  'https://www.googleapis.com/auth/calendar.app.created',   // calendário próprio "Agenda da Duda"
+  'https://www.googleapis.com/auth/calendar.app.created',   // calendário próprio "Bellisa"
   'https://www.googleapis.com/auth/calendar.freebusy',      // ver horários ocupados (sem ver detalhes)
 ].join(' ');
 let GOOGLE = {conectado:false,email:null,calendarioId:null,contatosSyncEm:null,token:null,expira:0};
@@ -2345,7 +2345,7 @@ function configGroups(){
     {icon:'',label:'Exportar relatório',sub:'Planilha de atendimentos, pagamentos e despesas',action:()=>openDrawer('exportarDrawer')},
     {icon:'',label:'Meu perfil e conta',sub:USER?USER.email:'',action:()=>abrirPerfil(false)},
     {icon:'',label:'Instalar o app',sub:jaInstalado()?'Já instalado neste aparelho':podeInstalar()?'Ícone na tela inicial, abre em tela cheia':'No Android: Chrome → menu ⋮ → Instalar app',action:()=>instalarApp()},
-    {icon:'',label:'Sobre o sistema',sub:'Versão 3.0 · Agenda da Duda',action:()=>{}},
+    {icon:'',label:'Sobre o sistema',sub:'Versão 3.2 · Bellisa — beleza com hora marcada',action:()=>{}},
   ],
   ];
 }
@@ -3289,7 +3289,7 @@ async function gapi(url,opts={},tentativa=0){
 const CAL='https://www.googleapis.com/calendar/v3';
 async function garantirCalendario(){
   if(GOOGLE.calendarioId) return GOOGLE.calendarioId;
-  const c=await gapi(CAL+'/calendars',{method:'POST',body:JSON.stringify({summary:'Agenda da Duda',timeZone:'America/Sao_Paulo',description:'Agendamentos do studio (criado pelo app Agenda da Duda)'})});
+  const c=await gapi(CAL+'/calendars',{method:'POST',body:JSON.stringify({summary:'Bellisa',timeZone:'America/Sao_Paulo',description:'Agendamentos do studio (criado pelo app Bellisa)'})});
   GOOGLE.calendarioId=c.id;
   await sb.from('google_conexao').update({calendario_id:c.id}).eq('owner_id',(USER||SESSAO?.user).id);
   return c.id;
@@ -3311,7 +3311,7 @@ async function syncEvento(id){
   const marca={confirmado:'✓ ',em_atendimento:'● ',concluido:'✔ '}[a.status]||'';
   const ev={
     summary:`${marca}${a.clientes?.nome||'Cliente'} — ${a.servico_nome}`,
-    description:[a.clientes?.telefone?'WhatsApp: '+fmtTel(a.clientes.telefone):'',`Valor: R$ ${Number(a.valor).toFixed(2).replace('.',',')}`,a.observacoes||'','Criado pelo app Agenda da Duda'].filter(Boolean).join('\n'),
+    description:[a.clientes?.telefone?'WhatsApp: '+fmtTel(a.clientes.telefone):'',`Valor: R$ ${Number(a.valor).toFixed(2).replace('.',',')}`,a.observacoes||'','Criado pelo app Bellisa'].filter(Boolean).join('\n'),
     start:{dateTime:a.inicio,timeZone:'America/Sao_Paulo'},end:{dateTime:a.fim,timeZone:'America/Sao_Paulo'},
     colorId:a.tipo==='podologia'?'3':'4',
     reminders:{useDefault:false,overrides:[{method:'popup',minutes:30}]},
@@ -3403,7 +3403,7 @@ function renderGoogleCard(){
   const el=document.getElementById('googleCard');if(!el)return;
   el.innerHTML=GOOGLE.conectado?`
     <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Conectado</div><div class="toggle-sub">${esc(GOOGLE.email||'')}</div></div><span class="badge badge-ok">Ativo</span></div>
-    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Google Agenda</div><div class="toggle-sub">Cada agendamento vai para o calendário “Agenda da Duda”. Compromissos pessoais bloqueiam horários.</div></div></div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Google Agenda</div><div class="toggle-sub">Cada agendamento vai para o calendário “Bellisa”. Compromissos pessoais bloqueiam horários.</div></div></div>
     <div class="btn-row" style="flex-wrap:wrap"><button class="btn btn-ghost btn-sm" id="gSyncAgendaBtn" onclick="sincronizarAgendaGoogle()">Enviar agenda para o Google</button><button class="btn btn-ghost btn-sm" onclick="abrirContatosGoogle()">Importar contatos</button></div>
     <button class="btn btn-danger btn-sm" style="margin-top:10px" onclick="desconectarGoogle()">Desconectar Google</button>`
   :`<div class="toggle-sub" style="padding:6px 0 12px;font-size:13.5px">Conecte sua conta Google para importar os contatos e mandar os agendamentos para o Google Agenda do celular.</div>
