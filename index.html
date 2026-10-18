@@ -3555,6 +3555,7 @@ async function ocupadoGoogle(dataStr){
 let CONTATOS_G=[];
 async function abrirContatosGoogle(){
   openDrawer('googleContatosDrawer');
+  SEL_G=new Set(); LIMITE_G=300;
   const el=document.getElementById('gContatosLista');
   el.innerHTML='<div class="empty-state">Buscando seus contatos…</div>';
   try{
@@ -3571,35 +3572,50 @@ async function abrirContatosGoogle(){
     renderContatosGoogle();
   }catch(e){el.innerHTML=`<div class="empty-state">Não consegui ler os contatos: ${esc(e.message)}</div>`}
 }
+// marcados ficam num Set (sobrevive à busca e ao "mostrar mais"); a lista cresce de 300 em 300
+let SEL_G=new Set(), LIMITE_G=300;
+const jaTemContato=c=>CLIENTS.some(x=>x.phone===c.tel);
+function filtroContatosG(){
+  const q=semAcento(document.getElementById('gContatosBusca').value||''), dig=q.replace(/\D/g,'');
+  return CONTATOS_G.filter(c=>!q||semAcento(c.nome).includes(q)||(dig&&c.tel.includes(dig)));
+}
 function renderContatosGoogle(){
-  const q=(document.getElementById('gContatosBusca').value||'').toLowerCase();
   const el=document.getElementById('gContatosLista');
-  const jaTem=c=>CLIENTS.some(x=>x.phone===c.tel);
-  const lista=CONTATOS_G.filter(c=>!q||c.nome.toLowerCase().includes(q)||c.tel.includes(q));
-  document.getElementById('gContatosInfo').textContent=`${CONTATOS_G.length} contatos com telefone · ${CONTATOS_G.filter(jaTem).length} já são clientes`;
+  const lista=filtroContatosG();
+  document.getElementById('gContatosInfo').textContent=`${CONTATOS_G.length} contatos com telefone · ${CONTATOS_G.filter(jaTemContato).length} já são clientes · ${SEL_G.size} marcado${SEL_G.size===1?'':'s'}`;
   el.innerHTML=lista.length?'':'<div class="empty-state">Nenhum contato encontrado.</div>';
-  el.insertAdjacentHTML('beforeend',lista.slice(0,300).map(c=>{
-    const tem=jaTem(c);
+  el.insertAdjacentHTML('beforeend',lista.slice(0,LIMITE_G).map(c=>{
+    const tem=jaTemContato(c);
     return `<label class="client-row" style="cursor:${tem?'default':'pointer'}">
-      <input type="checkbox" class="gContatoCk" value="${esc(c.resource)}" ${tem?'disabled checked':''} style="width:18px;height:18px;accent-color:var(--fg)">
+      <input type="checkbox" class="gContatoCk" value="${esc(c.resource)}" ${tem||SEL_G.has(c.resource)?'checked':''} ${tem?'disabled':''} onchange="marcarContatoG(this)" style="width:18px;height:18px;accent-color:var(--fg)">
       <div class="client-info"><div class="client-name">${esc(c.nome)}</div><div class="client-sub">${esc(fmtTel(c.tel))}${tem?' · já é cliente':''}</div></div></label>`;
   }).join(''));
-  if(lista.length>300) el.insertAdjacentHTML('beforeend','<div class="client-sub" style="padding:10px 4px">Mostrando 300 — use a busca para achar os outros.</div>');
+  if(lista.length>LIMITE_G) el.insertAdjacentHTML('beforeend',`<button class="btn btn-ghost btn-sm" style="margin:10px 0" onclick="LIMITE_G+=300;renderContatosGoogle()">Mostrar mais (${lista.length-LIMITE_G} restantes)</button>`);
 }
-function marcarTodosContatos(v){document.querySelectorAll('.gContatoCk:not(:disabled)').forEach(c=>c.checked=v)}
+function marcarContatoG(ck){
+  ck.checked?SEL_G.add(ck.value):SEL_G.delete(ck.value);
+  document.getElementById('gContatosInfo').textContent=document.getElementById('gContatosInfo').textContent.replace(/\d+ marcados?$/,`${SEL_G.size} marcado${SEL_G.size===1?'':'s'}`);
+}
+// "Marcar todos" vale para todos os contatos da busca atual, não só os que estão na tela
+function marcarTodosContatos(v){
+  filtroContatosG().filter(c=>!jaTemContato(c)).forEach(c=>v?SEL_G.add(c.resource):SEL_G.delete(c.resource));
+  renderContatosGoogle();
+}
 async function importarContatosGoogle(){
-  const sel=[...document.querySelectorAll('.gContatoCk:checked:not(:disabled)')].map(c=>c.value);
-  const rows=CONTATOS_G.filter(c=>sel.includes(c.resource)).map((c,i)=>({nome:c.nome,telefone:c.tel,nascimento:c.nasc,
+  const rows=CONTATOS_G.filter(c=>SEL_G.has(c.resource)&&!jaTemContato(c)).map((c,i)=>({nome:c.nome,telefone:c.tel,nascimento:c.nasc,
     tipo:'esmalteria',origem:'Outro',google_resource:c.resource,cor:CORES_CLIENTE[(CLIENTS.length+i)%CORES_CLIENTE.length]}));
   if(!rows.length){toast('Marque os contatos que são clientes');return}
-  const {error}=await sb.from('clientes').upsert(rows,{onConflict:'owner_id,telefone',ignoreDuplicates:true});
-  if(error){toast('Erro: '+error.message);return}
+  toast(`Importando ${rows.length} contato${rows.length>1?'s':''}…`);
+  for(let i=0;i<rows.length;i+=500){
+    const {error}=await sb.from('clientes').upsert(rows.slice(i,i+500),{onConflict:'owner_id,telefone',ignoreDuplicates:true});
+    if(error){toast('Erro: '+error.message);await recarregar();return}
+  }
   await sb.from('google_conexao').update({contatos_sync_em:new Date().toISOString()}).eq('owner_id',USER.id);
+  SEL_G.clear();
   closeDrawer('googleContatosDrawer');
   toast(`${rows.length} cliente${rows.length>1?'s':''} importada${rows.length>1?'s':''} do Google`);
   await recarregar();
-}
-function renderGoogleCard(){
+}function renderGoogleCard(){
   const el=document.getElementById('googleCard');if(!el)return;
   el.innerHTML=GOOGLE.conectado?`
     <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Conectado</div><div class="toggle-sub">${esc(GOOGLE.email||'')}</div></div><span class="badge badge-ok">Ativo</span></div>
