@@ -478,6 +478,21 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
 .tab-bar{background:var(--bg-subtle);border-radius:999px;padding:4px}
 .tab-item{border-radius:999px}
 .tab-item.active{color:var(--accent-2);box-shadow:var(--shadow)}
+/* Escolha de cliente e serviço no agendamento */
+.pick-list{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.pick-list:empty{display:none}
+.pick-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--border);border-radius:14px;background:var(--bg-card);color:var(--fg);font-size:14px;cursor:pointer}
+.pick-item:active{transform:scale(.99)}
+.pick-item.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--bg-card))}
+.pick-av{width:32px;height:32px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:13px}
+.pick-txt{flex:1;min-width:0}
+.pick-nome{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick-sub{font-size:12px;color:var(--fg-muted);margin-top:1px}
+.pick-acao{font-size:12px;color:var(--accent-2);font-weight:600;flex:none}
+.svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.svc-grid .pick-item{flex-direction:column;align-items:flex-start;gap:3px;min-height:72px}
+.svc-grid .pick-nome{white-space:normal;line-height:1.25}
+.svc-grid .pick-preco{font-weight:600;color:var(--accent-2);font-size:13px;margin-top:auto}
 .pill{border-radius:999px;border-color:transparent;background:var(--bg-card);box-shadow:var(--shadow)}
 .pill.active{background:var(--grad);color:#fff;border-color:transparent}
 
@@ -917,21 +932,19 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
   <div class="drawer-title">Novo agendamento</div>
   <div class="form-group">
     <label class="form-label">Cliente</label>
-    <input class="form-input" type="text" placeholder="Buscar ou cadastrar cliente…" id="inputCliente" list="clientesDatalist" autocomplete="off">
-    <datalist id="clientesDatalist"></datalist>
+    <div id="cliEscolhida" class="pick-item sel" hidden></div>
+    <input class="form-input" type="search" placeholder="Digite o nome ou o telefone…" id="inputCliente" autocomplete="off" oninput="CLI_ESCOLHIDA=null;renderBuscaCliente()" onfocus="renderBuscaCliente()">
+    <div id="cliSugestoes" class="pick-list"></div>
   </div>
-  <div class="form-row">
-    <div class="form-group">
-      <label class="form-label">Tipo</label>
-      <select class="form-input" id="inputTipo" onchange="loadServicesForm()">
-        <option value="esmalteria">Esmalteria</option>
-        <option value="podologia">Podologia</option>
-      </select>
+  <div class="form-group">
+    <label class="form-label">Serviço</label>
+    <input type="hidden" id="inputTipo" value="esmalteria">
+    <input type="hidden" id="inputServico" value="">
+    <div class="tab-bar" id="tipoTabs" style="margin-bottom:8px">
+      <button type="button" class="tab-item active" data-tipo="esmalteria" onclick="setTipoServico('esmalteria')">Esmalteria</button>
+      <button type="button" class="tab-item" data-tipo="podologia" onclick="setTipoServico('podologia')">Podologia</button>
     </div>
-    <div class="form-group">
-      <label class="form-label">Serviço</label>
-      <select class="form-input" id="inputServico" onchange="loadSlots()"></select>
-    </div>
+    <div id="svcLista" class="pick-list svc-grid"></div>
   </div>
   <div class="form-group">
     <label class="form-label">Data</label>
@@ -1622,7 +1635,6 @@ function renderTudo(){
 
   renderGoogleCard();
   buildCalendar();
-  document.getElementById('clientesDatalist').innerHTML=CLIENTS.map(c=>`<option value="${esc(c.name)}">`).join('');
   loadServicesForm();
   loadSlots();
 }
@@ -1868,8 +1880,11 @@ function remarcar(id){
 }
 function novoAgendamentoPara(nome,servicoId,tipo){
   document.getElementById('inputCliente').value=nome||'';
-  if(tipo){document.getElementById('inputTipo').value=tipo;loadServicesForm()}
-  if(servicoId){document.getElementById('inputServico').value=servicoId;calcSlotDuration()}
+  const achada=nome&&CLIENTS.find(c=>c.name===nome);
+  CLI_ESCOLHIDA=achada?achada.id:null; renderBuscaCliente();
+  if(tipo) document.getElementById('inputTipo').value=tipo;
+  if(servicoId) document.getElementById('inputServico').value=servicoId;
+  loadServicesForm();
   document.getElementById('inputData').value=ymd(selectedDate<hoje0()?hoje0():selectedDate);
   loadSlots();
   openDrawer('novoAgendDrawer');
@@ -2772,14 +2787,61 @@ function svcSelecionado(){
   const id=document.getElementById('inputServico').value;
   return [...SVCS_NAIL,...SVCS_POD].find(s=>s.id===id);
 }
+// ── escolha de serviço: abas por tipo + cartões
+function setTipoServico(tipo){ document.getElementById('inputTipo').value=tipo; loadServicesForm(); }
 function loadServicesForm() {
   const tipo = document.getElementById('inputTipo').value;
-  const sel = document.getElementById('inputServico');
   const svcs = tipo==='esmalteria'?SVCS_NAIL:SVCS_POD;
-  sel.innerHTML = svcs.length
-    ? svcs.map(s=>`<option value="${s.id}">${esc(s.name)} — ${s.dur}min · ${fmtR(s.promo??s.price)}</option>`).join('')
-    : '<option value="">Cadastre serviços na aba Serviços</option>';
+  const hid = document.getElementById('inputServico');
+  if(!svcs.some(s=>s.id===hid.value)) hid.value='';
+  document.querySelectorAll('#tipoTabs .tab-item').forEach(b=>b.classList.toggle('active',b.dataset.tipo===tipo));
+  document.getElementById('svcLista').innerHTML = svcs.length
+    ? svcs.map(s=>`<button type="button" class="pick-item${s.id===hid.value?' sel':''}" onclick="escolherServico('${s.id}')">
+        <span class="pick-nome">${esc(s.name)}</span><span class="pick-sub">${s.dur} min</span>
+        <span class="pick-preco">${fmtR(s.promo??s.price)}</span></button>`).join('')
+    : '<div class="pick-sub" style="grid-column:1/-1;padding:6px 2px">Nenhum serviço deste tipo. Cadastre na aba Serviços.</div>';
   loadSlots();
+}
+function escolherServico(id){
+  document.getElementById('inputServico').value=id;
+  loadServicesForm();
+}
+// ── escolha de cliente: busca por nome/telefone, toque para escolher
+let CLI_ESCOLHIDA=null;
+const semAcento=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+function renderBuscaCliente(){
+  const box=document.getElementById('cliSugestoes'), inp=document.getElementById('inputCliente'), esc1=document.getElementById('cliEscolhida');
+  const c=CLI_ESCOLHIDA&&CLIENTS.find(x=>x.id===CLI_ESCOLHIDA);
+  if(c){
+    esc1.hidden=false; inp.hidden=true; box.innerHTML='';
+    esc1.innerHTML=`<span class="pick-av" style="background:${esc(c.color)}">${esc(c.name[0])}</span>
+      <span class="pick-txt"><div class="pick-nome">${esc(c.name)}</div><div class="pick-sub">${c.phone?esc(fmtTel(c.phone)):'sem WhatsApp'}</div></span>
+      <span class="pick-acao" onclick="trocarCliente()">Trocar</span>`;
+    return;
+  }
+  esc1.hidden=true; inp.hidden=false;
+  const termo=inp.value.trim(), t=semAcento(termo), dig=termo.replace(/\D/g,'');
+  const lista=(t?CLIENTS.filter(x=>semAcento(x.name).includes(t)||(dig.length>=3&&String(x.phone).includes(dig))):CLIENTS)
+    .slice().sort((a,b)=>(b.visits||0)-(a.visits||0)).slice(0,t?8:5);
+  let html=lista.map(x=>`<button type="button" class="pick-item" onclick="escolherCliente('${x.id}')">
+      <span class="pick-av" style="background:${esc(x.color)}">${esc(x.name[0])}</span>
+      <span class="pick-txt"><div class="pick-nome">${esc(x.name)}</div><div class="pick-sub">${x.phone?esc(fmtTel(x.phone)):'sem WhatsApp'}</div></span></button>`).join('');
+  if(termo&&!CLIENTS.some(x=>semAcento(x.name)===t))
+    html+=`<button type="button" class="pick-item" onclick="document.getElementById('cliSugestoes').innerHTML='';toast('Será cadastrada como nova cliente ao agendar')">
+      <span class="pick-av" style="background:var(--accent)">+</span>
+      <span class="pick-txt"><div class="pick-nome">Nova cliente: ${esc(termo)}</div><div class="pick-sub">cadastra ao salvar o agendamento</div></span></button>`;
+  box.innerHTML=html;
+}
+function escolherCliente(id){
+  CLI_ESCOLHIDA=id;
+  const c=CLIENTS.find(x=>x.id===id);
+  document.getElementById('inputCliente').value=c?c.name:'';
+  renderBuscaCliente();
+}
+function trocarCliente(){
+  CLI_ESCOLHIDA=null;
+  const inp=document.getElementById('inputCliente'); inp.value='';
+  renderBuscaCliente(); inp.focus();
 }
 // Um horário está livre se [início, início+duração+intervalo) não encosta em
 // nenhum agendamento ativo nem bloqueio, e cabe no expediente.
@@ -2859,7 +2921,7 @@ async function salvarAgendamento() {
   if(pagModo!=='depois'&&pagoAgora<=0){toast(pagModo==='pago'?'Digite o valor pago':'Digite o valor da entrada');document.getElementById('pagValor').focus();return}
   if(pagoAgora>valor+0.001){toast('O pagamento é maior que o valor do serviço');return}
   const pagarAte=pagModo==='pago'?null:(document.getElementById('pagarAte').value||null);
-  let cli=CLIENTS.find(c=>c.name.toLowerCase()===nome.toLowerCase());
+  let cli=(CLI_ESCOLHIDA&&CLIENTS.find(c=>c.id===CLI_ESCOLHIDA))||CLIENTS.find(c=>c.name.toLowerCase()===nome.toLowerCase());
   try{
     if(!cli){
       const r=await q(sb.from('clientes').insert({nome,tipo:svc.tipo,cor:CORES_CLIENTE[CLIENTS.length%CORES_CLIENTE.length]}).select('id').single());
@@ -2892,6 +2954,7 @@ async function salvarAgendamento() {
   remarcandoId=null;
   closeDrawer('novoAgendDrawer');
   ['inputCliente','inputObs'].forEach(id=>document.getElementById(id).value='');
+  CLI_ESCOLHIDA=null; renderBuscaCliente();
   selectedDate=new Date(ini.getFullYear(),ini.getMonth(),ini.getDate());
   toast(foiRemarcacao?`Remarcado para ${labelDia(selectedDate).toLowerCase()} às ${hhmm(ini)}`:`${nome} — ${labelDia(selectedDate).toLowerCase()} às ${hhmm(ini)}`);
   await recarregar();
@@ -3280,7 +3343,7 @@ function gotoPage(id, navEl, doVoltar) {
 let ignorarPop=0;
 const gavetasAbertas=()=>[...document.querySelectorAll('.modal-overlay.open')];
 function openDrawer(id){
-  if(id==='novoAgendDrawer'){foraDoExpediente=false;loadSlots();}
+  if(id==='novoAgendDrawer'){foraDoExpediente=false;renderBuscaCliente();loadSlots();}
   if(id==='notifDrawer') marcarNotifsLidas();
   document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';
   if(!history.state?.modal) history.pushState({modal:true},'');
