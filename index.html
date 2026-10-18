@@ -2478,20 +2478,21 @@ function atualizarLinkPerfil(){
   document.getElementById('perfOnlineCampos').hidden=!on;
   document.getElementById('perfLink').textContent=slug?LINK_CLIENTES+slug:'Escolha um endereço curto, ex: duda';
 }
-async function salvarPerfil(){
+async function salvarPerfil(manterAberto){
   const slug=document.getElementById('perfSlug').value.trim().toLowerCase();
   const on=document.getElementById('perfOnline').checked;
-  if(on&&!/^[a-z0-9-]{3,40}$/.test(slug)){toast('Endereço: só letras minúsculas, números e hífen (mín. 3)');return}
-  if(['icons','tools','supabase','index','agendar','privacidade','api','admin','login'].includes(slug)){toast('Esse endereço é reservado. Escolha outro.');return}
+  if(on&&!/^[a-z0-9-]{3,40}$/.test(slug)){toast('Endereço: só letras minúsculas, números e hífen (mín. 3)');return false}
+  if(['icons','tools','supabase','index','agendar','privacidade','api','admin','login'].includes(slug)){toast('Esse endereço é reservado. Escolha outro.');return false}
   const row={nome:document.getElementById('perfNome').value.trim()||null,whatsapp:normTel(document.getElementById('perfWhats').value),
     bio:document.getElementById('perfBio').value.trim()||null,agendamento_online:on,slug:slug||null,
     antecedencia_min:parseInt(document.getElementById('perfAntec').value),dias_frente:parseInt(document.getElementById('perfDias').value),
     atualizado_em:new Date().toISOString()};
   const {error}=await sb.from('perfil').upsert(row,{onConflict:'owner_id'});
-  if(error){toast(error.code==='23505'?'Esse endereço já está em uso. Escolha outro.':'Erro: '+error.message);return}
-  closeDrawer('perfilDrawer');
-  toast('Perfil salvo');
+  if(error){toast(error.code==='23505'?'Esse endereço já está em uso. Escolha outro.':'Erro: '+error.message);return false}
+  PERFIL={...PERFIL,...row};
+  if(!manterAberto){ closeDrawer('perfilDrawer'); toast('Perfil salvo'); }
   await recarregar();
+  return true;
 }
 async function enviarFotoCapa(input){
   const a=input.files[0];if(!a)return;
@@ -2511,7 +2512,14 @@ async function enviarFotoCapa(input){
   input.value='';
 }
 async function copiarLink(){
-  const l=linkAgendamento()||document.getElementById('perfLink').textContent;
+  // endereço digitado e ainda não salvo: salva antes, para compartilhar o link que vale
+  const slug=document.getElementById('perfSlug').value.trim().toLowerCase();
+  if(slug&&slug!==PERFIL.slug){
+    if(!await salvarPerfil(true)) return;
+    toast('Endereço novo salvo — o link antigo deixou de valer');
+  }
+  const l=linkAgendamento();
+  if(!l){toast('Escolha um endereço para o link');return}
   if(navigator.share){try{await navigator.share({title:'Agende seu horário',url:l});return}catch(e){}}
   try{await navigator.clipboard.writeText(l);toast('Link copiado')}catch(e){toast(l)}
 }
