@@ -15,6 +15,8 @@ const CORS = {
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 const RETORNOS = new Set([
+  "https://bellisa.vercel.app/",
+  "https://bellisa.com.br/",
   "https://agenda-duda-ruddy.vercel.app/",
   "https://italopauloip01-hash.github.io/agenda-duda/",
 ]);
