@@ -365,7 +365,10 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
 .cal-bar-wrap{width:60%;height:3px;background:var(--bg-subtle);border-radius:2px;overflow:hidden;position:relative}
 .cal-day.today .cal-bar-wrap{background:color-mix(in srgb,var(--on-fg) 25%,transparent)}
 .cal-bar-fill{position:absolute;inset:0 auto 0 0;height:100%!important;border-radius:2px}
-.cal-day-count{font-size:10px;color:var(--fg-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cal-day-count{font-size:10.5px;color:var(--fg-muted);font-variant-numeric:tabular-nums;min-height:13px;line-height:13px}
+.cal-bar-fill{background:var(--accent)}
+.cal-day.today .cal-bar-fill{background:#fff}
+.cal-grid,.cal-grid-header{grid-template-columns:repeat(7,minmax(0,1fr))}
 .cal-day.sel{box-shadow:inset 0 0 0 2px var(--accent)}
 .cal-day.today.sel{box-shadow:inset 0 0 0 2px var(--accent),var(--shadow-md)}
 
@@ -2891,9 +2894,11 @@ function buildCalendar() {
     const cell = document.createElement('div');
     cell.className = 'cal-day' + (isToday?' today':'') + (d===calSel.getDate()?' sel':'');
     const marca = folga ? '<span class="cal-tag">folga</span>' : fechado && !occ ? '<span class="cal-tag">fechado</span>' : '';
+    const pct = Math.min(occ / maxSlots, 1);
     cell.innerHTML = `
       <span class="cal-day-num">${d}</span>
-      ${marca || (occ>0?`<span class="cal-day-count">${occ} ${occ===1?'horário':'horários'}</span>`:'')}`;
+      ${marca || `<div class="cal-bar-wrap"><div class="cal-bar-fill" style="width:${pct*100}%"></div></div>
+      <span class="cal-day-count">${occ||''}</span>`}`;
     // tocar num dia mostra os compromissos dele logo abaixo
     cell.onclick = () => {
       calSel=dia0; buildCalendar();
@@ -2911,8 +2916,9 @@ function renderCalDia(){
   const el=document.getElementById('calDia'); if(!el||!calSel) return;
   const k=ymd(calSel), lista=ALL_APPTS.filter(a=>ymd(a.ini)===k).sort((a,b)=>a.ini-b.ini);
   const folga=BLOQUEIOS.find(b=>b.tipo==='folga'&&b.ini<addDias(calSel,1)&&b.fim>calSel);
-  const titulo=calSel.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
-  el.innerHTML=`<div class="section-header" style="margin:18px 0 10px"><span class="section-title" style="text-transform:capitalize">${titulo}</span>
+  const sem=calSel.toLocaleDateString('pt-BR',{weekday:'long'});
+  const titulo=sem[0].toUpperCase()+sem.slice(1)+', '+calSel.toLocaleDateString('pt-BR',{day:'numeric',month:'long'});
+  el.innerHTML=`<div class="section-header" style="margin:18px 0 10px"><span class="section-title">${titulo}</span>
       <button class="btn btn-ghost btn-sm" style="width:auto;padding:6px 12px" onclick="agendarNoDiaCal()">+ Agendar</button></div>
     ${folga?`<div class="alert alert-info"><span>Folga${folga.motivo?': '+esc(folga.motivo):''}</span></div>`:''}
     ${lista.length?'':'<div class="empty-state" style="padding:18px 0">Nenhum compromisso neste dia.</div>'}`;
