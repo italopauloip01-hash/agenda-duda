@@ -1105,7 +1105,12 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
       <label><input class="form-input big" type="number" inputmode="numeric" min="0" max="59" step="5" id="svcM" placeholder="0" oninput="syncDurSvc()"><span>min</span></label>
     </div></div>
   <div class="form-group"><label class="form-label big">Categoria</label>
-    <select class="form-input big" id="svcTipo"><option value="esmalteria">Esmalteria</option><option value="podologia">Podologia</option><option value="sobrancelha">Sobrancelha</option><option value="maquiagem">Maquiagem</option></select>
+    <select class="form-input big" id="svcTipo" onchange="if(this.value==='__nova')abrirNovaCategoria()"><option value="esmalteria">Esmalteria</option><option value="podologia">Podologia</option><option value="sobrancelha">Sobrancelha</option><option value="maquiagem">Maquiagem</option><option value="__nova">＋ Criar nova categoria…</option></select>
+    <div id="novaCatBox" hidden style="margin-top:8px">
+      <div style="display:flex;gap:8px"><input class="form-input big" style="flex:1" type="text" id="novaCatNome" maxlength="30" placeholder="Ex: Cílios, Depilação…">
+      <button type="button" class="btn btn-primary btn-sm" style="width:auto;padding:0 16px" onclick="criarCategoria()">Criar</button></div>
+      <div class="pick-sub" style="margin-top:4px">A categoria nova aparece no app e no link das clientes quando tiver pelo menos um serviço.</div>
+    </div>
   </div>
   <details class="mais-opcoes"><summary>Mais opções (promoção e intervalo)</summary>
     <div class="form-row" style="margin-top:12px">
@@ -1349,7 +1354,18 @@ let ALL_APPTS = [];   // agendamentos deste ano e do próximo
 let APPTS = [];       // agendamentos do dia selecionado
 let CLIENTS = [];
 // categorias de serviço (a ordem é a das abas)
-const TIPOS_SVC=[{id:'esmalteria',nome:'Esmalteria',cor:'#C2637A'},{id:'podologia',nome:'Podologia',cor:'#7A63C2'},{id:'sobrancelha',nome:'Sobrancelha',cor:'#B8865A'},{id:'maquiagem',nome:'Maquiagem',cor:'#5A8AB8'}];
+// as 4 padrão sempre aparecem; categorias criadas pela profissional usam o próprio nome como tipo
+const TIPOS_PADRAO=[{id:'esmalteria',nome:'Esmalteria',cor:'#C2637A'},{id:'podologia',nome:'Podologia',cor:'#7A63C2'},{id:'sobrancelha',nome:'Sobrancelha',cor:'#B8865A'},{id:'maquiagem',nome:'Maquiagem',cor:'#5A8AB8'}];
+const CORES_EXTRA=['#5AA88A','#C2925A','#8A5AB8','#B85A8A','#5A9AB8','#A8A85A'];
+let TIPOS_SVC=TIPOS_PADRAO.slice();
+function montarTipos(tiposUsados){
+  const extras=[...new Set(tiposUsados)].filter(t=>t&&!TIPOS_PADRAO.some(p=>p.id===t)).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  TIPOS_SVC=TIPOS_PADRAO.concat(extras.map((t,i)=>({id:t,nome:t,cor:CORES_EXTRA[i%CORES_EXTRA.length]})));
+  const sel=document.getElementById('svcTipo');
+  if(sel){const v=sel.value;
+    sel.innerHTML=TIPOS_SVC.map(t=>`<option value="${esc(t.id)}">${esc(t.nome)}</option>`).join('')+'<option value="__nova">＋ Criar nova categoria…</option>';
+    if(TIPOS_SVC.some(t=>t.id===v)) sel.value=v;}
+}
 const corTipo=t=>(TIPOS_SVC.find(x=>x.id===t)||TIPOS_SVC[0]).cor;
 const nomeTipo=t=>(TIPOS_SVC.find(x=>x.id===t)||{nome:t}).nome;
 let SVCS_TIPO = {};
@@ -1636,6 +1652,7 @@ async function recarregar(){
       color:c.cor,phone:c.telefone||'',bday:c.nascimento,cpf:c.cpf||'',origem:c.origem,vip:c.vip,faltou:Number(c.faltas),pref:c.preferencias,obs:c.observacoes}));
     const mapSvc=s=>({id:s.id,name:s.nome,tipo:s.tipo,dur:s.duracao_min,int:s.intervalo_min,price:Number(s.preco),
       promo:s.preco_promo!=null?Number(s.preco_promo):null,color:s.cor});
+    montarTipos(svc.map(s=>s.tipo));
     SVCS_TIPO=Object.fromEntries(TIPOS_SVC.map(t=>[t.id,svc.filter(s=>s.tipo===t.id).map(mapSvc)]));
     SVCS_NAIL=SVCS_TIPO.esmalteria;
     SVCS_POD=SVCS_TIPO.podologia;
@@ -1945,7 +1962,7 @@ function renderClients() {
     });
   if(!rows.length) list.innerHTML=`<div class="empty-state">${CLIENTS.length?'Nenhuma cliente encontrada.':'Nenhuma cliente cadastrada ainda.'}</div>`;
   rows.forEach(c => {
-      const typeL = c.type==='esmalteria'?'Esmalteria':c.type==='podologia'?'Podologia':'Ambos';
+      const typeL = c.type==='ambos'?'Ambos':nomeTipo(c.type);
       const row = document.createElement('div');
       row.className = 'client-row';
       row.innerHTML = `
@@ -1960,7 +1977,7 @@ function renderClients() {
     });
 }
 function openFicha(c) {
-  const typeL = c.type==='esmalteria'?'Esmalteria':c.type==='podologia'?'Podologia':'Esmalteria e podologia';
+  const typeL = c.type==='ambos'?'Esmalteria e podologia':nomeTipo(c.type);
   const wa=waLink(c.phone,`Olá ${c.name.split(' ')[0]}! `);
   window._fichaNome=c.name;
   const abertos=ALL_APPTS.filter(a=>a.cliente_id===c.id&&EM_ABERTO(a));
@@ -2124,11 +2141,27 @@ function syncDurSvc(){
   const h=parseInt(document.getElementById('svcH').value)||0, m=parseInt(document.getElementById('svcM').value)||0;
   document.getElementById('svcDur').value=h*60+m||'';
 }
+function abrirNovaCategoria(){
+  document.getElementById('novaCatBox').hidden=false;
+  document.getElementById('novaCatNome').value='';
+  document.getElementById('novaCatNome').focus();
+}
+function criarCategoria(){
+  let nome=document.getElementById('novaCatNome').value.trim().replace(/\s+/g,' ');
+  if(nome.length<2){toast('Digite o nome da categoria');return}
+  nome=nome[0].toUpperCase()+nome.slice(1);
+  const igual=TIPOS_SVC.find(t=>semAcento(t.nome)===semAcento(nome));
+  if(!igual) montarTipos(TIPOS_SVC.map(t=>t.id).concat(nome));
+  document.getElementById('svcTipo').value=igual?igual.id:nome;
+  document.getElementById('novaCatBox').hidden=true;
+  toast(igual?`Já existe: ${igual.nome}`:`Categoria "${nome}" criada — salve o serviço para ela valer`);
+}
 function ajustarNomeSvc(){const t=document.getElementById('svcNome');t.style.height='auto';t.style.height=t.scrollHeight+'px'}
 function novoServico(tipo){
   SVC_EDIT=null;
   ['svcNome','svcDur','svcH','svcM','svcInt','svcPreco','svcPromo'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('svcTipo').value=tipo;
+  document.getElementById('novaCatBox').hidden=true;
   document.getElementById('svcTitulo').textContent='Novo serviço';
   openDrawer('novoServicoDrawer');
 }
@@ -2143,6 +2176,7 @@ function editarServico(id){
   document.getElementById('svcPreco').value=fmtNum(s.price);
   document.getElementById('svcPromo').value=fmtNum(s.promo);
   document.getElementById('svcTipo').value=s.tipo;
+  document.getElementById('novaCatBox').hidden=true;
   document.getElementById('svcTitulo').textContent='Editar serviço';
   openDrawer('novoServicoDrawer');
   requestAnimationFrame(ajustarNomeSvc);
@@ -2155,6 +2189,7 @@ async function usarServicosPadrao(){
 async function salvarServico(){
   const v=id=>document.getElementById(id).value.trim();
   syncDurSvc();
+  if(v('svcTipo')==='__nova'){toast('Toque em Criar para confirmar a categoria nova');return}
   const nome=v('svcNome').replace(/\s+/g,' '), dur=parseInt(v('svcDur')), preco=parseValor(v('svcPreco'));
   if(!nome||!dur||preco==null){toast('Preencha nome, duração e preço');return}
   const dados={nome,tipo:v('svcTipo'),duracao_min:dur,intervalo_min:parseInt(v('svcInt'))||0,

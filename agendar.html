@@ -281,7 +281,9 @@ async function iniciar(){
   try{A=await rpc('agenda_publica',{p_slug:SLUG})}catch(e){A=null}
   if(!A){indisponivel();return}
   document.title=`${A.nome} · Agende seu horário`;
-  const tipos=Object.keys(TIPO_NOME).filter(t=>A.servicos.some(s=>s.tipo===t));
+  // as 4 padrão primeiro, depois as categorias criadas pela profissional
+  const tipos=Object.keys(TIPO_NOME).filter(t=>A.servicos.some(s=>s.tipo===t))
+    .concat([...new Set(A.servicos.map(s=>s.tipo))].filter(t=>!TIPO_NOME[t]).sort((a,b)=>a.localeCompare(b,'pt-BR')));
   escolha.tipo=tipos.includes('esmalteria')?'esmalteria':tipos[0];
   renderPagina();
 }
@@ -450,7 +452,9 @@ function voltarPara(n){
 function rolarPara(){const el=document.getElementById('agendamento');const y=el.getBoundingClientRect().top+scrollY-16;if(Math.abs(y-scrollY)>40)scrollTo({top:y,behavior:'smooth'})}
 
 function renderServicos(){
-  const tipos=Object.keys(TIPO_NOME).filter(t=>A.servicos.some(s=>s.tipo===t));
+  // as 4 padrão primeiro, depois as categorias criadas pela profissional
+  const tipos=Object.keys(TIPO_NOME).filter(t=>A.servicos.some(s=>s.tipo===t))
+    .concat([...new Set(A.servicos.map(s=>s.tipo))].filter(t=>!TIPO_NOME[t]).sort((a,b)=>a.localeCompare(b,'pt-BR')));
   const lista=A.servicos.filter(s=>s.tipo===escolha.tipo);
   document.getElementById('etapa').innerHTML=`
     <div class="etapa-tit"><h3>Qual serviço?</h3></div>
