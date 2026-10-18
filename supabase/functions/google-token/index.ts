@@ -16,6 +16,7 @@ const json = (status: number, body: unknown) =>
 // Só aceita voltar para os endereços do próprio app
 const RETORNOS = new Set([
   "https://bellisa.vercel.app/",
+  "https://bellisa.com.br/",
   "https://agenda-duda-ruddy.vercel.app/",
   "https://italopauloip01-hash.github.io/agenda-duda/",
 ]);
@@ -48,7 +49,15 @@ Deno.serve(async (req) => {
     if (!j.refresh_token) return json(400, { erro: "sem_refresh_token" });
     // e-mail da conta Google (vem no id_token quando o escopo "email" foi pedido)
     let email: string | null = null;
-    try { email = JSON.parse(atob(j.id_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).email || null; } catch (_) { /* opcional */ }
+    let perfilG: { name?: string; given_name?: string; picture?: string } = {};
+    try { perfilG = JSON.parse(atob(j.id_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); email = (perfilG as { email?: string }).email || null; } catch (_) { /* opcional */ }
+    // nome e foto do Google na conta (só preenche o que ainda não tiver nome)
+    if (perfilG.picture || perfilG.name) {
+      const md = user.user_metadata || {};
+      await admin.auth.admin.updateUserById(user.id, { user_metadata: { ...md,
+        avatar_url: perfilG.picture ?? md.avatar_url,
+        full_name: md.full_name || perfilG.name, given_name: md.given_name || perfilG.given_name } });
+    }
     const { error } = await admin.from("google_conexao").upsert({
       owner_id: user.id, refresh_token: j.refresh_token, email_google: email, atualizado_em: new Date().toISOString(),
     }, { onConflict: "owner_id" });
