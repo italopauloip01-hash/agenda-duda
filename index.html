@@ -2432,7 +2432,9 @@ async function salvarHorarios(){
 // ── PERFIL E AGENDAMENTO ONLINE ───────────────────────────────────
 let PERFIL={};
 const BASE_SITE=location.origin+location.pathname.replace(/[^/]*$/,'');
-const linkAgendamento=()=>PERFIL.slug?`${BASE_SITE}agendar.html?u=${PERFIL.slug}`:'';
+// link curto e profissional: bellisa.vercel.app/duda (o vercel.json leva para a página de agendamento)
+const LINK_CLIENTES='https://bellisa.vercel.app/';
+const linkAgendamento=()=>PERFIL.slug?LINK_CLIENTES+PERFIL.slug:'';
 function abrirPerfil(focarOnline){
   const p=PERFIL;
   document.getElementById('perfNome').value=p.nome||'';
@@ -2451,12 +2453,13 @@ function atualizarLinkPerfil(){
   const slug=document.getElementById('perfSlug').value.trim().toLowerCase();
   const on=document.getElementById('perfOnline').checked;
   document.getElementById('perfOnlineCampos').hidden=!on;
-  document.getElementById('perfLink').textContent=slug?`${BASE_SITE}agendar.html?u=${slug}`:'Escolha um endereço curto, ex: duda';
+  document.getElementById('perfLink').textContent=slug?LINK_CLIENTES+slug:'Escolha um endereço curto, ex: duda';
 }
 async function salvarPerfil(){
   const slug=document.getElementById('perfSlug').value.trim().toLowerCase();
   const on=document.getElementById('perfOnline').checked;
   if(on&&!/^[a-z0-9-]{3,40}$/.test(slug)){toast('Endereço: só letras minúsculas, números e hífen (mín. 3)');return}
+  if(['icons','tools','supabase','index','agendar','privacidade','api','admin','login'].includes(slug)){toast('Esse endereço é reservado. Escolha outro.');return}
   const row={nome:document.getElementById('perfNome').value.trim()||null,whatsapp:normTel(document.getElementById('perfWhats').value),
     bio:document.getElementById('perfBio').value.trim()||null,agendamento_online:on,slug:slug||null,
     antecedencia_min:parseInt(document.getElementById('perfAntec').value),dias_frente:parseInt(document.getElementById('perfDias').value),

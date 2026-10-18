@@ -238,7 +238,8 @@ section{margin-top:46px}
 // horarios_ocupados, agendar_online) — nunca enxerga dados de outras clientes.
 const SUPABASE_URL='https://rsrpfwtrkpclscpccaok.supabase.co';
 const SUPABASE_KEY='sb_publishable_0FRlkE_cdq_RKIpX6pSjGA_boyTYEX0';
-const SLUG=(new URLSearchParams(location.search).get('u')||'').toLowerCase();
+// endereço curto (bellisa.vercel.app/duda) ou o antigo (agendar.html?u=duda)
+const SLUG=(new URLSearchParams(location.search).get('u')||(location.pathname.match(/\/([a-z0-9-]{3,40})\/?$/i)||[])[1]||'').toLowerCase();
 const CATS={gel:'Unhas em gel',acrilico:'Acrílico',esmaltacao:'Esmaltação',nailart:'Nail art',podologia:'Podologia',tratamentos:'Tratamentos'};
 const DIAS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const DIAS_LONGOS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];

@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/:slug([a-z0-9-]{3,40})", "destination": "/agendar.html?u=:slug" }
+  ]
+}
