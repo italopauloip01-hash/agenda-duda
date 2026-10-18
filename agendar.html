@@ -245,6 +245,7 @@ const DIAS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const DIAS_LONGOS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 // categorias de serviço: nome na aba e ícone
+const fmtDur=m=>{m=Math.round(Number(m)||0);const h=Math.floor(m/60),r=m%60;return h?(r?h+'h'+String(r).padStart(2,'0'):h+'h'):r+' min'};
 const TIPO_NOME={esmalteria:'Unhas',podologia:'Pés & podologia',sobrancelha:'Sobrancelha',maquiagem:'Maquiagem'};
 const icTipo=t=>({podologia:IC.pe,sobrancelha:IC.sob,maquiagem:IC.maq}[t]||IC.unha);
 const IC={
@@ -462,7 +463,7 @@ function renderServicos(){
     <div class="svcs">${lista.map((s,i)=>`
       <button class="svc" style="animation-delay:${i*40}ms" onclick="escolherSvc('${s.id}')">
         <span class="ic">${icTipo(s.tipo)}</span>
-        <span class="n"><b>${esc(s.nome)}</b><span>${s.duracao_min} min</span></span>
+        <span class="n"><b>${esc(s.nome)}</b><span>${fmtDur(s.duracao_min)}</span></span>
         <span class="p">${reais(s.preco)}</span>
       </button>`).join('')}</div>`;
 }

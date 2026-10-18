@@ -1814,7 +1814,7 @@ function openDetail(a) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px">
         <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Serviço</div><span style="font-weight:500">${esc(a.service)}</span></div>
         <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Horário</div><span style="font-weight:500">${a.time} – ${a.end}</span></div>
-        <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Duração</div><span style="font-weight:500">${a.dur} min</span></div>
+        <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Duração</div><span style="font-weight:500">${fmtDur(a.dur)}</span></div>
         <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Valor</div><span style="font-weight:500">${fmtR(a.price)}</span></div>
         <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Tipo</div><span class="badge ${a.type==='esmalteria'?'badge-nail':'badge-pod'}">${a.type==='esmalteria'?'Esmalteria':'Podologia'}</span></div>
         <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Status</div><span class="badge ${STATUS_MAP[a.status].cls}">${STATUS_MAP[a.status].label}</span></div>
@@ -2123,7 +2123,7 @@ function renderServiceLists() {
         <div class="service-dot" style="background:${esc(s.color)}"></div>
         <div class="service-info">
           <div class="service-name">${esc(s.name)}</div>
-          <div class="service-dur">⏱ ${s.dur}min${s.int?' + '+s.int+'min intervalo':''}</div>
+          <div class="service-dur">⏱ ${fmtDur(s.dur)}${s.int?' + '+fmtDur(s.int)+' de intervalo':''}</div>
         </div>
         <div class="service-price">${promo}</div>
         <div class="service-actions">
@@ -2135,6 +2135,8 @@ function renderServiceLists() {
     });
   }
 }
+// duração legível: 45 min · 1h · 2h40
+const fmtDur=m=>{m=Math.round(Number(m)||0);const h=Math.floor(m/60),r=m%60;return h?(r?h+'h'+String(r).padStart(2,'0'):h+'h'):r+' min'};
 let SVC_EDIT=null;
 const fmtNum=n=>n==null?'':String(n).replace('.',',');
 function syncDurSvc(){
@@ -2909,7 +2911,7 @@ function loadServicesForm() {
   tabs.innerHTML=tipos.map(t=>`<button type="button" class="tab-item${t.id===tipo?' active':''}" onclick="setTipoServico('${t.id}')">${t.nome}</button>`).join('');
   document.getElementById('svcLista').innerHTML = svcs.length
     ? svcs.map(s=>`<button type="button" class="pick-item${s.id===hid.value?' sel':''}" onclick="escolherServico('${s.id}')">
-        <span class="pick-nome">${esc(s.name)}</span><span class="pick-sub">${s.dur} min</span>
+        <span class="pick-nome">${esc(s.name)}</span><span class="pick-sub">${fmtDur(s.dur)}</span>
         <span class="pick-preco">${fmtR(s.promo??s.price)}</span></button>`).join('')
     : `<div class="pick-sub" style="grid-column:1/-1;padding:6px 2px">${termo?'Nenhum serviço com esse nome.':'Nenhum serviço deste tipo. Cadastre na aba Serviços.'}</div>`;
   loadSlots();
@@ -3019,7 +3021,7 @@ function calcSlotDuration(startTime) {
   if(!startTime) return;
   const [h,m]=startTime.split(':').map(Number);
   const end=new Date(2000,0,1,h,m+svc.dur);
-  document.getElementById('inputDuracao').value=`${startTime} → ${hhmm(end)}  (${svc.dur} min${svc.int?' + '+svc.int+' intervalo':''})`;
+  document.getElementById('inputDuracao').value=`${startTime} → ${hhmm(end)}  (${fmtDur(svc.dur)}${svc.int?' + '+fmtDur(svc.int)+' de intervalo':''})`;
 }
 async function salvarAgendamento() {
   const nome=document.getElementById('inputCliente').value.trim();
