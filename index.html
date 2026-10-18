@@ -490,6 +490,19 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
 .pick-sub{font-size:12px;color:var(--fg-muted);margin-top:1px}
 .pick-acao{font-size:12px;color:var(--accent-2);font-weight:600;flex:none}
 .svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+/* Formulário de serviço com campos grandes */
+.form-label.big{font-size:14px;font-weight:600;color:var(--fg)}
+.form-input.big{font-size:18px;padding:14px 16px;border-radius:16px}
+textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hidden;font-family:inherit}
+.campo-preco{position:relative}
+.campo-preco span{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:20px;font-weight:600;color:var(--fg-muted)}
+.campo-preco .form-input.preco{padding-left:52px;font-size:24px;font-weight:700}
+.campo-tempo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.campo-tempo label{position:relative}
+.campo-tempo span{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--fg-muted);pointer-events:none}
+.campo-tempo .form-input{font-size:22px;font-weight:600;padding-right:70px}
+.mais-opcoes{margin:4px 0 16px;font-size:14px}
+.mais-opcoes summary{cursor:pointer;color:var(--accent-2);font-weight:600;padding:6px 0}
 .tipo-tabs{overflow-x:auto;scrollbar-width:none}.tipo-tabs::-webkit-scrollbar{display:none}
 .tipo-tabs .tab-item{flex:1 0 auto;padding:8px 12px}
 .svc-grid .pick-item{flex-direction:column;align-items:flex-start;gap:3px;min-height:72px}
@@ -1079,18 +1092,25 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
 <div class="modal-overlay" id="novoServicoDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
   <div class="drawer-title" id="svcTitulo">Novo serviço</div>
-  <div class="form-group"><label class="form-label">Nome</label><input class="form-input" type="text" id="svcNome" placeholder="Nome do serviço"></div>
-  <div class="form-row">
-    <div class="form-group"><label class="form-label">Duração (min)</label><input class="form-input" type="number" id="svcDur" placeholder="60"></div>
-    <div class="form-group"><label class="form-label">Intervalo (min)</label><input class="form-input" type="number" id="svcInt" placeholder="0"></div>
+  <div class="form-group"><label class="form-label big">Nome do serviço</label>
+    <textarea class="form-input big" id="svcNome" rows="2" placeholder="Ex: Alongamento acrílico" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea></div>
+  <div class="form-group"><label class="form-label big">Preço</label>
+    <div class="campo-preco"><span>R$</span><input class="form-input big preco" type="text" inputmode="decimal" id="svcPreco" placeholder="0,00"></div></div>
+  <div class="form-group"><label class="form-label big">Tempo do atendimento</label>
+    <input type="hidden" id="svcDur">
+    <div class="campo-tempo">
+      <label><input class="form-input big" type="number" inputmode="numeric" min="0" max="12" id="svcH" placeholder="0" oninput="syncDurSvc()"><span>horas</span></label>
+      <label><input class="form-input big" type="number" inputmode="numeric" min="0" max="59" step="5" id="svcM" placeholder="0" oninput="syncDurSvc()"><span>min</span></label>
+    </div></div>
+  <div class="form-group"><label class="form-label big">Categoria</label>
+    <select class="form-input big" id="svcTipo"><option value="esmalteria">Esmalteria</option><option value="podologia">Podologia</option><option value="sobrancelha">Sobrancelha</option><option value="maquiagem">Maquiagem</option></select>
   </div>
-  <div class="form-row">
-    <div class="form-group"><label class="form-label">Preço</label><input class="form-input" type="text" inputmode="decimal" id="svcPreco" placeholder="R$ 0,00"></div>
-    <div class="form-group"><label class="form-label">Promo</label><input class="form-input" type="text" inputmode="decimal" id="svcPromo" placeholder="R$ 0,00"></div>
-  </div>
-  <div class="form-group"><label class="form-label">Tipo</label>
-    <select class="form-input" id="svcTipo"><option value="esmalteria">Esmalteria</option><option value="podologia">Podologia</option><option value="sobrancelha">Sobrancelha</option><option value="maquiagem">Maquiagem</option></select>
-  </div>
+  <details class="mais-opcoes"><summary>Mais opções (promoção e intervalo)</summary>
+    <div class="form-row" style="margin-top:12px">
+      <div class="form-group"><label class="form-label">Preço promocional</label><input class="form-input big" type="text" inputmode="decimal" id="svcPromo" placeholder="R$ 0,00"></div>
+      <div class="form-group"><label class="form-label">Intervalo depois (min)</label><input class="form-input big" type="number" inputmode="numeric" id="svcInt" placeholder="0"></div>
+    </div>
+  </details>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="closeDrawer('novoServicoDrawer')">Cancelar</button>
     <button class="btn btn-primary" onclick="salvarServico()">Salvar</button>
@@ -2092,9 +2112,14 @@ function renderServiceLists() {
 }
 let SVC_EDIT=null;
 const fmtNum=n=>n==null?'':String(n).replace('.',',');
+function syncDurSvc(){
+  const h=parseInt(document.getElementById('svcH').value)||0, m=parseInt(document.getElementById('svcM').value)||0;
+  document.getElementById('svcDur').value=h*60+m||'';
+}
+function ajustarNomeSvc(){const t=document.getElementById('svcNome');t.style.height='auto';t.style.height=t.scrollHeight+'px'}
 function novoServico(tipo){
   SVC_EDIT=null;
-  ['svcNome','svcDur','svcInt','svcPreco','svcPromo'].forEach(id=>document.getElementById(id).value='');
+  ['svcNome','svcDur','svcH','svcM','svcInt','svcPreco','svcPromo'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('svcTipo').value=tipo;
   document.getElementById('svcTitulo').textContent='Novo serviço';
   openDrawer('novoServicoDrawer');
@@ -2104,12 +2129,15 @@ function editarServico(id){
   SVC_EDIT=id;
   document.getElementById('svcNome').value=s.name;
   document.getElementById('svcDur').value=s.dur;
+  document.getElementById('svcH').value=Math.floor(s.dur/60)||'';
+  document.getElementById('svcM').value=s.dur%60||'';
   document.getElementById('svcInt').value=s.int||'';
   document.getElementById('svcPreco').value=fmtNum(s.price);
   document.getElementById('svcPromo').value=fmtNum(s.promo);
   document.getElementById('svcTipo').value=s.tipo;
   document.getElementById('svcTitulo').textContent='Editar serviço';
   openDrawer('novoServicoDrawer');
+  requestAnimationFrame(ajustarNomeSvc);
 }
 async function usarServicosPadrao(){
   try{await q(sb.from('servicos').insert(SERVICOS_PADRAO))}catch(e){return}
@@ -2118,12 +2146,13 @@ async function usarServicosPadrao(){
 }
 async function salvarServico(){
   const v=id=>document.getElementById(id).value.trim();
-  const nome=v('svcNome'), dur=parseInt(v('svcDur')), preco=parseValor(v('svcPreco'));
+  syncDurSvc();
+  const nome=v('svcNome').replace(/\s+/g,' '), dur=parseInt(v('svcDur')), preco=parseValor(v('svcPreco'));
   if(!nome||!dur||preco==null){toast('Preencha nome, duração e preço');return}
   const dados={nome,tipo:v('svcTipo'),duracao_min:dur,intervalo_min:parseInt(v('svcInt'))||0,
     preco,preco_promo:parseValor(v('svcPromo')),cor:corTipo(v('svcTipo'))};
   try{await q(SVC_EDIT?sb.from('servicos').update(dados).eq('id',SVC_EDIT):sb.from('servicos').insert(dados))}catch(e){return}
-  ['svcNome','svcDur','svcInt','svcPreco','svcPromo'].forEach(id=>document.getElementById(id).value='');
+  ['svcNome','svcDur','svcH','svcM','svcInt','svcPreco','svcPromo'].forEach(id=>document.getElementById(id).value='');
   closeDrawer('novoServicoDrawer');
   toast(SVC_EDIT?'Serviço atualizado':'Serviço salvo');
   SVC_EDIT=null;
