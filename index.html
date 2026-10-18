@@ -490,6 +490,8 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
 .pick-sub{font-size:12px;color:var(--fg-muted);margin-top:1px}
 .pick-acao{font-size:12px;color:var(--accent-2);font-weight:600;flex:none}
 .svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tipo-tabs{overflow-x:auto;scrollbar-width:none}.tipo-tabs::-webkit-scrollbar{display:none}
+.tipo-tabs .tab-item{flex:1 0 auto;padding:8px 12px}
 .svc-grid .pick-item{flex-direction:column;align-items:flex-start;gap:3px;min-height:72px}
 .svc-grid .pick-nome{white-space:normal;line-height:1.25}
 .svc-grid .pick-preco{font-weight:600;color:var(--accent-2);font-size:13px;margin-top:auto}
@@ -675,17 +677,13 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
 <!-- ── SERVIÇOS ── -->
 <main class="page-content page" id="page-servicos">
   <div class="tab-bar">
-    <button class="tab-item active" onclick="setServTab('nail',this)">Esmalteria</button>
-    <button class="tab-item" onclick="setServTab('pod',this)">Podologia</button>
+    <button class="tab-item active" onclick="setServTab('nail',this)">Serviços</button>
     <button class="tab-item" onclick="setServTab('estoque',this)">Estoque</button>
   </div>
   <div id="servPageNail" class="serv-tab active">
-    <div id="serviceListNail" class="list-card"></div>
-    <button class="btn btn-ghost" style="margin-top:12px" onclick="novoServico('esmalteria')">Novo serviço</button>
-  </div>
-  <div id="servPagePod" class="serv-tab" hidden>
-    <div id="serviceListPod" class="list-card"></div>
-    <button class="btn btn-ghost" style="margin-top:12px" onclick="novoServico('podologia')">Novo serviço</button>
+    <div class="search-bar" style="margin-bottom:10px"><span class="search-icon"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><input type="search" id="svcPageBusca" placeholder="Buscar serviço" oninput="renderServiceLists()"></div>
+    <div id="serviceListAll"></div>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="novoServico('esmalteria')">Novo serviço</button>
   </div>
   <div id="servPageEstoque" class="serv-tab" hidden>
     <div id="estoqueAlert"></div>
@@ -940,10 +938,8 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
     <label class="form-label">Serviço</label>
     <input type="hidden" id="inputTipo" value="esmalteria">
     <input type="hidden" id="inputServico" value="">
-    <div class="tab-bar" id="tipoTabs" style="margin-bottom:8px">
-      <button type="button" class="tab-item active" data-tipo="esmalteria" onclick="setTipoServico('esmalteria')">Esmalteria</button>
-      <button type="button" class="tab-item" data-tipo="podologia" onclick="setTipoServico('podologia')">Podologia</button>
-    </div>
+    <input class="form-input" type="search" id="svcBusca" placeholder="Buscar serviço…" autocomplete="off" oninput="loadServicesForm()" style="margin-bottom:8px">
+    <div class="tab-bar tipo-tabs" id="tipoTabs" style="margin-bottom:8px"></div>
     <div id="svcLista" class="pick-list svc-grid"></div>
   </div>
   <div class="form-group">
@@ -1082,7 +1078,7 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
 <!-- Novo serviço -->
 <div class="modal-overlay" id="novoServicoDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
-  <div class="drawer-title">Novo serviço</div>
+  <div class="drawer-title" id="svcTitulo">Novo serviço</div>
   <div class="form-group"><label class="form-label">Nome</label><input class="form-input" type="text" id="svcNome" placeholder="Nome do serviço"></div>
   <div class="form-row">
     <div class="form-group"><label class="form-label">Duração (min)</label><input class="form-input" type="number" id="svcDur" placeholder="60"></div>
@@ -1093,7 +1089,7 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
     <div class="form-group"><label class="form-label">Promo</label><input class="form-input" type="text" inputmode="decimal" id="svcPromo" placeholder="R$ 0,00"></div>
   </div>
   <div class="form-group"><label class="form-label">Tipo</label>
-    <select class="form-input" id="svcTipo"><option value="esmalteria">Esmalteria</option><option value="podologia">Podologia</option></select>
+    <select class="form-input" id="svcTipo"><option value="esmalteria">Esmalteria</option><option value="podologia">Podologia</option><option value="sobrancelha">Sobrancelha</option><option value="maquiagem">Maquiagem</option></select>
   </div>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="closeDrawer('novoServicoDrawer')">Cancelar</button>
@@ -1330,6 +1326,11 @@ let GOOGLE = {conectado:false,email:null,calendarioId:null,contatosSyncEm:null,t
 let ALL_APPTS = [];   // agendamentos deste ano e do próximo
 let APPTS = [];       // agendamentos do dia selecionado
 let CLIENTS = [];
+// categorias de serviço (a ordem é a das abas)
+const TIPOS_SVC=[{id:'esmalteria',nome:'Esmalteria',cor:'#C2637A'},{id:'podologia',nome:'Podologia',cor:'#7A63C2'},{id:'sobrancelha',nome:'Sobrancelha',cor:'#B8865A'},{id:'maquiagem',nome:'Maquiagem',cor:'#5A8AB8'}];
+const corTipo=t=>(TIPOS_SVC.find(x=>x.id===t)||TIPOS_SVC[0]).cor;
+const nomeTipo=t=>(TIPOS_SVC.find(x=>x.id===t)||{nome:t}).nome;
+let SVCS_TIPO = {};
 let SVCS_NAIL = [];
 let SVCS_POD = [];
 let INVENTORY = [];
@@ -1607,8 +1608,9 @@ async function recarregar(){
       color:c.cor,phone:c.telefone||'',bday:c.nascimento,cpf:c.cpf||'',origem:c.origem,vip:c.vip,faltou:Number(c.faltas),pref:c.preferencias,obs:c.observacoes}));
     const mapSvc=s=>({id:s.id,name:s.nome,tipo:s.tipo,dur:s.duracao_min,int:s.intervalo_min,price:Number(s.preco),
       promo:s.preco_promo!=null?Number(s.preco_promo):null,color:s.cor});
-    SVCS_NAIL=svc.filter(s=>s.tipo==='esmalteria').map(mapSvc);
-    SVCS_POD=svc.filter(s=>s.tipo==='podologia').map(mapSvc);
+    SVCS_TIPO=Object.fromEntries(TIPOS_SVC.map(t=>[t.id,svc.filter(s=>s.tipo===t.id).map(mapSvc)]));
+    SVCS_NAIL=SVCS_TIPO.esmalteria;
+    SVCS_POD=SVCS_TIPO.podologia;
     INVENTORY=prod.map(p=>({id:p.id,name:p.nome,cat:p.categoria,qtd:Number(p.quantidade),min:Number(p.minimo),custo:Number(p.custo)}));
     EXPENSES=desp.map(e=>({id:e.id,desc:e.descricao,cat:e.categoria,valor:Number(e.valor),dataD:new Date(e.data+'T12:00:00'),data:relDia(e.data+'T12:00:00')}));
     AVALIACOES=aval.map(a=>({id:a.id,name:a.nome,nota:a.nota,comentario:a.comentario||'',pendente:!a.publicada,data:relDia(a.criado_em)}));
@@ -2050,15 +2052,24 @@ function setServTab(tab, el) {
   document.querySelectorAll('#page-servicos .tab-item').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('servPageNail').hidden = tab!=='nail';
-  document.getElementById('servPagePod').hidden = tab!=='pod';
   document.getElementById('servPageEstoque').hidden = tab!=='estoque';
 }
+// todos os serviços numa lista só, separados por categoria; tocar abre para editar
 function renderServiceLists() {
-  const vazio=!SVCS_NAIL.length&&!SVCS_POD.length;
-  const mk = (items, id) => {
+  const box=document.getElementById('serviceListAll'); if(!box) return;
+  const todos=Object.values(SVCS_TIPO).flat();
+  const termo=semAcento(document.getElementById('svcPageBusca').value.trim());
+  box.innerHTML='';
+  if(!todos.length){box.innerHTML='<div class="list-card"><div class="empty-state">Nenhum serviço cadastrado.<br><br><button class="btn btn-primary btn-sm" style="width:auto;margin:0 auto" onclick="usarServicosPadrao()">Usar lista padrão (11 serviços)</button></div></div>';return}
+  TIPOS_SVC.forEach(tp=>{
+    const items=(SVCS_TIPO[tp.id]||[]).filter(s=>!termo||semAcento(s.name).includes(termo)).slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+    if(!items.length) return;
+    box.insertAdjacentHTML('beforeend',`<div class="section-label" style="margin-top:14px">${tp.nome} · ${items.length}</div><div class="list-card" id="svcGrupo-${tp.id}"></div>`);
+    mk(items,'svcGrupo-'+tp.id);
+  });
+  if(!box.children.length) box.innerHTML='<div class="empty-state">Nenhum serviço encontrado.</div>';
+  function mk(items, id){
     const el = document.getElementById(id);
-    el.innerHTML = '';
-    if(!items.length) el.innerHTML=`<div class="empty-state">Nenhum serviço cadastrado.${vazio?'<br><br><button class="btn btn-primary btn-sm" style="width:auto;margin:0 auto" onclick="usarServicosPadrao()">Usar lista padrão (11 serviços)</button>':''}</div>`;
     items.forEach(s => {
       const promo = s.promo!=null?`<span style="font-size:11px;color:var(--fg-muted);text-decoration:line-through;margin-right:4px">${fmtR(s.price)}</span><span style="color:var(--ok);font-weight:700">${fmtR(s.promo)}</span>`:`<span>${fmtR(s.price)}</span>`;
       const d = document.createElement('div');
@@ -2073,14 +2084,31 @@ function renderServiceLists() {
         <div class="service-actions">
           <button class="icon-btn" style="width:28px;height:28px;font-size:13px" title="Remover" onclick="event.stopPropagation();removerServico('${s.id}')"><svg class="i" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
         </div>`;
+      d.style.cursor='pointer';
+      d.onclick=()=>editarServico(s.id);
       el.appendChild(d);
     });
-  };
-  mk(SVCS_NAIL,'serviceListNail');
-  mk(SVCS_POD,'serviceListPod');
+  }
 }
+let SVC_EDIT=null;
+const fmtNum=n=>n==null?'':String(n).replace('.',',');
 function novoServico(tipo){
+  SVC_EDIT=null;
+  ['svcNome','svcDur','svcInt','svcPreco','svcPromo'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('svcTipo').value=tipo;
+  document.getElementById('svcTitulo').textContent='Novo serviço';
+  openDrawer('novoServicoDrawer');
+}
+function editarServico(id){
+  const s=Object.values(SVCS_TIPO).flat().find(x=>x.id===id); if(!s) return;
+  SVC_EDIT=id;
+  document.getElementById('svcNome').value=s.name;
+  document.getElementById('svcDur').value=s.dur;
+  document.getElementById('svcInt').value=s.int||'';
+  document.getElementById('svcPreco').value=fmtNum(s.price);
+  document.getElementById('svcPromo').value=fmtNum(s.promo);
+  document.getElementById('svcTipo').value=s.tipo;
+  document.getElementById('svcTitulo').textContent='Editar serviço';
   openDrawer('novoServicoDrawer');
 }
 async function usarServicosPadrao(){
@@ -2092,11 +2120,13 @@ async function salvarServico(){
   const v=id=>document.getElementById(id).value.trim();
   const nome=v('svcNome'), dur=parseInt(v('svcDur')), preco=parseValor(v('svcPreco'));
   if(!nome||!dur||preco==null){toast('Preencha nome, duração e preço');return}
-  try{await q(sb.from('servicos').insert({nome,tipo:v('svcTipo'),duracao_min:dur,intervalo_min:parseInt(v('svcInt'))||0,
-    preco,preco_promo:parseValor(v('svcPromo')),cor:v('svcTipo')==='podologia'?'#7A63C2':'#C2637A'}))}catch(e){return}
+  const dados={nome,tipo:v('svcTipo'),duracao_min:dur,intervalo_min:parseInt(v('svcInt'))||0,
+    preco,preco_promo:parseValor(v('svcPromo')),cor:corTipo(v('svcTipo'))};
+  try{await q(SVC_EDIT?sb.from('servicos').update(dados).eq('id',SVC_EDIT):sb.from('servicos').insert(dados))}catch(e){return}
   ['svcNome','svcDur','svcInt','svcPreco','svcPromo'].forEach(id=>document.getElementById(id).value='');
   closeDrawer('novoServicoDrawer');
-  toast('Serviço salvo');
+  toast(SVC_EDIT?'Serviço atualizado':'Serviço salvo');
+  SVC_EDIT=null;
   await recarregar();
 }
 async function removerServico(id){
@@ -2275,7 +2305,7 @@ function renderTopServices() {
   if(!data.length){el.innerHTML='<div class="card"><div class="empty-state" style="padding:10px">Sem dados '+FIN_PERIOD_LABELS[finPeriod]+'.</div></div>';return}
   const max = data[0].qtd;
   el.innerHTML = '<div class="card">'+data.map(d=>{
-    const color=d.type==='podologia'?'var(--pod)':'var(--nail)';
+    const color=d.type==='esmalteria'?'var(--nail)':d.type==='podologia'?'var(--pod)':corTipo(d.type);
     return `
     <div class="chart-row">
       <div class="chart-label" style="width:80px;font-size:11px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.name)}</div>
@@ -2787,25 +2817,35 @@ function exportarDespesas(){
 // ── FORM / SLOTS ──────────────────────────────────────────────────
 function svcSelecionado(){
   const id=document.getElementById('inputServico').value;
-  return [...SVCS_NAIL,...SVCS_POD].find(s=>s.id===id);
+  return Object.values(SVCS_TIPO).flat().find(s=>s.id===id);
 }
 // ── escolha de serviço: abas por tipo + cartões
 function setTipoServico(tipo){ document.getElementById('inputTipo').value=tipo; loadServicesForm(); }
 function loadServicesForm() {
-  const tipo = document.getElementById('inputTipo').value;
-  const svcs = tipo==='esmalteria'?SVCS_NAIL:SVCS_POD;
+  const tipos=TIPOS_SVC.filter(t=>(SVCS_TIPO[t.id]||[]).length);
+  const tipoEl=document.getElementById('inputTipo');
+  if(tipos.length&&!tipos.some(t=>t.id===tipoEl.value)) tipoEl.value=tipos[0].id;
+  const tipo = tipoEl.value;
+  const termo = semAcento((document.getElementById('svcBusca')||{}).value||'').trim();
+  // com busca: procura em todas as categorias; sem busca: só a categoria da aba
+  const svcs = (termo?Object.values(SVCS_TIPO).flat().filter(s=>semAcento(s.name).includes(termo)):(SVCS_TIPO[tipo]||[]))
+    .slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
   const hid = document.getElementById('inputServico');
-  if(!svcs.some(s=>s.id===hid.value)) hid.value='';
-  document.querySelectorAll('#tipoTabs .tab-item').forEach(b=>b.classList.toggle('active',b.dataset.tipo===tipo));
+  if(!Object.values(SVCS_TIPO).flat().some(s=>s.id===hid.value)) hid.value='';
+  const tabs=document.getElementById('tipoTabs');
+  tabs.hidden=!!termo||tipos.length<2;
+  tabs.innerHTML=tipos.map(t=>`<button type="button" class="tab-item${t.id===tipo?' active':''}" onclick="setTipoServico('${t.id}')">${t.nome}</button>`).join('');
   document.getElementById('svcLista').innerHTML = svcs.length
     ? svcs.map(s=>`<button type="button" class="pick-item${s.id===hid.value?' sel':''}" onclick="escolherServico('${s.id}')">
         <span class="pick-nome">${esc(s.name)}</span><span class="pick-sub">${s.dur} min</span>
         <span class="pick-preco">${fmtR(s.promo??s.price)}</span></button>`).join('')
-    : '<div class="pick-sub" style="grid-column:1/-1;padding:6px 2px">Nenhum serviço deste tipo. Cadastre na aba Serviços.</div>';
+    : `<div class="pick-sub" style="grid-column:1/-1;padding:6px 2px">${termo?'Nenhum serviço com esse nome.':'Nenhum serviço deste tipo. Cadastre na aba Serviços.'}</div>`;
   loadSlots();
 }
 function escolherServico(id){
   document.getElementById('inputServico').value=id;
+  const s=svcSelecionado(); if(s) document.getElementById('inputTipo').value=s.tipo;
+  document.getElementById('svcBusca').value='';
   loadServicesForm();
 }
 // ── escolha de cliente: busca por nome/telefone, toque para escolher

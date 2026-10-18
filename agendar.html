@@ -136,8 +136,8 @@ section{margin-top:46px}
 .resumo-linha .link{margin-left:auto;font-size:13.5px}
 .resumo-linha .ic{width:36px;height:36px;border-radius:12px;background:var(--card);display:flex;align-items:center;justify-content:center;color:var(--rose-2);flex-shrink:0}
 
-.abas{display:flex;background:var(--bg-2);border-radius:999px;padding:4px;margin-bottom:14px}
-.abas button{flex:1;border:none;background:none;padding:10px;border-radius:999px;font-weight:600;font-size:14.5px;color:var(--muted);transition:all .25s}
+.abas{display:flex;background:var(--bg-2);border-radius:999px;padding:4px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none}.abas::-webkit-scrollbar{display:none}
+.abas button{flex:1 0 auto;white-space:nowrap;border:none;background:none;padding:10px;border-radius:999px;font-weight:600;font-size:14.5px;color:var(--muted);transition:all .25s}
 .abas button.on{background:var(--card);color:var(--rose-2);box-shadow:var(--sombra-sm)}
 .svcs{display:flex;flex-direction:column;gap:10px}
 .svc{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:15px 16px;transition:all .2s;animation:surge .4s both}
@@ -244,9 +244,14 @@ const CATS={gel:'Unhas em gel',acrilico:'Acrílico',esmaltacao:'Esmaltação',na
 const DIAS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const DIAS_LONGOS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+// categorias de serviço: nome na aba e ícone
+const TIPO_NOME={esmalteria:'Unhas',podologia:'Pés & podologia',sobrancelha:'Sobrancelha',maquiagem:'Maquiagem'};
+const icTipo=t=>({podologia:IC.pe,sobrancelha:IC.sob,maquiagem:IC.maq}[t]||IC.unha);
 const IC={
   unha:'<svg class="i" viewBox="0 0 24 24"><path d="M10 2.5h4v4.5h-4z"/><path d="M8.5 7h7l1.5 3.5V19a2.5 2.5 0 0 1-2.5 2.5h-5A2.5 2.5 0 0 1 7 19v-8.5z"/><path d="M7 13h10"/></svg>',
   pe:'<svg class="i" viewBox="0 0 24 24"><path d="M8 3c2 0 3 2 3 5s-1 5-1 8 1 5-2 5-3-3-3-6 1-12 3-12z"/><circle cx="15" cy="5" r="1.4"/><circle cx="17.6" cy="8" r="1.2"/><circle cx="18.8" cy="11.2" r="1"/></svg>',
+  sob:'<svg class="i" viewBox="0 0 24 24"><path d="M3 11c3-3 7-4 11-3s5 2 7 3"/><path d="M5 15c2-1 4-1.5 6-1"/></svg>',
+  maq:'<svg class="i" viewBox="0 0 24 24"><path d="M9 3h6l-1 6h-4z"/><rect x="8" y="9" width="8" height="12" rx="2"/></svg>',
   cal:'<svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
   rel:'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   zap:'<svg class="i" viewBox="0 0 24 24" style="stroke:none;fill:currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-3.3-.8-2.8-1.1-4.5-4-4.6-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.6 2.1 1.1 1 2 1.3 2.3 1.4.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.3z"/></svg>',
@@ -276,7 +281,7 @@ async function iniciar(){
   try{A=await rpc('agenda_publica',{p_slug:SLUG})}catch(e){A=null}
   if(!A){indisponivel();return}
   document.title=`${A.nome} · Agende seu horário`;
-  const tipos=[...new Set(A.servicos.map(s=>s.tipo))];
+  const tipos=Object.keys(TIPO_NOME).filter(t=>A.servicos.some(s=>s.tipo===t));
   escolha.tipo=tipos.includes('esmalteria')?'esmalteria':tipos[0];
   renderPagina();
 }
@@ -424,7 +429,7 @@ function renderAgendamento(){
   const e=etapaAtual();
   const nomes=['Serviço','Dia','Horário','Seus dados'];
   const resumo=[];
-  if(escolha.svc) resumo.push(linhaResumo(escolha.svc.tipo==='podologia'?IC.pe:IC.unha,'Serviço',`${esc(escolha.svc.nome)} · ${reais(escolha.svc.preco)}`,'voltarPara(1)'));
+  if(escolha.svc) resumo.push(linhaResumo(icTipo(escolha.svc.tipo),'Serviço',`${esc(escolha.svc.nome)} · ${reais(escolha.svc.preco)}`,'voltarPara(1)'));
   if(escolha.dia) resumo.push(linhaResumo(IC.cal,'Dia',dataLonga(escolha.dia),'voltarPara(2)'));
   if(escolha.hora) resumo.push(linhaResumo(IC.rel,'Horário',escolha.hora,'voltarPara(3)'));
   el.innerHTML=`<div class="passos">${nomes.map((n,i)=>`<div class="${i+1===e?'on':i+1<e?'ok':''}">${n}</div>`).join('')}</div>
@@ -445,14 +450,14 @@ function voltarPara(n){
 function rolarPara(){const el=document.getElementById('agendamento');const y=el.getBoundingClientRect().top+scrollY-16;if(Math.abs(y-scrollY)>40)scrollTo({top:y,behavior:'smooth'})}
 
 function renderServicos(){
-  const tipos=[...new Set(A.servicos.map(s=>s.tipo))];
+  const tipos=Object.keys(TIPO_NOME).filter(t=>A.servicos.some(s=>s.tipo===t));
   const lista=A.servicos.filter(s=>s.tipo===escolha.tipo);
   document.getElementById('etapa').innerHTML=`
     <div class="etapa-tit"><h3>Qual serviço?</h3></div>
-    ${tipos.length>1?`<div class="abas">${tipos.map(t=>`<button class="${escolha.tipo===t?'on':''}" onclick="escolha.tipo='${t}';renderServicos()">${t==='podologia'?'Pés & podologia':'Unhas'}</button>`).join('')}</div>`:''}
+    ${tipos.length>1?`<div class="abas">${tipos.map(t=>`<button class="${escolha.tipo===t?'on':''}" onclick="escolha.tipo='${t}';renderServicos()">${TIPO_NOME[t]||t}</button>`).join('')}</div>`:''}
     <div class="svcs">${lista.map((s,i)=>`
       <button class="svc" style="animation-delay:${i*40}ms" onclick="escolherSvc('${s.id}')">
-        <span class="ic">${s.tipo==='podologia'?IC.pe:IC.unha}</span>
+        <span class="ic">${icTipo(s.tipo)}</span>
         <span class="n"><b>${esc(s.nome)}</b><span>${s.duracao_min} min</span></span>
         <span class="p">${reais(s.preco)}</span>
       </button>`).join('')}</div>`;
