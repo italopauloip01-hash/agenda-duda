@@ -1090,6 +1090,32 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
   <button class="btn btn-ghost" style="margin-top:13px" onclick="closeDrawer('aniversariantesDrawer')">Fechar</button>
 </div></div>
 
+<!-- Importar horários do Google Agenda pessoal -->
+<div class="modal-overlay" id="gAgendaDrawer"><div class="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">Horários do Google Agenda</div>
+  <div class="drawer-subtitle" id="gAgendaInfo">Próximos 90 dias</div>
+  <div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn btn-ghost btn-sm" style="width:auto" onclick="marcarEventosG(true)">Marcar todos</button><button class="btn btn-ghost btn-sm" style="width:auto" onclick="marcarEventosG(false)">Desmarcar</button></div>
+  <div id="gAgendaLista" class="list-card"></div>
+  <div class="btn-row" style="margin-top:14px">
+    <button class="btn btn-ghost" onclick="closeDrawer('gAgendaDrawer')">Fechar</button>
+    <button class="btn btn-primary" id="gAgendaBtn" onclick="importarEventosG()">Importar marcados</button>
+  </div>
+</div></div>
+
+<!-- Aviso para a cliente (marcação / remarcação / cancelamento) -->
+<div class="modal-overlay" id="avisoDrawer"><div class="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title" id="avisoTitulo">Avisar a cliente?</div>
+  <div class="form-group"><label class="form-label">Mensagem (pode editar antes de enviar)</label>
+    <textarea class="form-input big" id="avisoTexto" rows="3" style="resize:none;overflow:hidden;font-family:inherit;line-height:1.4" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea></div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="closeDrawer('avisoDrawer')">Agora não</button>
+    <button class="btn btn-primary" id="avisoBtn">Enviar no WhatsApp</button>
+  </div>
+  <div class="pick-sub" style="margin-top:10px;text-align:center">Os textos ficam em Ajustes → Mensagens prontas.</div>
+</div></div>
+
 <!-- Novo serviço -->
 <div class="modal-overlay" id="novoServicoDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
@@ -1346,6 +1372,7 @@ const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/contacts.readonly',      // ler contatos
   'https://www.googleapis.com/auth/calendar.app.created',   // calendário próprio "Bellisa"
   'https://www.googleapis.com/auth/calendar.freebusy',      // ver horários ocupados (sem ver detalhes)
+  'https://www.googleapis.com/auth/calendar.events.readonly', // importar horários já marcados no Google Agenda
 ].join(' ');
 let GOOGLE = {conectado:false,email:null,calendarioId:null,contatosSyncEm:null,token:null,expira:0};
 
@@ -1855,6 +1882,7 @@ async function mudarStatus(id,status){
   }
   closeDrawer('detailDrawer');
   toast('Status: '+STATUS_MAP[status].label);
+  if(status==='cancelado') setTimeout(()=>avisarCliente('cancelamento',id),350);
 }
 
 // ── PAGAMENTOS ────────────────────────────────────────────────────
@@ -2656,8 +2684,12 @@ async function copiarLink(){
 const MSGS_PADRAO=[
   {id:'lembrete',titulo:'Lembrete do horário',uso:'Botão Lembrete e Lembretes de amanhã',
     texto:'Oi {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora}. Posso confirmar? 💅'},
-  {id:'confirmacao',titulo:'Confirmação de agendamento',
+  {id:'confirmacao',titulo:'Confirmação de agendamento',uso:'Aviso ao marcar um horário',
     texto:'Oi {nome}! Seu horário de {servico} está confirmado para {dia} às {hora}. Te espero! 💖'},
+  {id:'remarcado',titulo:'Horário remarcado',uso:'Aviso ao remarcar',
+    texto:'Oi {nome}! Seu horário de {servico} foi remarcado para {dia} às {hora}. Qualquer coisa é só me chamar 💖'},
+  {id:'cancelamento',titulo:'Horário cancelado',uso:'Aviso ao cancelar',
+    texto:'Oi {nome}, seu horário de {servico} de {dia} às {hora} foi cancelado. Quer marcar outro dia? {link}'},
   {id:'boas_vindas',titulo:'Boas-vindas (cliente nova)',
     texto:'Oi {nome}, seja muito bem-vinda! 💕 Qualquer dúvida sobre o atendimento é só me chamar por aqui. Para agendar online: {link}'},
   {id:'remarcar',titulo:'Remarcação',
@@ -2791,6 +2823,21 @@ async function restaurarOcultas(){
 
 // Escolher e enviar (da ficha da cliente ou do agendamento)
 let envioCtx=null;
+// Depois de marcar, remarcar ou cancelar: pergunta se quer avisar a cliente, com a mensagem pronta (editável)
+const AVISO_TITULO={confirmacao:'Horário marcado',remarcado:'Horário remarcado',cancelamento:'Horário cancelado'};
+function avisarCliente(tipo,apptId){
+  const a=ALL_APPTS.find(x=>x.id===apptId); if(!a) return;
+  if(!a.phone){toast(`${AVISO_TITULO[tipo]} — ${a.name.split(' ')[0]} não tem WhatsApp cadastrado`);return}
+  document.getElementById('avisoTitulo').textContent=`${AVISO_TITULO[tipo]} · avisar ${a.name.split(' ')[0]}?`;
+  const txt=document.getElementById('avisoTexto');
+  txt.value=modelo(tipo,varsAgendamento(a));
+  document.getElementById('avisoBtn').onclick=()=>{
+    const l=waLink(a.phone,txt.value); if(l) window.open(l,'_blank','noopener');
+    closeDrawer('avisoDrawer');
+  };
+  openDrawer('avisoDrawer');
+  requestAnimationFrame(()=>{txt.style.height='auto';txt.style.height=txt.scrollHeight+'px'});
+}
 function enviarMensagem(clienteId,apptId){
   const a=apptId?ALL_APPTS.find(x=>x.id===apptId):null;
   const c=CLIENTS.find(x=>x.id===(clienteId||a?.cliente_id));
@@ -3079,6 +3126,7 @@ async function salvarAgendamento() {
   selectedDate=new Date(ini.getFullYear(),ini.getMonth(),ini.getDate());
   toast(foiRemarcacao?`Remarcado para ${labelDia(selectedDate).toLowerCase()} às ${hhmm(ini)}`:`${nome} — ${labelDia(selectedDate).toLowerCase()} às ${hhmm(ini)}`);
   await recarregar();
+  avisarCliente(foiRemarcacao?'remarcado':'confirmacao',novo.id);
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────────
@@ -3620,6 +3668,7 @@ async function syncEvento(id){
   if(!GOOGLE.conectado) return;
   const {data:a}=await sb.from('agendamentos').select('*, clientes(nome,telefone)').eq('id',id).single();
   if(!a) return;
+  if(a.origem==='google') return; // veio do Google Agenda pessoal: já está lá, não duplica
   const cal=await garantirCalendario();
   const url=CAL+'/calendars/'+encodeURIComponent(cal)+'/events';
   if(a.status==='cancelado'||a.status==='faltou'){
@@ -3652,12 +3701,84 @@ function syncEmSegundoPlano(...ids){
 async function sincronizarAgendaGoogle(){
   const btn=document.getElementById('gSyncAgendaBtn');if(btn){btn.disabled=true;btn.textContent='Enviando…'}
   const {data}=await sb.from('agendamentos').select('id').gte('inicio',new Date(Date.now()-864e5).toISOString())
-    .not('status','in','(cancelado,faltou)');
+    .not('status','in','(cancelado,faltou)').neq('origem','google');
   let ok=0;
   try{for(const r of data||[]){await syncEvento(r.id);ok++}}
   catch(e){toast('Google Agenda: '+e.message)}
   if(btn){btn.disabled=false;btn.textContent='Enviar agenda para o Google'}
   toast(`${ok} agendamento${ok===1?'':'s'} no Google Agenda`);
+}
+// ── Importar horários já marcados no Google Agenda pessoal ─────────
+// Lê os eventos com horário dos próximos 90 dias, tenta achar a cliente e o serviço pelo título
+// e cria os agendamentos marcados (origem 'google', para não serem reenviados ao Google).
+let EVENTOS_G=[];
+function acharPorNome(lista,texto,campo){
+  const t=semAcento(texto);
+  return lista.filter(x=>{const n=semAcento(x[campo]);return n.length>=3&&t.includes(n)}).sort((a,b)=>b[campo].length-a[campo].length)[0]||null;
+}
+async function abrirImportarAgenda(){
+  openDrawer('gAgendaDrawer');
+  const el=document.getElementById('gAgendaLista');
+  el.innerHTML='<div class="empty-state">Buscando seus horários no Google…</div>';
+  try{
+    const ini=hoje0(), fim=addDias(ini,90);
+    let token='',evs=[];
+    do{
+      const j=await gapi(`${CAL}/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${ini.toISOString()}&timeMax=${fim.toISOString()}${token?'&pageToken='+token:''}`);
+      evs=evs.concat(j.items||[]); token=j.nextPageToken||'';
+    }while(token);
+    const svcs=Object.values(SVCS_TIPO).flat();
+    EVENTOS_G=evs.filter(e=>e.start?.dateTime&&e.end?.dateTime&&e.status!=='cancelled').map(e=>{
+      const i=new Date(e.start.dateTime), f=new Date(e.end.dateTime), titulo=e.summary||'(sem título)';
+      const txt=titulo+' '+(e.description||'');
+      const cli=acharPorNome(CLIENTS,titulo,'name'), svc=acharPorNome(svcs,txt,'name');
+      const jaTem=ALL_APPTS.some(a=>ATIVOS(a)&&a.ini<f&&a.fim>i);
+      return {id:e.id,ini:i,fim:f,titulo,cli,svc,jaTem,sel:!jaTem};
+    });
+    renderEventosG();
+  }catch(e){
+    const semPermissao=e.status===403||/insufficient|scope|permission/i.test(e.message);
+    el.innerHTML=semPermissao
+      ?`<div class="empty-state">Para ler seus horários, o Google precisa de uma permissão nova.<br><br><button class="btn btn-primary btn-sm" style="width:auto;margin:0 auto" onclick="conectarGoogle()">Dar permissão no Google</button></div>`
+      :`<div class="empty-state">Não consegui ler o Google Agenda: ${esc(e.message)}</div>`;
+  }
+}
+function renderEventosG(){
+  const el=document.getElementById('gAgendaLista');
+  document.getElementById('gAgendaInfo').textContent=`${EVENTOS_G.length} horário${EVENTOS_G.length===1?'':'s'} nos próximos 90 dias · ${EVENTOS_G.filter(e=>e.sel).length} marcado${EVENTOS_G.filter(e=>e.sel).length===1?'':'s'}`;
+  if(!EVENTOS_G.length){el.innerHTML='<div class="empty-state">Nenhum horário com hora marcada nos próximos 90 dias.</div>';return}
+  el.innerHTML=EVENTOS_G.map((e,k)=>{
+    const dia=e.ini.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+    return `<label class="client-row" style="align-items:flex-start;cursor:pointer">
+      <input type="checkbox" ${e.sel?'checked':''} onchange="EVENTOS_G[${k}].sel=this.checked;renderEventosG()" style="width:18px;height:18px;margin-top:3px;accent-color:var(--fg)">
+      <div class="client-info"><div class="client-name" style="white-space:normal">${esc(e.titulo)}</div>
+        <div class="client-sub" style="white-space:normal">${dia} · ${hhmm(e.ini)}–${hhmm(e.fim)}${e.jaTem?' · <b style="color:var(--warn)">já tem horário na agenda</b>':''}</div>
+        <div class="client-sub" style="white-space:normal">Cliente: ${e.cli?esc(e.cli.name):'<i>nova — '+esc(e.titulo)+'</i>'} · Serviço: ${e.svc?esc(e.svc.name)+' ('+fmtR(e.svc.promo??e.svc.price)+')':'<i>não identificado</i>'}</div></div></label>`;
+  }).join('');
+}
+function marcarEventosG(v){EVENTOS_G.forEach(e=>e.sel=v&&!e.jaTem);renderEventosG()}
+async function importarEventosG(){
+  const lista=EVENTOS_G.filter(e=>e.sel);
+  if(!lista.length){toast('Marque os horários que quer trazer');return}
+  const btn=document.getElementById('gAgendaBtn'); btn.disabled=true; btn.textContent='Importando…';
+  let ok=0, conflito=0, erro=0;
+  for(const e of lista){
+    try{
+      let cliId=e.cli?.id;
+      if(!cliId){
+        const r=await sb.from('clientes').insert({nome:e.titulo.slice(0,80),tipo:e.svc?.tipo||'esmalteria',origem:'Google',cor:CORES_CLIENTE[(CLIENTS.length+ok)%CORES_CLIENTE.length]}).select('id').single();
+        if(r.error) throw r.error; cliId=r.data.id;
+      }
+      const {error}=await sb.from('agendamentos').insert({cliente_id:cliId,servico_id:e.svc?.id||null,servico_nome:e.svc?.name||e.titulo.slice(0,80),
+        tipo:e.svc?.tipo||'esmalteria',inicio:e.ini.toISOString(),fim:e.fim.toISOString(),valor:e.svc?(e.svc.promo??e.svc.price):0,
+        origem:'google',observacoes:'Importado do Google Agenda'});
+      if(error){ if(error.code==='23P01') conflito++; else throw error; } else ok++;
+    }catch(x){console.error(x);erro++}
+  }
+  btn.disabled=false; btn.textContent='Importar marcados';
+  closeDrawer('gAgendaDrawer');
+  toast(`${ok} horário${ok===1?'':'s'} importado${ok===1?'':'s'}`+(conflito?` · ${conflito} batia${conflito===1?'':'m'} com outro horário`:'')+(erro?` · ${erro} com erro`:''));
+  await recarregar();
 }
 // Horários ocupados no calendário pessoal (só início/fim, sem detalhes)
 const BUSY_GOOGLE={};
@@ -3741,7 +3862,7 @@ async function importarContatosGoogle(){
   el.innerHTML=GOOGLE.conectado?`
     <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Conectado</div><div class="toggle-sub">${esc(GOOGLE.email||'')}</div></div><span class="badge badge-ok">Ativo</span></div>
     <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Google Agenda</div><div class="toggle-sub">Cada agendamento vai para o calendário “Bellisa”. Compromissos pessoais bloqueiam horários.</div></div></div>
-    <div class="btn-row" style="flex-wrap:wrap"><button class="btn btn-ghost btn-sm" id="gSyncAgendaBtn" onclick="sincronizarAgendaGoogle()">Enviar agenda para o Google</button><button class="btn btn-ghost btn-sm" onclick="abrirContatosGoogle()">Importar contatos</button></div>
+    <div class="btn-row" style="flex-wrap:wrap"><button class="btn btn-ghost btn-sm" id="gSyncAgendaBtn" onclick="sincronizarAgendaGoogle()">Enviar agenda para o Google</button><button class="btn btn-ghost btn-sm" onclick="abrirContatosGoogle()">Importar contatos</button><button class="btn btn-ghost btn-sm" onclick="abrirImportarAgenda()">Importar horários do Google Agenda</button></div>
     <button class="btn btn-danger btn-sm" style="margin-top:10px" onclick="desconectarGoogle()">Desconectar Google</button>`
   :`<div class="toggle-sub" style="padding:6px 0 12px;font-size:13.5px">Conecte sua conta Google para importar os contatos e mandar os agendamentos para o Google Agenda do celular.</div>
     <button class="btn btn-primary btn-sm" onclick="conectarGoogle()">Conectar Google</button>`;

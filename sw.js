@@ -2,7 +2,7 @@
 // - Página: rede primeiro (sempre a versão mais nova), cache se estiver offline.
 // - Fontes e biblioteca do Supabase (CDN): cache primeiro.
 // - API do Supabase: nunca passa pelo cache.
-const VERSAO = 'bellisa-v20';
+const VERSAO = 'bellisa-v21';
 const BASICO = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
