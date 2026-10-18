@@ -2847,6 +2847,7 @@ function escolherServico(id){
   const s=svcSelecionado(); if(s) document.getElementById('inputTipo').value=s.tipo;
   document.getElementById('svcBusca').value='';
   loadServicesForm();
+  calcSlotDuration(); // preenche o valor mesmo em dia fechado (sem grade de horários)
 }
 // ── escolha de cliente: busca por nome/telefone, toque para escolher
 let CLI_ESCOLHIDA=null;
