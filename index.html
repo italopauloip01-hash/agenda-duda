@@ -366,8 +366,6 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
 .cal-day.today .cal-bar-wrap{background:color-mix(in srgb,var(--on-fg) 25%,transparent)}
 .cal-bar-fill{position:absolute;inset:0 auto 0 0;height:100%!important;border-radius:2px}
 .cal-day-count{font-size:10.5px;color:var(--fg-muted);font-variant-numeric:tabular-nums;min-height:13px;line-height:13px}
-.cal-bar-fill{background:var(--accent)}
-.cal-day.today .cal-bar-fill{background:#fff}
 .cal-grid,.cal-grid-header{grid-template-columns:repeat(7,minmax(0,1fr))}
 .cal-day.sel{box-shadow:inset 0 0 0 2px var(--accent)}
 .cal-day.today.sel{box-shadow:inset 0 0 0 2px var(--accent),var(--shadow-md)}
@@ -852,7 +850,7 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
     <div class="stat-tile">
       <div class="stat-label">Ocupação média</div>
       <div class="stat-value stat-ok" id="calStatOcup">74%</div>
-      <div class="stat-sub">capacidade mensal</div>
+      <div class="stat-sub">do tempo de trabalho</div>
     </div>
   </div>
   <div class="cal-grid-header">
@@ -2867,6 +2865,23 @@ function getOccupancy(year, month, day) {
   const k=ymd(new Date(year,month,day));
   return ALL_APPTS.filter(a=>ATIVOS(a)&&ymd(a.ini)===k).length;
 }
+// minutos de trabalho do dia (expediente menos almoço) e minutos já ocupados por atendimentos
+const minDe=s=>{const [h,m]=String(s).split(':');return +h*60+(+m||0)};
+function tempoDoDia(dia0){
+  const h=HORARIOS.find(x=>x.dia===dia0.getDay());
+  let trab=0;
+  if(h&&h.aberto&&h.abre&&h.fecha){
+    trab=minDe(h.fecha)-minDe(h.abre);
+    if(h.almIni&&h.almFim) trab-=Math.max(0,minDe(h.almFim)-minDe(h.almIni));
+  }
+  const dia1=addDias(dia0,1);
+  const ocup=ALL_APPTS.filter(a=>ATIVOS(a)&&a.ini<dia1&&a.fim>dia0)
+    .reduce((s,a)=>s+Math.max(0,(Math.min(a.fim,dia1)-Math.max(a.ini,dia0))/60000),0);
+  return {trab:Math.max(0,trab),ocup:Math.round(ocup)};
+}
+// verde (folgado) → amarelo → laranja → vermelho (agenda cheia), pela fração do expediente ocupada
+const corOcupacao=p=>p>=.9?'var(--danger)':p>=.7?'#F08A3C':p>=.4?'var(--warn)':'var(--ok)';
+const fmtHoras=m=>{const h=Math.floor(m/60),r=m%60;return h?`${h}h${r?String(r).padStart(2,'0'):''}`:`${r}min`};
 function buildCalendar() {
   const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   document.getElementById('calMonthTitle').textContent = months[calMonth] + ' ' + calYear;
@@ -2875,8 +2890,7 @@ function buildCalendar() {
   const first = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
   const days = new Date(calYear, calMonth+1, 0).getDate();
   const today = new Date();
-  const maxSlots = 8;
-  let totalAppts = 0, workDays = 0;
+  let totalAppts = 0, minTrab = 0, minOcup = 0;
   for(let i=0;i<first;i++) {
     const empty = document.createElement('div');
     empty.className = 'cal-day empty';
@@ -2891,13 +2905,14 @@ function buildCalendar() {
     const dia0 = new Date(calYear, calMonth, d), dia1 = addDias(dia0, 1);
     const folga = BLOQUEIOS.some(b=>b.tipo==='folga'&&b.ini<dia1&&b.fim>dia0);
     const fechado = !folga && !(HORARIOS.find(h=>h.dia===dia0.getDay())||{aberto:true}).aberto;
+    const t = tempoDoDia(dia0);
+    const pct = t.trab ? Math.min(t.ocup/t.trab,1) : (t.ocup?1:0);
     const cell = document.createElement('div');
     cell.className = 'cal-day' + (isToday?' today':'') + (d===calSel.getDate()?' sel':'');
     const marca = folga ? '<span class="cal-tag">folga</span>' : fechado && !occ ? '<span class="cal-tag">fechado</span>' : '';
-    const pct = Math.min(occ / maxSlots, 1);
     cell.innerHTML = `
       <span class="cal-day-num">${d}</span>
-      ${marca || `<div class="cal-bar-wrap"><div class="cal-bar-fill" style="width:${pct*100}%"></div></div>
+      ${marca || `<div class="cal-bar-wrap"><div class="cal-bar-fill" style="width:${pct*100}%;background:${corOcupacao(pct)}"></div></div>
       <span class="cal-day-count">${occ||''}</span>`}`;
     // tocar num dia mostra os compromissos dele logo abaixo
     cell.onclick = () => {
@@ -2905,20 +2920,21 @@ function buildCalendar() {
       document.getElementById('calDia').scrollIntoView({behavior:'smooth',block:'nearest'});
     };
     grid.appendChild(cell);
-    if(occ > 0){ totalAppts += occ; workDays++; }
+    totalAppts += occ;
+    if(!folga){ minTrab += t.trab; minOcup += t.ocup; }
   }
   renderCalDia();
   document.getElementById('calStatMes').textContent = totalAppts;
-  const avgOcup = workDays > 0 ? Math.round((totalAppts/(workDays*maxSlots))*100) : 0;
-  document.getElementById('calStatOcup').textContent = avgOcup + '%';
-}
-function renderCalDia(){
+  document.getElementById('calStatOcup').textContent = (minTrab ? Math.round(minOcup/minTrab*100) : 0) + '%';
+}function renderCalDia(){
   const el=document.getElementById('calDia'); if(!el||!calSel) return;
   const k=ymd(calSel), lista=ALL_APPTS.filter(a=>ymd(a.ini)===k).sort((a,b)=>a.ini-b.ini);
   const folga=BLOQUEIOS.find(b=>b.tipo==='folga'&&b.ini<addDias(calSel,1)&&b.fim>calSel);
   const sem=calSel.toLocaleDateString('pt-BR',{weekday:'long'});
   const titulo=sem[0].toUpperCase()+sem.slice(1)+', '+calSel.toLocaleDateString('pt-BR',{day:'numeric',month:'long'});
-  el.innerHTML=`<div class="section-header" style="margin:18px 0 10px"><span class="section-title">${titulo}</span>
+  const tp=tempoDoDia(calSel);
+  const resumo=tp.trab?`${fmtHoras(tp.ocup)} de ${fmtHoras(tp.trab)} ocupadas`:(folga?'':'Fechado neste dia');
+  el.innerHTML=`<div class="section-header" style="margin:18px 0 10px"><div><div class="section-title">${titulo}</div>${resumo?`<div style="font-size:12px;color:var(--fg-muted);margin-top:2px">${resumo}</div>`:''}</div>
       <button class="btn btn-ghost btn-sm" style="width:auto;padding:6px 12px" onclick="agendarNoDiaCal()">+ Agendar</button></div>
     ${folga?`<div class="alert alert-info"><span>Folga${folga.motivo?': '+esc(folga.motivo):''}</span></div>`:''}
     ${lista.length?'':'<div class="empty-state" style="padding:18px 0">Nenhum compromisso neste dia.</div>'}`;
