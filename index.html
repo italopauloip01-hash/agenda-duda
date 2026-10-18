@@ -365,7 +365,9 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
 .cal-bar-wrap{width:60%;height:3px;background:var(--bg-subtle);border-radius:2px;overflow:hidden;position:relative}
 .cal-day.today .cal-bar-wrap{background:color-mix(in srgb,var(--on-fg) 25%,transparent)}
 .cal-bar-fill{position:absolute;inset:0 auto 0 0;height:100%!important;border-radius:2px}
-.cal-day-count{font-size:10.5px;color:var(--fg-muted);font-variant-numeric:tabular-nums}
+.cal-day-count{font-size:10px;color:var(--fg-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cal-day.sel{box-shadow:inset 0 0 0 2px var(--accent)}
+.cal-day.today.sel{box-shadow:inset 0 0 0 2px var(--accent),var(--shadow-md)}
 
 /* Donut */
 .donut-wrap{position:relative;width:120px;height:120px;flex-shrink:0}
@@ -854,15 +856,7 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
     <span>DOM</span><span>SEG</span><span>TER</span><span>QUA</span><span>QUI</span><span>SEX</span><span>SÁB</span>
   </div>
   <div class="cal-grid" id="calGrid"></div>
-  <div class="cal-legenda">
-    <span><i style="background:var(--ok)"></i>Tranquilo</span>
-    <span><i style="background:var(--warn)"></i>Movimentado</span>
-    <span><i style="background:#F08A3C"></i>Quase cheio</span>
-    <span><i style="background:var(--danger)"></i>Lotado</span>
-    <span><i class="q" style="background:var(--warn-lt);box-shadow:inset 0 0 0 1.5px var(--warn)"></i>Folga</span>
-    <span><i class="q" style="background:var(--info-lt);box-shadow:inset 0 0 0 1.5px var(--info)"></i>Fechado</span>
-  </div>
-  <p style="margin-top:10px;font-size:12.5px;color:var(--fg-soft);text-align:center">Toque num dia para abrir a agenda dele.</p>
+  <div id="calDia"></div>
 </main>
 
 <!-- ── CONFIG ── -->
@@ -1032,6 +1026,7 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
     <div class="form-group"><label class="form-label">WhatsApp</label><input class="form-input" type="tel" id="cliTel" placeholder="(00) 00000-0000"></div>
     <div class="form-group"><label class="form-label">Nascimento</label><input class="form-input" type="date" id="cliNasc"></div>
   </div>
+  <div class="form-group"><label class="form-label">CPF <span style="font-weight:400;color:var(--fg-muted)">(opcional, para nota fiscal)</span></label><input class="form-input" type="text" inputmode="numeric" id="cliCpf" placeholder="000.000.000-00" oninput="mascaraCpf(this)"></div>
   <div class="form-group">
     <label class="form-label">Tipo de atendimento</label>
     <select class="form-input" id="cliTipo">
@@ -1332,6 +1327,7 @@ let currentClientFilter = 'todos';
 let finPeriod = 'semana';
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
+let calSel = null; // dia tocado no calendário
 let portfolioFilter = 'todos';
 let galleryViewMode = 'grid';
 
@@ -1393,6 +1389,9 @@ function fmtR(v){
   return s+(v>=1000?'R$'+(v/1000).toFixed(1).replace('.0','').replace('.',',')+'k':'R$'+(Number.isInteger(v)?v:v.toFixed(2).replace('.',',')));
 }
 function normTel(s){let d=String(s||'').replace(/\D/g,'');if(!d)return null;if(d.length<=11)d='55'+d;return d}
+function cpfValido(s){const d=String(s||'').replace(/\D/g,'');if(d.length!==11||/^(\d)\1{10}$/.test(d))return false;const dv=n=>{let t=0;for(let i=0;i<n;i++)t+=+d[i]*(n+1-i);const r=t*10%11;return r===10?0:r};return dv(9)===+d[9]&&dv(10)===+d[10]}
+function fmtCpf(s){const d=String(s||'').replace(/\D/g,'');return d.length===11?`${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`:''}
+function mascaraCpf(el){const d=el.value.replace(/\D/g,'').slice(0,11);el.value=d.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2')}
 function fmtTel(s){const d=String(s||'').replace(/^55/,'');if(d.length===11)return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;if(d.length===10)return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;return s||'—'}
 function relDia(d){
   if(!d)return 'Nunca';
@@ -1585,7 +1584,7 @@ async function recarregar(){
     GOOGLE.conectado=!!gc;
     if(gc){GOOGLE.email=gc.email_google;GOOGLE.calendarioId=gc.calendario_id;GOOGLE.contatosSyncEm=gc.contatos_sync_em}
     CLIENTS=cli.map(c=>({id:c.id,name:c.nome,type:c.tipo,visits:Number(c.visitas),last:relDia(c.ultima_visita),
-      color:c.cor,phone:c.telefone||'',bday:c.nascimento,vip:c.vip,faltou:Number(c.faltas),pref:c.preferencias,obs:c.observacoes}));
+      color:c.cor,phone:c.telefone||'',bday:c.nascimento,cpf:c.cpf||'',vip:c.vip,faltou:Number(c.faltas),pref:c.preferencias,obs:c.observacoes}));
     const mapSvc=s=>({id:s.id,name:s.nome,tipo:s.tipo,dur:s.duracao_min,int:s.intervalo_min,price:Number(s.preco),
       promo:s.preco_promo!=null?Number(s.preco_promo):null,color:s.cor});
     SVCS_NAIL=svc.filter(s=>s.tipo==='esmalteria').map(mapSvc);
@@ -1932,6 +1931,9 @@ function openFicha(c) {
         <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:2px">WhatsApp</div>${esc(fmtTel(c.phone))}</div>
         <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:2px">Aniversário</div>${c.bday?new Date(c.bday+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long'}):'—'}</div>
       </div>
+      <div style="margin-top:8px" id="fichaCpf"><div style="color:var(--fg-muted);font-size:12px;margin-bottom:2px">CPF</div>
+        <div style="display:flex;align-items:center;gap:8px">${c.cpf?esc(fmtCpf(c.cpf)):'<span style="color:var(--fg-muted)">Não informado</span>'}
+          <button class="btn btn-ghost btn-sm" style="width:auto;padding:4px 10px;margin-left:auto" onclick="editarCpf('${c.id}')">${c.cpf?'Alterar':'Adicionar'}</button></div></div>
       ${c.pref?`<div style="margin-top:8px"><div style="color:var(--fg-muted);font-size:12px;margin-bottom:2px">Preferências</div>${esc(c.pref)}</div>`:''}
       ${c.obs?`<div style="margin-top:8px"><div style="color:var(--fg-muted);font-size:12px;margin-bottom:2px">Observações</div>${esc(c.obs)}</div>`:''}
     </div>
@@ -1942,6 +1944,21 @@ function openFicha(c) {
     </div>
     <button class="btn btn-ghost" onclick="closeDrawer('fichaClienteDrawer')">Fechar</button>`;
   openDrawer('fichaClienteDrawer');
+}
+function editarCpf(id){
+  const c=CLIENTS.find(x=>x.id===id); if(!c) return;
+  document.getElementById('fichaCpf').innerHTML=`<div style="color:var(--fg-muted);font-size:12px;margin-bottom:4px">CPF (para nota fiscal)</div>
+    <div style="display:flex;gap:8px"><input class="form-input" style="flex:1" type="text" inputmode="numeric" id="fichaCpfInput" placeholder="000.000.000-00" value="${esc(fmtCpf(c.cpf))}" oninput="mascaraCpf(this)">
+    <button class="btn btn-primary btn-sm" style="width:auto;padding:0 14px" onclick="salvarCpf('${id}')">Salvar</button></div>`;
+  document.getElementById('fichaCpfInput').focus();
+}
+async function salvarCpf(id){
+  const cpf=document.getElementById('fichaCpfInput').value.replace(/\D/g,'')||null;
+  if(cpf&&!cpfValido(cpf)){toast('CPF inválido — confira os números');return}
+  const {error}=await sb.from('clientes').update({cpf}).eq('id',id);
+  if(error){toast('Erro: '+error.message);return}
+  const c=CLIENTS.find(x=>x.id===id); c.cpf=cpf||'';
+  toast(cpf?'CPF salvo':'CPF removido'); openFicha(c);
 }
 function renderAniversarios() {
   const el = document.getElementById('aniversList');
@@ -1970,12 +1987,14 @@ async function salvarCliente(){
   const v=id=>document.getElementById(id).value.trim();
   const nome=v('cliNome');
   if(!nome){document.getElementById('cliNome').focus();return}
+  const cpf=v('cliCpf').replace(/\D/g,'')||null;
+  if(cpf&&!cpfValido(cpf)){toast('CPF inválido — confira os números');document.getElementById('cliCpf').focus();return}
   const {error}=await sb.from('clientes').insert({
-    nome,telefone:normTel(v('cliTel')),nascimento:v('cliNasc')||null,tipo:v('cliTipo'),origem:v('cliOrigem'),
+    nome,telefone:normTel(v('cliTel')),nascimento:v('cliNasc')||null,cpf,tipo:v('cliTipo'),origem:v('cliOrigem'),
     preferencias:v('cliPref')||null,observacoes:v('cliObs')||null,vip:document.getElementById('cliVip').checked,
     cor:CORES_CLIENTE[CLIENTS.length%CORES_CLIENTE.length]});
   if(error){toast(error.code==='23505'?'Já existe uma cliente com esse WhatsApp':'Erro: '+error.message);return}
-  ['cliNome','cliTel','cliNasc','cliPref','cliObs'].forEach(id=>document.getElementById(id).value='');
+  ['cliNome','cliTel','cliNasc','cliCpf','cliPref','cliObs'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('cliVip').checked=false;
   closeDrawer('novoClienteDrawer');
   toast('Cliente cadastrada');
@@ -2693,8 +2712,8 @@ const num=v=>Number(v||0).toFixed(2).replace('.',',');
 function exportarAtendimentos(){
   const [i,f,rot]=periodoExport();
   const l=ALL_APPTS.filter(a=>a.ini>=i&&a.ini<f);
-  baixarCSV(`atendimentos-${rot}.csv`,[['Data','Hora','Cliente','Telefone','Serviço','Tipo','Status','Valor','Pago','Falta','Formas de pagamento','Local','Observações'],
-    ...l.map(a=>[a.ini.toLocaleDateString('pt-BR'),a.time,a.name,fmtTel(a.phone),a.service,a.type,STATUS_MAP[a.status].label,num(a.price),num(a.pago),num(ATIVOS(a)?a.falta:0),
+  baixarCSV(`atendimentos-${rot}.csv`,[['Data','Hora','Cliente','Telefone','CPF','Serviço','Tipo','Status','Valor','Pago','Falta','Formas de pagamento','Local','Observações'],
+    ...l.map(a=>[a.ini.toLocaleDateString('pt-BR'),a.time,a.name,fmtTel(a.phone),fmtCpf(CLIENTS.find(c=>c.id===a.cliente_id)?.cpf),a.service,a.type,STATUS_MAP[a.status].label,num(a.price),num(a.pago),num(ATIVOS(a)?a.falta:0),
       [...new Set(a.pagos.map(p=>FORMAS[p.forma]))].join(', '),a.local,a.obs||''])]);
 }
 function exportarPagamentos(){
@@ -2860,35 +2879,60 @@ function buildCalendar() {
     empty.className = 'cal-day empty';
     grid.appendChild(empty);
   }
+  // dia escolhido: mantém se for deste mês; senão hoje (se estiver no mês) ou dia 1
+  if(!calSel || calSel.getMonth()!==calMonth || calSel.getFullYear()!==calYear)
+    calSel = (today.getFullYear()===calYear && today.getMonth()===calMonth) ? new Date(calYear,calMonth,today.getDate()) : new Date(calYear,calMonth,1);
   for(let d=1;d<=days;d++) {
     const occ = getOccupancy(calYear, calMonth, d);
-    const pct = Math.min(occ / maxSlots, 1);
-    // verde (folgado) → amarelo → laranja → vermelho (lotado)
-    const color = pct >= 1 ? 'var(--danger)' : pct >= .7 ? '#F08A3C' : pct >= .4 ? 'var(--warn)' : 'var(--ok)';
     const isToday = calYear===today.getFullYear() && calMonth===today.getMonth() && d===today.getDate();
     const dia0 = new Date(calYear, calMonth, d), dia1 = addDias(dia0, 1);
     const folga = BLOQUEIOS.some(b=>b.tipo==='folga'&&b.ini<dia1&&b.fim>dia0);
     const fechado = !folga && !(HORARIOS.find(h=>h.dia===dia0.getDay())||{aberto:true}).aberto;
     const cell = document.createElement('div');
-    cell.className = 'cal-day' + (isToday?' today':'') + (folga&&!isToday?' folga':'') + (fechado&&!isToday?' fechado':'');
+    cell.className = 'cal-day' + (isToday?' today':'') + (d===calSel.getDate()?' sel':'');
     const marca = folga ? '<span class="cal-tag">folga</span>' : fechado && !occ ? '<span class="cal-tag">fechado</span>' : '';
     cell.innerHTML = `
       <span class="cal-day-num">${d}</span>
-      ${marca || `<div class="cal-bar-wrap"><div class="cal-bar-fill" style="width:${pct*100}%;background:${isToday?'#fff':color}"></div></div>`}
-      ${occ>0?`<span class="cal-day-count">${occ}</span>`:''}`;
-    // tocar num dia abre a agenda dele
+      ${marca || (occ>0?`<span class="cal-day-count">${occ} ${occ===1?'horário':'horários'}</span>`:'')}`;
+    // tocar num dia mostra os compromissos dele logo abaixo
     cell.onclick = () => {
-      selectedDate=new Date(calYear,calMonth,d);
-      gotoPage('agenda',document.querySelectorAll('.nav-item')[0]);
-      buildDateStrip();
-      renderAppointments();
+      calSel=dia0; buildCalendar();
+      document.getElementById('calDia').scrollIntoView({behavior:'smooth',block:'nearest'});
     };
     grid.appendChild(cell);
     if(occ > 0){ totalAppts += occ; workDays++; }
   }
+  renderCalDia();
   document.getElementById('calStatMes').textContent = totalAppts;
   const avgOcup = workDays > 0 ? Math.round((totalAppts/(workDays*maxSlots))*100) : 0;
   document.getElementById('calStatOcup').textContent = avgOcup + '%';
+}
+function renderCalDia(){
+  const el=document.getElementById('calDia'); if(!el||!calSel) return;
+  const k=ymd(calSel), lista=ALL_APPTS.filter(a=>ymd(a.ini)===k).sort((a,b)=>a.ini-b.ini);
+  const folga=BLOQUEIOS.find(b=>b.tipo==='folga'&&b.ini<addDias(calSel,1)&&b.fim>calSel);
+  const titulo=calSel.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+  el.innerHTML=`<div class="section-header" style="margin:18px 0 10px"><span class="section-title" style="text-transform:capitalize">${titulo}</span>
+      <button class="btn btn-ghost btn-sm" style="width:auto;padding:6px 12px" onclick="agendarNoDiaCal()">+ Agendar</button></div>
+    ${folga?`<div class="alert alert-info"><span>Folga${folga.motivo?': '+esc(folga.motivo):''}</span></div>`:''}
+    ${lista.length?'':'<div class="empty-state" style="padding:18px 0">Nenhum compromisso neste dia.</div>'}`;
+  lista.forEach(a=>{
+    const card=document.createElement('div'); card.className='appt-card';
+    if(!ATIVOS(a)) card.style.opacity='.55';
+    const [h,m]=a.time.split(':');
+    card.innerHTML=`<div class="appt-time-col"><span class="appt-hour">${h}</span><span class="appt-min">${m}</span></div>
+      <div class="appt-body"><div class="appt-name">${esc(a.name)}</div><div class="appt-service">${esc(a.service)} · até ${a.end}</div>
+        <div class="appt-meta"><span class="badge ${STATUS_MAP[a.status].cls}">${STATUS_MAP[a.status].label}</span>${pagBadge(a)}</div></div>
+      <div class="appt-price">${fmtR(a.price)}</div>`;
+    card.onclick=()=>openDetail(a);
+    el.appendChild(card);
+  });
+}
+function agendarNoDiaCal(){
+  selectedDate=new Date(calSel);
+  gotoPage('agenda',document.querySelectorAll('.nav-item')[0]);
+  buildDateStrip(); renderAppointments();
+  openDrawer('novoAgendDrawer');
 }
 function calPrevMonth() {
   calMonth--; if(calMonth<0){calMonth=11;calYear--;}

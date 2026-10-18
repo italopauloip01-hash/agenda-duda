@@ -489,6 +489,7 @@ function renderDados(){
     <div class="etapa-tit"><h3>Seus dados</h3></div>
     <div class="campo"><label for="nome">Seu nome</label><input id="nome" autocomplete="name" placeholder="Como podemos te chamar?" maxlength="80" value="${esc(salvo.nome||'')}"></div>
     <div class="campo"><label for="tel">WhatsApp</label><input id="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" value="${esc(salvo.tel||'')}" oninput="mascara(this)"></div>
+    <div class="campo"><label for="cpf">CPF <span style="color:var(--soft)">(opcional, para nota fiscal)</span></label><input id="cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" oninput="mascaraCpf(this)"></div>
     <div class="campo"><label for="obs">Alguma observação? <span style="color:var(--soft)">(opcional)</span></label><textarea id="obs" rows="2" maxlength="300" placeholder="Preferência de cor, alergia, primeira vez…"></textarea></div>
     <label class="lembrar"><input type="checkbox" id="lembrar" ${salvo.nome?'checked':''}> Lembrar meus dados neste celular</label>
     <div class="erro" id="erro" hidden></div>`;
@@ -522,17 +523,22 @@ const ERROS={
   limite:'Você já tem horários marcados por aqui. Fale com a gente pelo WhatsApp para marcar mais.',
   agenda_indisponivel:'A agenda online está fechada no momento.',
   servico_invalido:'Esse serviço não está mais disponível.',
+  cpf_invalido:'Confira o CPF — os números não batem. Se preferir, deixe em branco.',
 };
+function cpfValido(s){const d=String(s||'').replace(/\D/g,'');if(d.length!==11||/^(\d)\1{10}$/.test(d))return false;const dv=n=>{let t=0;for(let i=0;i<n;i++)t+=+d[i]*(n+1-i);const r=t*10%11;return r===10?0:r};return dv(9)===+d[9]&&dv(10)===+d[10]}
+function mascaraCpf(el){const d=el.value.replace(/\D/g,'').slice(0,11);el.value=d.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2')}
 async function confirmar(){
   const nome=document.getElementById('nome').value.trim(), tel=document.getElementById('tel').value, obs=document.getElementById('obs').value.trim();
   const erro=document.getElementById('erro');
   const mostrar=m=>{erro.textContent=m;erro.hidden=false;erro.scrollIntoView({behavior:'smooth',block:'center'})};
   if(nome.length<2){document.getElementById('nome').focus();return mostrar(ERROS.nome_invalido)}
   if(tel.replace(/\D/g,'').length<10){document.getElementById('tel').focus();return mostrar(ERROS.telefone_invalido)}
+  const cpf=document.getElementById('cpf').value.replace(/\D/g,'');
+  if(cpf&&!cpfValido(cpf)){document.getElementById('cpf').focus();return mostrar(ERROS.cpf_invalido)}
   if(document.getElementById('lembrar').checked) store.set('agenda_cliente',{nome,tel}); else store.del('agenda_cliente');
   const btn=document.getElementById('barraBtn');btn.disabled=true;btn.textContent='Agendando…';
   try{
-    await rpc('agendar_online',{p_slug:SLUG,p_servico:escolha.svc.id,p_inicio:`${ymd(escolha.dia)}T${escolha.hora}:00-03:00`,p_nome:nome,p_telefone:tel,p_obs:obs||null});
+    await rpc('agendar_online',{p_slug:SLUG,p_servico:escolha.svc.id,p_inicio:`${ymd(escolha.dia)}T${escolha.hora}:00-03:00`,p_nome:nome,p_telefone:tel,p_obs:obs||null,p_cpf:cpf||null});
     sucesso(nome);
   }catch(e){
     btn.disabled=false;atualizarBarra();
