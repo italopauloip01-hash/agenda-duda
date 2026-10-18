@@ -1373,6 +1373,7 @@ const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar.app.created',   // calendário próprio "Bellisa"
   'https://www.googleapis.com/auth/calendar.freebusy',      // ver horários ocupados (sem ver detalhes)
   'https://www.googleapis.com/auth/calendar.events.readonly', // importar horários já marcados no Google Agenda
+  'https://www.googleapis.com/auth/calendar.calendarlist.readonly', // saber quais calendários a conta tem
 ].join(' ');
 let GOOGLE = {conectado:false,email:null,calendarioId:null,contatosSyncEm:null,token:null,expira:0};
 
@@ -3615,6 +3616,13 @@ async function concluirGoogle(){
   toast('Google conectado');
   renderConfig();renderGoogleCard();
   gotoPage('config',document.querySelectorAll('.nav-item')[5]);
+  // veio do botão "Dar permissão" da importação: já abre a lista de horários
+  let depois=null;try{depois=sessionStorage.getItem('g_depois');sessionStorage.removeItem('g_depois')}catch(e){}
+  if(depois==='importarAgenda') setTimeout(abrirImportarAgenda,400);
+}
+function permitirAgendaGoogle(){
+  try{sessionStorage.setItem('g_depois','importarAgenda')}catch(e){}
+  conectarGoogle();
 }
 async function desconectarGoogle(){
   if(!confirm('Desconectar o Google? Os agendamentos param de ir para o Google Agenda.'))return;
@@ -3722,11 +3730,25 @@ async function abrirImportarAgenda(){
   el.innerHTML='<div class="empty-state">Buscando seus horários no Google…</div>';
   try{
     const ini=hoje0(), fim=addDias(ini,90);
-    let token='',evs=[];
-    do{
-      const j=await gapi(`${CAL}/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${ini.toISOString()}&timeMax=${fim.toISOString()}${token?'&pageToken='+token:''}`);
-      evs=evs.concat(j.items||[]); token=j.nextPageToken||'';
-    }while(token);
+    // todos os calendários da conta (o celular às vezes grava em outro que não o principal),
+    // menos o "Bellisa" do próprio app, feriados e aniversários
+    let cals=['primary'];
+    try{
+      const cl=await gapi(`${CAL}/users/me/calendarList?minAccessRole=reader&maxResults=100`);
+      const ids=(cl.items||[]).map(c=>c.id).filter(id=>id!==GOOGLE.calendarioId&&!/#holiday@|#contacts@|#weeknum@/.test(id));
+      if(ids.length) cals=ids;
+    }catch(e){ if(e.status===403) throw e; }
+    let evs=[];
+    for(const cal of cals){
+      let token='';
+      do{
+        const j=await gapi(`${CAL}/calendars/${encodeURIComponent(cal)}/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${ini.toISOString()}&timeMax=${fim.toISOString()}${token?'&pageToken='+token:''}`);
+        evs=evs.concat(j.items||[]); token=j.nextPageToken||'';
+      }while(token);
+    }
+    // mesmo evento em dois calendários conta uma vez só
+    const vistos=new Set(); evs=evs.filter(e=>{const k=(e.iCalUID||e.id)+'|'+(e.start?.dateTime||'');if(vistos.has(k))return false;vistos.add(k);return true})
+      .sort((a,b)=>new Date(a.start?.dateTime||a.start?.date)-new Date(b.start?.dateTime||b.start?.date));
     const svcs=Object.values(SVCS_TIPO).flat();
     EVENTOS_G=evs.filter(e=>e.start?.dateTime&&e.end?.dateTime&&e.status!=='cancelled').map(e=>{
       const i=new Date(e.start.dateTime), f=new Date(e.end.dateTime), titulo=e.summary||'(sem título)';
@@ -3749,15 +3771,19 @@ async function abrirImportarAgenda(){
     renderEventosG();
   }catch(e){
     const semPermissao=e.status===403||/insufficient|scope|permission/i.test(e.message);
-    el.innerHTML=semPermissao
-      ?`<div class="empty-state">Para ler seus horários, o Google precisa de uma permissão nova.<br><br><button class="btn btn-primary btn-sm" style="width:auto;margin:0 auto" onclick="conectarGoogle()">Dar permissão no Google</button></div>`
+    const naoConectado=/não conectado/i.test(e.message);
+    el.innerHTML=semPermissao||naoConectado
+      ?`<div class="empty-state" style="line-height:1.5">${naoConectado?'Esta conta ainda não está ligada ao Google.':'Para ler os horários, o Google precisa de uma <b>permissão nova</b>: “ver eventos da agenda”.'}<br>
+         Na tela do Google, marque <b>todas as caixinhas</b> e toque em Continuar. Depois a lista abre sozinha.<br><br>
+         <button class="btn btn-primary btn-sm" style="width:auto;margin:0 auto" onclick="permitirAgendaGoogle()">${naoConectado?'Conectar Google':'Dar permissão no Google'}</button></div>`
       :`<div class="empty-state">Não consegui ler o Google Agenda: ${esc(e.message)}</div>`;
   }
 }
 function renderEventosG(){
   const el=document.getElementById('gAgendaLista');
   document.getElementById('gAgendaInfo').textContent=`${EVENTOS_G.length} horário${EVENTOS_G.length===1?'':'s'} nos próximos 90 dias · ${EVENTOS_G.filter(e=>e.sel).length} marcado${EVENTOS_G.filter(e=>e.sel).length===1?'':'s'}`;
-  if(!EVENTOS_G.length){el.innerHTML='<div class="empty-state">Nenhum horário com hora marcada nos próximos 90 dias.</div>';return}
+  if(!EVENTOS_G.length){el.innerHTML=`<div class="empty-state" style="line-height:1.5">Nenhum horário com hora marcada nos próximos 90 dias na conta ${esc(GOOGLE.email||'Google')}.<br><br>
+    Se os horários estão no celular mas não aparecem aqui, eles podem estar salvos só no aparelho (ex.: “Calendário Samsung” ou “Meu calendário” no telefone) e não no Google. No app de agenda do celular, ao abrir um compromisso, veja se a conta é a do Gmail.</div>`;return}
   el.innerHTML=EVENTOS_G.map((e,k)=>{
     const dia=e.ini.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
     return `<label class="client-row" style="align-items:flex-start;cursor:pointer">
