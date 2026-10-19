@@ -633,6 +633,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
       <button class="btn btn-primary" id="loginEmailBtn" onclick="loginEmail(false)">Entrar</button>
     </div>
     <div class="login-msg" id="loginMsg"></div>
+    <div id="loginVersao" style="margin-top:22px;font-size:11.5px;color:var(--fg-soft);text-align:center"></div>
   </div>
 </div>
 <div id="toast"></div>
@@ -1428,6 +1429,8 @@ let SVCS_POD = [];
 let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
+// versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
+const VERSAO_APP='3.36'; const VERSAO_DATA='18/10/2026 23:53';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2588,7 +2591,7 @@ function configGroups(){
     {icon:'',label:'Exportar relatório',sub:'Planilha de atendimentos, pagamentos e despesas',action:()=>openDrawer('exportarDrawer')},
     {icon:'',label:'Meu perfil e conta',sub:USER?USER.email:'',action:()=>abrirPerfil(false)},
     {icon:'',label:'Instalar o app',sub:jaInstalado()?'Já instalado neste aparelho':podeInstalar()?'Ícone na tela inicial, abre em tela cheia':'No Android: Chrome → menu ⋮ → Instalar app',action:()=>instalarApp()},
-    {icon:'',label:'Sobre o sistema',sub:'Versão 3.2 · Bellisa — beleza com hora marcada',action:()=>{}},
+    {icon:'',label:'Sobre o sistema',sub:`Versão ${VERSAO_APP} · atualizada em ${VERSAO_DATA}`,action:()=>toast(`Bellisa versão ${VERSAO_APP} — ${VERSAO_DATA}`)},
   ],
   ];
 }
@@ -3737,6 +3740,21 @@ async function inscreverPush(){
 // tocou na notificação do celular: o service worker manda abrir o agendamento
 navigator.serviceWorker?.addEventListener('message',e=>{ if(e.data?.abrir) setTimeout(()=>abrirAgendamentoPorId(e.data.abrir),300) });
 { const p=new URLSearchParams(location.search).get('abrir'); if(p) window._abrirDepois=p; }
+
+// ── Versão: aparece na tela de entrada; quando sai uma nova, avisa e oferece atualizar ──
+{ const v=document.getElementById('loginVersao'); if(v) v.textContent=`Bellisa · versão ${VERSAO_APP}`; }
+if(navigator.serviceWorker){
+  let jaTinha=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(!jaTinha){jaTinha=true;return} // primeira instalação: nada a avisar
+    let el=document.getElementById('avisoVersao');
+    if(!el){el=document.createElement('div');el.id='avisoVersao';el.className='alert alert-info';
+      el.style.cssText='position:fixed;left:50%;bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:55;width:min(92vw,460px);box-shadow:var(--shadow-lg);cursor:pointer';
+      document.body.appendChild(el)}
+    el.innerHTML='<span style="flex:1">✨ Saiu uma versão nova do app.</span><button class="btn btn-primary btn-sm" style="width:auto;padding:6px 12px">Atualizar</button>';
+    el.onclick=()=>location.reload();
+  });
+}
 
 // ── Atualizar: puxar a tela para baixo, ao voltar para o app e a cada minuto ──
 let ultimaAtualizacao=Date.now();
