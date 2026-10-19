@@ -1452,7 +1452,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.39'; const VERSAO_DATA='19/10/2026 00:11';
+const VERSAO_APP='3.40'; const VERSAO_DATA='19/10/2026 00:12';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -4136,13 +4136,13 @@ function syncEmSegundoPlano(...ids){
 }
 // Envia todos os agendamentos futuros que ainda não estão no Google
 async function sincronizarAgendaGoogle(){
-  const btn=document.getElementById('gSyncAgendaBtn');if(btn){btn.disabled=true;btn.textContent='Enviando…'}
+  const btn=document.getElementById('gSyncAgendaBtn')?.querySelector('.settings-sub');if(btn)btn.textContent='Enviando…';
   const {data}=await sb.from('agendamentos').select('id').gte('inicio',new Date(Date.now()-864e5).toISOString())
     .not('status','in','(cancelado,faltou)').neq('origem','google');
   let ok=0;
   try{for(const r of data||[]){await syncEvento(r.id);ok++}}
   catch(e){toast('Google Agenda: '+e.message)}
-  if(btn){btn.disabled=false;btn.textContent='Enviar agenda para o Google'}
+  if(btn)btn.textContent='Coloca os horários futuros no calendário Bellisa';
   toast(`${ok} agendamento${ok===1?'':'s'} no Google Agenda`);
 }
 // ── Importar horários já marcados no Google Agenda pessoal ─────────
@@ -4328,8 +4328,10 @@ async function importarContatosGoogle(){
   el.innerHTML=GOOGLE.conectado?`
     <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Conectado</div><div class="toggle-sub">${esc(GOOGLE.email||'')}</div></div><span class="badge badge-ok">Ativo</span></div>
     <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Google Agenda</div><div class="toggle-sub">Cada agendamento vai para o calendário “Bellisa”. Compromissos pessoais bloqueiam horários.</div></div></div>
-    <div class="btn-row" style="flex-wrap:wrap"><button class="btn btn-ghost btn-sm" id="gSyncAgendaBtn" onclick="sincronizarAgendaGoogle()">Enviar agenda para o Google</button><button class="btn btn-ghost btn-sm" onclick="abrirContatosGoogle()">Importar contatos</button><button class="btn btn-ghost btn-sm" onclick="abrirImportarAgenda()">Importar horários do Google Agenda</button></div>
-    <button class="btn btn-danger btn-sm" style="margin-top:10px" onclick="desconectarGoogle()">Desconectar Google</button>`
+    <div class="settings-row" id="gSyncAgendaBtn" onclick="sincronizarAgendaGoogle()"><div class="settings-text"><div class="settings-label">Enviar agenda para o Google</div><div class="settings-sub">Coloca os horários futuros no calendário “Bellisa”</div></div><span class="chevron">›</span></div>
+    <div class="settings-row" onclick="abrirContatosGoogle()"><div class="settings-text"><div class="settings-label">Importar contatos</div><div class="settings-sub">Traz clientes da agenda de contatos do Google</div></div><span class="chevron">›</span></div>
+    <div class="settings-row" onclick="abrirImportarAgenda()"><div class="settings-text"><div class="settings-label">Importar horários do Google Agenda</div><div class="settings-sub">Compromissos já marcados viram agendamentos</div></div><span class="chevron">›</span></div>
+    <div class="settings-row" onclick="desconectarGoogle()"><div class="settings-text"><div class="settings-label" style="color:var(--danger)">Desconectar Google</div><div class="settings-sub">Para de enviar para o Google Agenda</div></div><span class="chevron">›</span></div>`
   :`<div class="toggle-sub" style="padding:6px 0 12px;font-size:13.5px">Conecte sua conta Google para importar os contatos e mandar os agendamentos para o Google Agenda do celular.</div>
     <button class="btn btn-primary btn-sm" onclick="conectarGoogle()">Conectar Google</button>`;
 }
