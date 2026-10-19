@@ -100,7 +100,15 @@ svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stro
 .icon-btn:active{background:var(--border)}
 .avatar{width:32px;height:32px;border-radius:50%;background:var(--bg-subtle);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--fg);font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;margin-left:6px}
 .notif-wrap{position:relative}
-.notif-badge{position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--bg)}
+.notif-badge{position:absolute;top:4px;right:3px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:var(--danger,#d9534f);color:#fff;font-size:10.5px;font-weight:700;line-height:17px;text-align:center;box-shadow:0 0 0 2px var(--bg)}
+.notif-badge:empty{min-width:8px;width:8px;height:8px;padding:0;top:8px;right:9px}
+@keyframes sinoBalanca{0%,100%{transform:rotate(0)}20%{transform:rotate(14deg)}40%{transform:rotate(-12deg)}60%{transform:rotate(8deg)}80%{transform:rotate(-5deg)}}
+.sino-toca{animation:sinoBalanca .9s ease}
+/* aviso de novo agendamento (aparece em cima da tela) */
+#avisoNovo{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translate(-50%,-140%);z-index:60;width:min(92vw,460px);display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:18px;background:var(--bg-card);color:var(--fg);box-shadow:var(--shadow-lg);transition:transform .35s cubic-bezier(.32,.72,0,1);cursor:pointer}
+#avisoNovo.vis{transform:translate(-50%,0)}
+#avisoNovo .ic{width:38px;height:38px;border-radius:12px;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+#avisoNovo b{display:block;font-size:14px}#avisoNovo span{font-size:12.5px;color:var(--fg-muted)}
 
 /* Page content */
 .page-content{flex:1;padding:6px max(20px,env(safe-area-inset-right,0px)) calc(var(--nav-h) + 40px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px))}
@@ -1563,6 +1571,8 @@ async function entrar(user){
   // a sessão guardada no celular pode ter nome/foto antigos: busca a versão atual da conta
   sb.auth.getUser().then(({data})=>{ if(data?.user&&USER&&data.user.id===USER.id){USER=data.user;mostrarConta(data.user)} }).catch(()=>{});
   await recarregar();
+  ligarTempoReal();
+  if(window._abrirDepois){ abrirAgendamentoPorId(window._abrirDepois); window._abrirDepois=null; history.replaceState(history.state,'',location.pathname) }
   // entrou pelo Google: calendário e contatos já vieram vinculados
   if(window._pendGoogle){
     const g=window._pendGoogle;window._pendGoogle=null;
@@ -1710,7 +1720,7 @@ async function recarregar(){
     INVENTORY=prod.map(p=>({id:p.id,name:p.nome,cat:p.categoria,qtd:Number(p.quantidade),min:Number(p.minimo),custo:Number(p.custo)}));
     EXPENSES=desp.map(e=>({id:e.id,desc:e.descricao,cat:e.categoria,valor:Number(e.valor),dataD:new Date(e.data+'T12:00:00'),data:relDia(e.data+'T12:00:00')}));
     AVALIACOES=aval.map(a=>({id:a.id,name:a.nome,nota:a.nota,comentario:a.comentario||'',pendente:!a.publicada,data:relDia(a.criado_em)}));
-    NOTIFS=notif.map(n=>({id:n.id,icon:n.icone,text:n.texto,time:relTempo(n.criado_em),lida:n.lida}));
+    NOTIFS=notif.map(n=>({id:n.id,icon:n.icone,text:n.texto,time:relTempo(n.criado_em),lida:n.lida,agendamento_id:n.agendamento_id}));
     BLOQUEIOS=bloq.map(b=>({id:b.id,tipo:b.tipo,ini:new Date(b.inicio),fim:new Date(b.fim),motivo:b.motivo}));
     ALL_APPTS=appts;
   }catch(e){return}
@@ -1844,6 +1854,8 @@ function renderAlerts() {
   const anivAmanha=CLIENTS.filter(x=>x.bday&&md(x.bday)===md(ymd(amanha)));
   const baixo=INVENTORY.filter(p=>p.qtd<p.min).length;
   let h='';
+  if('Notification' in window&&Notification.permission==='default')
+    h+=`<div class="alert alert-info"><span style="flex:1">🔔 Ative as notificações para saber na hora quando chegar um agendamento.</span><button class="btn btn-primary btn-sm" style="width:auto;padding:6px 12px" onclick="ativarNotificacoes()">Ativar</button></div>`;
   const pedidos=ALL_APPTS.filter(PEND).sort((x,y)=>x.ini-y.ini);
   if(pedidos.length) h+=`<div class="alert alert-warn" style="cursor:pointer" onclick="openDetail(ALL_APPTS.find(x=>x.id==='${pedidos[0].id}'))"><span style="flex:1"><b>${pedidos.length} pedido${pedidos.length>1?'s':''} pelo link</b> aguardando sua confirmação — toque para ver</span></div>`;
   if(pend) h+=`<div class="alert alert-warn"><span>${pend} cliente${pend>1?'s':''} ainda não confirm${pend>1?'aram':'ou'} para amanhã.</span></div>`;
@@ -2518,11 +2530,12 @@ async function aprovarAvaliacao(id,ok){
 function renderNotifs() {
   const el = document.getElementById('notifList');
   el.innerHTML='';
-  document.querySelector('.notif-badge').style.display=NOTIFS.some(n=>!n.lida)?'':'none';
+  atualizarSino();
   if(!NOTIFS.length) el.innerHTML='<div class="empty-state">Nenhuma notificação.</div>';
   NOTIFS.forEach(n => {
     const d = document.createElement('div');
-    d.style.cssText='display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--border)'+(n.lida?';opacity:.6':'');
+    d.style.cssText='display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--border)'+(n.lida?';opacity:.6':'')+(n.agendamento_id?';cursor:pointer':'');
+    if(n.agendamento_id) d.onclick=()=>{const a=ALL_APPTS.find(x=>x.id===n.agendamento_id); if(a){closeDrawer('notifDrawer');openDetail(a)} else toast('Esse horário não está mais na agenda')};
     d.innerHTML=`<span style="font-size:19px;flex-shrink:0">${esc(n.icon)}</span><div><div style="font-size:13px;line-height:1.45">${esc(n.text)}</div><div style="font-size:11px;color:var(--fg-muted);margin-top:3px">há ${n.time}</div></div>`;
     el.appendChild(d);
   });
@@ -2531,7 +2544,7 @@ async function marcarNotifsLidas(){
   if(!NOTIFS.some(n=>!n.lida))return;
   try{await q(sb.from('notificacoes').update({lida:true}).eq('lida',false))}catch(e){return}
   NOTIFS.forEach(n=>n.lida=true);
-  document.querySelector('.notif-badge').style.display='none';
+  atualizarSino();
 }
 
 // ── BLOQUEIOS E FOLGAS ────────────────────────────────────────────
@@ -3644,6 +3657,73 @@ function closeDrawer(id,doVoltar){
   document.body.style.overflow='';
   if(!doVoltar&&history.state?.modal){ignorarPop++;history.back();}
 }
+// ── Tempo real: novos agendamentos aparecem na hora, com aviso, som e notificação do celular ──
+function atualizarSino(){
+  const b=document.querySelector('.notif-badge'); if(!b) return;
+  const n=NOTIFS.filter(x=>!x.lida).length;
+  b.style.display=n?'':'none'; b.textContent=n>9?'9+':n?String(n):'';
+}
+let canalTempoReal=null, recarregarDepois=null;
+// recarrega a agenda logo depois de uma mudança — mas espera se alguma janela de preenchimento estiver aberta
+function recarregarEmBreve(espera=700){
+  clearTimeout(recarregarDepois);
+  recarregarDepois=setTimeout(()=>{
+    const ocupada=gavetasAbertas().some(g=>!['notifDrawer','avisoDrawer','detailDrawer'].includes(g.id));
+    if(ocupada) return recarregarEmBreve(3000);
+    atualizarAgora(false);
+  },espera);
+}
+function ligarTempoReal(){
+  if(canalTempoReal||!USER) return;
+  canalTempoReal=sb.channel('agenda-'+USER.id)
+    .on('postgres_changes',{event:'*',schema:'public',table:'agendamentos',filter:'owner_id=eq.'+USER.id},()=>recarregarEmBreve())
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'notificacoes',filter:'owner_id=eq.'+USER.id},({new:n})=>{
+      NOTIFS.unshift({id:n.id,icon:n.icone,text:n.texto,time:'agora',lida:false,agendamento_id:n.agendamento_id});
+      renderNotifs(); avisarNovo(n);
+      recarregarEmBreve();
+    })
+    .subscribe();
+}
+function somAviso(){
+  try{
+    const c=new (window.AudioContext||window.webkitAudioContext)(), t=c.currentTime;
+    [[880,0],[1175,.14]].forEach(([f,d])=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f;
+      g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.18,t+d+.02);g.gain.exponentialRampToValueAtTime(.001,t+d+.35);
+      o.connect(g).connect(c.destination);o.start(t+d);o.stop(t+d+.4)});
+  }catch(e){}
+  try{navigator.vibrate&&navigator.vibrate([120,60,120])}catch(e){}
+}
+function abrirAgendamentoPorId(id){
+  const a=ALL_APPTS.find(x=>x.id===id);
+  if(a){ gotoPage('agenda',document.querySelectorAll('.nav-item')[0]); openDetail(a); return true }
+  return false;
+}
+function avisarNovo(n){
+  somAviso();
+  const sino=document.querySelector('.notif-badge')?.parentElement; if(sino){sino.classList.remove('sino-toca');void sino.offsetWidth;sino.classList.add('sino-toca')}
+  let el=document.getElementById('avisoNovo');
+  if(!el){el=document.createElement('div');el.id='avisoNovo';document.body.appendChild(el)}
+  el.innerHTML=`<div class="ic">${esc(n.icone||'📅')}</div><div style="flex:1;min-width:0"><b>Novo agendamento</b><span>${esc(n.texto)}</span></div>`;
+  el.onclick=()=>{el.classList.remove('vis'); setTimeout(()=>{ if(!n.agendamento_id||!abrirAgendamentoPorId(n.agendamento_id)) openDrawer('notifDrawer') },400)};
+  requestAnimationFrame(()=>el.classList.add('vis'));
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('vis'),8000);
+  // notificação do celular (aparece mesmo com o app minimizado)
+  if('Notification' in window&&Notification.permission==='granted'&&navigator.serviceWorker){
+    navigator.serviceWorker.ready.then(r=>r.showNotification('Novo agendamento',{body:n.texto,icon:'icons/icon-192.png',badge:'icons/favicon-32.png',
+      tag:'agend-'+(n.agendamento_id||n.id),renotify:true,vibrate:[120,60,120],data:{agendamento_id:n.agendamento_id}})).catch(()=>{});
+  }
+}
+// pedido de permissão (precisa ser num toque da pessoa)
+async function ativarNotificacoes(){
+  if(!('Notification' in window)){toast('Este navegador não mostra notificações');return}
+  const p=await Notification.requestPermission();
+  toast(p==='granted'?'Notificações ativadas':'Notificações bloqueadas — dá para liberar nas configurações do navegador');
+  renderAlerts(); renderBotCard&&renderBotCard();
+}
+// tocou na notificação do celular: o service worker manda abrir o agendamento
+navigator.serviceWorker?.addEventListener('message',e=>{ if(e.data?.abrir) setTimeout(()=>abrirAgendamentoPorId(e.data.abrir),300) });
+{ const p=new URLSearchParams(location.search).get('abrir'); if(p) window._abrirDepois=p; }
+
 // ── Atualizar: puxar a tela para baixo, ao voltar para o app e a cada minuto ──
 let ultimaAtualizacao=Date.now();
 async function atualizarAgora(mostrar){

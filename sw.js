@@ -2,7 +2,7 @@
 // - Página: rede primeiro (sempre a versão mais nova), cache se estiver offline.
 // - Fontes e biblioteca do Supabase (CDN): cache primeiro.
 // - API do Supabase: nunca passa pelo cache.
-const VERSAO = 'bellisa-v33';
+const VERSAO = 'bellisa-v34';
 const BASICO = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -12,6 +12,16 @@ self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
     .then(ks => Promise.all(ks.filter(k => k !== VERSAO).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
+});
+// tocou na notificação de "Novo agendamento": abre o app (ou traz para frente) já no horário
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const id = e.notification.data && e.notification.data.agendamento_id;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(lista => {
+    const aberto = lista.find(c => new URL(c.url).origin === location.origin);
+    if (aberto) { if (id) aberto.postMessage({ abrir: id }); return aberto.focus(); }
+    return self.clients.openWindow('./' + (id ? '?abrir=' + id : ''));
+  }));
 });
 self.addEventListener('fetch', e => {
   const req = e.request;
