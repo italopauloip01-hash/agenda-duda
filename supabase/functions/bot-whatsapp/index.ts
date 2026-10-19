@@ -86,6 +86,19 @@ Deno.serve(async (req) => {
       ? { status: "enviado", enviado_em: new Date().toISOString(), erro: null, tentativas: tent }
       : { status: tent >= 3 ? "erro" : "pendente", erro: String(corpo.erro || "falha").slice(0, 300), tentativas: tent })
       .eq("id", corpo.id);
+    // desistiu de vez (3 tentativas): avisa a profissional para conferir o número da cliente
+    if (!corpo.ok && tent >= 3) {
+      const { data: f } = await admin.from("fila_whatsapp").select("agendamento_id, telefone").eq("id", corpo.id).maybeSingle();
+      let nome = "a cliente";
+      if (f?.agendamento_id) {
+        const { data: a } = await admin.from("agendamentos").select("clientes(nome)").eq("id", f.agendamento_id).maybeSingle();
+        // deno-lint-ignore no-explicit-any
+        nome = String((a as any)?.clientes?.nome || nome).split(" ")[0];
+      }
+      const motivo = /sem WhatsApp/i.test(String(corpo.erro)) ? "o número não tem WhatsApp — confira se foi digitado certo" : "deu erro no envio";
+      await admin.from("notificacoes").insert({ owner_id: owner, icone: "⚠️", agendamento_id: f?.agendamento_id || null,
+        texto: `Não consegui mandar WhatsApp para ${nome} (${String(f?.telefone || "").replace(/^55(\d{2})(\d+)(\d{4})$/, "($1) …$3")}): ${motivo}.` });
+    }
     return json(200, { ok: true });
   }
   return json(400, { erro: "acao" });
