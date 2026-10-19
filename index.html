@@ -1572,6 +1572,7 @@ async function entrar(user){
   sb.auth.getUser().then(({data})=>{ if(data?.user&&USER&&data.user.id===USER.id){USER=data.user;mostrarConta(data.user)} }).catch(()=>{});
   await recarregar();
   ligarTempoReal();
+  inscreverPush().catch(e=>console.error(e));
   if(window._abrirDepois){ abrirAgendamentoPorId(window._abrirDepois); window._abrirDepois=null; history.replaceState(history.state,'',location.pathname) }
   // entrou pelo Google: calendário e contatos já vieram vinculados
   if(window._pendGoogle){
@@ -3708,7 +3709,7 @@ function avisarNovo(n){
   requestAnimationFrame(()=>el.classList.add('vis'));
   clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('vis'),8000);
   // notificação do celular (aparece mesmo com o app minimizado)
-  if('Notification' in window&&Notification.permission==='granted'&&navigator.serviceWorker){
+  if(!window._temPush&&'Notification' in window&&Notification.permission==='granted'&&navigator.serviceWorker){ // com push, quem mostra é o próprio push
     navigator.serviceWorker.ready.then(r=>r.showNotification('Novo agendamento',{body:n.texto,icon:'icons/icon-192.png',badge:'icons/favicon-32.png',
       tag:'agend-'+(n.agendamento_id||n.id),renotify:true,vibrate:[120,60,120],data:{agendamento_id:n.agendamento_id}})).catch(()=>{});
   }
@@ -3718,7 +3719,20 @@ async function ativarNotificacoes(){
   if(!('Notification' in window)){toast('Este navegador não mostra notificações');return}
   const p=await Notification.requestPermission();
   toast(p==='granted'?'Notificações ativadas':'Notificações bloqueadas — dá para liberar nas configurações do navegador');
+  if(p==='granted') inscreverPush().catch(e=>console.error(e));
   renderAlerts(); renderBotCard&&renderBotCard();
+}
+// Push: o celular recebe "Novo agendamento" mesmo com o app fechado (a chave pública pode ficar no site)
+const VAPID_PUBLIC='BAy14H-S_c4UF__Y02zs70RVPa6wwZqMUYgIJFi8XJSTVgb0zM-wDw200NEcFX04XqGf_Xae4ohWAOsMr-jUEtI';
+const b64ParaBytes=s=>{const p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0))};
+async function inscreverPush(){
+  if(!USER||!('serviceWorker' in navigator)||!('PushManager' in window)||Notification.permission!=='granted') return;
+  const reg=await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ParaBytes(VAPID_PUBLIC)});
+  const j=sub.toJSON();
+  const {error}=await sb.from('push_inscricoes').upsert({endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,aparelho:navigator.userAgent.slice(0,150)},{onConflict:'endpoint'});
+  if(!error) window._temPush=true; else console.error(error);
 }
 // tocou na notificação do celular: o service worker manda abrir o agendamento
 navigator.serviceWorker?.addEventListener('message',e=>{ if(e.data?.abrir) setTimeout(()=>abrirAgendamentoPorId(e.data.abrir),300) });

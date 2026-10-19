@@ -2,7 +2,7 @@
 // - Página: rede primeiro (sempre a versão mais nova), cache se estiver offline.
 // - Fontes e biblioteca do Supabase (CDN): cache primeiro.
 // - API do Supabase: nunca passa pelo cache.
-const VERSAO = 'bellisa-v34';
+const VERSAO = 'bellisa-v35';
 const BASICO = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -12,6 +12,15 @@ self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
     .then(ks => Promise.all(ks.filter(k => k !== VERSAO).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
+});
+// push do servidor (chega mesmo com o app fechado): mostra a notificação
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { texto: e.data && e.data.text() }; }
+  e.waitUntil(self.registration.showNotification(d.titulo || 'Bellisa', {
+    body: d.texto || 'Você tem uma novidade na agenda', icon: './icons/icon-192.png', badge: './icons/favicon-32.png',
+    tag: d.tag || 'bellisa', renotify: true, vibrate: [120, 60, 120], data: { agendamento_id: d.agendamento_id || null },
+  }));
 });
 // tocou na notificação de "Novo agendamento": abre o app (ou traz para frente) já no horário
 self.addEventListener('notificationclick', e => {
