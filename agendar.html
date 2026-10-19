@@ -148,6 +148,9 @@ section{margin-top:46px}
 .svc .n{flex:1;min-width:0}
 .svc .n b{display:block;font-weight:600;font-size:15.5px}
 .svc .n span{font-size:13.5px;color:var(--muted)}
+.svc .n .desc{display:block;font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.35}
+.svc .ic.foto{width:56px;height:56px;background:center/cover no-repeat;color:#fff;font-size:22px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.4);cursor:zoom-in}
+.svc .ic.foto.on{box-shadow:inset 0 0 0 100px rgba(164,78,104,.45)}
 .svc .p{font-weight:600;font-size:15.5px;white-space:nowrap}
 
 .mes{font-family:'Fraunces',serif;font-size:17px;margin-bottom:10px;text-transform:capitalize;color:var(--muted)}
@@ -240,7 +243,9 @@ const SUPABASE_URL='https://rsrpfwtrkpclscpccaok.supabase.co';
 const SUPABASE_KEY='sb_publishable_0FRlkE_cdq_RKIpX6pSjGA_boyTYEX0';
 // endereço curto (bellisa.vercel.app/duda) ou o antigo (agendar.html?u=duda)
 const SLUG=(new URLSearchParams(location.search).get('u')||(location.pathname.match(/\/([a-z0-9-]{3,40})\/?$/i)||[])[1]||'').toLowerCase();
-const CATS={gel:'Unhas em gel',acrilico:'Acrílico',esmaltacao:'Esmaltação',nailart:'Nail art',podologia:'Podologia',tratamentos:'Tratamentos'};
+const CATS_ANTIGAS={gel:'Unhas em gel',acrilico:'Acrílico',esmaltacao:'Esmaltação',nailart:'Nail art',podologia:'Podologia',tratamentos:'Tratamentos'};
+// nome da categoria da foto: as antigas, as de serviço (Unhas, Sobrancelha…) ou o próprio nome criado
+const CATS=new Proxy(CATS_ANTIGAS,{get:(o,k)=>o[k]||(typeof TIPO_NOME!=='undefined'&&TIPO_NOME[k])||k});
 const DIAS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const DIAS_LONGOS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -371,7 +376,10 @@ function filtrar(c){filtroFoto=c;verTodas=false;renderBook()}
 function abrirFoto(i){fotoAtual=i;mostrarFoto();document.getElementById('lightbox').hidden=false;document.body.style.overflow='hidden'}
 function mostrarFoto(){const f=fotosVisiveis[fotoAtual];document.getElementById('lbImg').src=foto(f.caminho);document.getElementById('lbTxt').textContent=f.legenda||CATS[f.categoria]||''}
 function passarFoto(d){fotoAtual=(fotoAtual+d+fotosVisiveis.length)%fotosVisiveis.length;mostrarFoto()}
-function fecharFoto(){document.getElementById('lightbox').hidden=true;document.body.style.overflow=''}
+function fecharFoto(){document.getElementById('lightbox').hidden=true;document.body.style.overflow='';if(window._fotosBook){fotosVisiveis=window._fotosBook;window._fotosBook=null}}
+// foto ilustrativa de um serviço (abre no mesmo visualizador do book)
+function verFotoSvc(ev,id){ev.stopPropagation();const s=A.servicos.find(x=>x.id===id);if(!s||!s.foto)return;
+  window._fotosBook=fotosVisiveis;fotosVisiveis=[{caminho:s.foto,legenda:s.nome+(s.descricao?' — '+s.descricao:'')}];abrirFoto(0)}
 (()=>{let x0=null;const lb=document.getElementById('lightbox');
   lb.addEventListener('touchstart',e=>x0=e.touches[0].clientX,{passive:true});
   lb.addEventListener('touchend',e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0;if(Math.abs(dx)>50)passarFoto(dx<0?1:-1);x0=null});
@@ -463,8 +471,8 @@ function renderServicos(){
     ${tipos.length>1?`<div class="abas">${tipos.map(t=>`<button class="${escolha.tipo===t?'on':''}" onclick="escolha.tipo='${t}';renderServicos()">${TIPO_NOME[t]||t}</button>`).join('')}</div>`:''}
     <div class="svcs">${lista.map((s,i)=>`
       <button class="svc${escolha.sel.includes(s.id)?' on':''}" style="animation-delay:${i*40}ms" onclick="escolherSvc('${s.id}')">
-        <span class="ic">${escolha.sel.includes(s.id)?'✓':icTipo(s.tipo)}</span>
-        <span class="n"><b>${esc(s.nome)}</b><span>${fmtDur(s.duracao_min)}</span></span>
+        ${s.foto?`<span class="ic foto${escolha.sel.includes(s.id)?' on':''}" style="background-image:url('${foto(s.foto)}')" onclick="verFotoSvc(event,'${s.id}')" title="Ver foto">${escolha.sel.includes(s.id)?'✓':''}</span>`:`<span class="ic">${escolha.sel.includes(s.id)?'✓':icTipo(s.tipo)}</span>`}
+        <span class="n"><b>${esc(s.nome)}</b><span>${fmtDur(s.duracao_min)}</span>${s.descricao?`<small class="desc">${esc(s.descricao)}</small>`:''}</span>
         <span class="p">${reais(s.preco)}</span>
       </button>`).join('')}</div>`;
 }

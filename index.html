@@ -872,14 +872,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
 
   <!-- Galeria / Portfólio -->
   <div id="finTabGaleria" class="fin-tab" hidden>
-    <div class="pill-tabs">
-      <div class="pill active" onclick="filterPortfolio('todos',this)">Todos</div>
-      <div class="pill" onclick="filterPortfolio('gel',this)">Gel</div>
-      <div class="pill" onclick="filterPortfolio('acrilico',this)">Acrílico</div>
-      <div class="pill" onclick="filterPortfolio('esmaltacao',this)">Esmaltação</div>
-      <div class="pill" onclick="filterPortfolio('nailart',this)">Nail art</div>
-      <div class="pill" onclick="filterPortfolio('podologia',this)">Podologia</div>
-      <div class="pill" onclick="filterPortfolio('tratamentos',this)">Tratamentos</div>
+    <div class="pill-tabs" id="portfolioFiltros"></div>
     </div>
     <span id="viewGrid" hidden></span><span id="viewList" hidden></span>
     <div id="galeriaGrid"></div>
@@ -1130,6 +1123,24 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
   </div>
 </div></div>
 
+<!-- Divulgar a agenda: imagem pronta para Status/Instagram/WhatsApp -->
+<div class="modal-overlay" id="divulgarDrawer"><div class="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">Divulgar minha agenda</div>
+  <div class="tab-bar" id="divFormato" style="margin-bottom:12px">
+    <button type="button" class="tab-item active" data-f="story" onclick="setFormatoDivulgar('story')">Status / Story</button>
+    <button type="button" class="tab-item" data-f="post" onclick="setFormatoDivulgar('post')">Post do feed</button>
+  </div>
+  <div id="divPrevia" style="display:flex;justify-content:center;margin-bottom:12px;min-height:200px;align-items:center"><div class="empty-state">Montando a imagem…</div></div>
+  <div class="form-group"><label class="form-label">Texto para enviar junto (pode editar)</label>
+    <textarea class="form-input" id="divTexto" rows="3" style="resize:none;font-family:inherit;line-height:1.4"></textarea></div>
+  <button class="btn btn-primary" onclick="compartilharDivulgar()">Compartilhar imagem</button>
+  <div class="btn-row" style="margin-top:8px">
+    <button class="btn btn-ghost" onclick="baixarDivulgar()">Salvar imagem</button>
+    <button class="btn btn-ghost" onclick="copiarTextoDivulgar()">Copiar texto</button>
+  </div>
+</div></div>
+
 <!-- Aviso para a cliente (marcação / remarcação / cancelamento) -->
 <div class="modal-overlay" id="avisoDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
@@ -1165,6 +1176,16 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
       <div class="pick-sub" style="margin-top:4px">A categoria nova aparece no app e no link das clientes quando tiver pelo menos um serviço.</div>
     </div>
   </div>
+  <div class="form-group"><label class="form-label big">Foto ilustrativa <span style="font-weight:400;color:var(--fg-muted)">(aparece no link das clientes)</span></label>
+    <div style="display:flex;gap:12px;align-items:center">
+      <div id="svcFotoPrev" style="width:84px;height:84px;border-radius:18px;background:var(--bg-subtle) center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;color:var(--fg-soft);font-size:26px">📷</div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer">Escolher foto<input type="file" id="svcFotoArq" accept="image/*" hidden onchange="previaFotoSvc(this)"></label>
+        <button type="button" class="btn btn-ghost btn-sm" id="svcFotoTirar" onclick="tirarFotoSvc()" hidden>Tirar foto</button>
+      </div>
+    </div></div>
+  <div class="form-group"><label class="form-label big">Como é o serviço <span style="font-weight:400;color:var(--fg-muted)">(opcional)</span></label>
+    <textarea class="form-input" id="svcDesc" rows="2" maxlength="300" style="resize:none;font-family:inherit;line-height:1.4" placeholder="Ex: Inclui cutilagem, esmaltação em gel e hidratação. Dura até 21 dias."></textarea></div>
   <details class="mais-opcoes"><summary>Mais opções (promoção e intervalo)</summary>
     <div class="form-row" style="margin-top:12px">
       <div class="form-group"><label class="form-label">Preço promocional</label><input class="form-input big" type="text" inputmode="decimal" id="svcPromo" placeholder="R$ 0,00"></div>
@@ -1189,7 +1210,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
   <div class="form-row">
     <div class="form-group"><label class="form-label">Custo unit.</label><input class="form-input" type="text" inputmode="decimal" id="prodCusto" placeholder="R$ 0,00"></div>
     <div class="form-group"><label class="form-label">Categoria</label>
-      <select class="form-input" id="prodCat"><option>Esmalte</option><option>Gel</option><option>Acrílico</option><option>Material Podologia</option><option>Outros</option></select>
+      <input class="form-input" id="prodCat" list="prodCats" placeholder="Ex: Esmalte, Sobrancelha…" maxlength="40"><datalist id="prodCats"><option>Esmalte</option><option>Acrílico</option><option>Material de podologia</option><option>Sobrancelha</option><option>Maquiagem</option><option>Descartáveis</option><option>Outros</option></datalist>
     </div>
   </div>
   <div class="btn-row">
@@ -1312,6 +1333,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
           <select class="form-input" id="perfAntec"><option value="0">Nenhuma</option><option value="60">1 hora</option><option value="120">2 horas</option><option value="240">4 horas</option><option value="720">12 horas</option><option value="1440">1 dia</option></select></div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="copiarLink()">Compartilhar link</button>
+      <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="abrirDivulgar()">✨ Divulgar minha agenda (imagem pronta)</button>
     </div>
   </div>
 
@@ -1430,7 +1452,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.36'; const VERSAO_DATA='18/10/2026 23:53';
+const VERSAO_APP='3.37'; const VERSAO_DATA='18/10/2026 23:59';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -1461,14 +1483,8 @@ function pagBadge(a){
 }
 const HORA_ABRE = 8, HORA_FECHA = 18;
 
-const PORTFOLIO_CATS = [
-  {id:'gel',      name:'Unhas em Gel',   icon:'💎', color:'#C2637A', tags:['Gel UV','Francesa','Degradê'], count:6},
-  {id:'acrilico', name:'Acrílico',        icon:'✨', color:'#D4856E', tags:['Extensão','Manutenção'],      count:4},
-  {id:'esmaltacao',name:'Esmaltação',     icon:'💅', color:'#C29A63', tags:['Simples','Com arte'],         count:5},
-  {id:'nailart',  name:'Nail Art',        icon:'🎨', color:'#C26398', tags:['Floral','Geométrico','3D'],   count:3},
-  {id:'podologia',name:'Podologia',       icon:'🦶', color:'#7A63C2', tags:['Básica','Tratamento'],        count:4},
-  {id:'tratamentos',name:'Tratamentos',  icon:'💊', color:'#63C2B0', tags:['Micose','Calosidade'],        count:2},
-];
+// categorias do portfólio = categorias de serviço (Esmalteria, Podologia, Sobrancelha, Maquiagem e as criadas)
+const PORTFOLIO_CATS_ = () => TIPOS_SVC.map(t=>({id:t.id,name:t.nome,color:t.cor}));
 
 // Lista inicial oferecida quando ainda não há serviços cadastrados
 const SERVICOS_PADRAO = [
@@ -1716,7 +1732,7 @@ async function recarregar(){
     CLIENTS=cli.map(c=>({id:c.id,name:c.nome,type:c.tipo,visits:Number(c.visitas),last:relDia(c.ultima_visita),
       color:c.cor,phone:c.telefone||'',bday:c.nascimento,cpf:c.cpf||'',origem:c.origem,vip:c.vip,faltou:Number(c.faltas),pref:c.preferencias,obs:c.observacoes}));
     const mapSvc=s=>({id:s.id,name:s.nome,tipo:s.tipo,dur:s.duracao_min,int:s.intervalo_min,price:Number(s.preco),
-      promo:s.preco_promo!=null?Number(s.preco_promo):null,color:s.cor});
+      promo:s.preco_promo!=null?Number(s.preco_promo):null,color:s.cor,foto:s.foto||null,desc:s.descricao||''});
     montarTipos(svc.map(s=>s.tipo));
     SVCS_TIPO=Object.fromEntries(TIPOS_SVC.map(t=>[t.id,svc.filter(s=>s.tipo===t.id).map(mapSvc)]));
     SVCS_NAIL=SVCS_TIPO.esmalteria;
@@ -2198,7 +2214,7 @@ function renderServiceLists() {
       const d = document.createElement('div');
       d.className = 'service-item';
       d.innerHTML = `
-        <div class="service-dot" style="background:${esc(s.color)}"></div>
+        ${s.foto?`<div class="service-dot" style="width:40px;height:40px;border-radius:12px;background:center/cover url(&quot;${esc(urlFoto(s.foto))}&quot;)"></div>`:`<div class="service-dot" style="background:${esc(s.color)}"></div>`}
         <div class="service-info">
           <div class="service-name">${esc(s.name)}</div>
           <div class="service-dur">⏱ ${fmtDur(s.dur)}${s.int?' + '+fmtDur(s.int)+' de intervalo':''}</div>
@@ -2237,11 +2253,31 @@ function criarCategoria(){
   toast(igual?`Já existe: ${igual.nome}`:`Categoria "${nome}" criada — salve o serviço para ela valer`);
 }
 function ajustarNomeSvc(){const t=document.getElementById('svcNome');t.style.height='auto';t.style.height=t.scrollHeight+'px'}
+// foto ilustrativa do serviço (prévia antes de salvar)
+let FOTO_SVC={arquivo:null,tirar:false};
+function mostrarFotoSvc(caminho){
+  FOTO_SVC={arquivo:null,tirar:false};
+  const p=document.getElementById('svcFotoPrev');
+  p.style.backgroundImage=caminho?`url("${urlFoto(caminho)}")`:''; p.textContent=caminho?'':'📷';
+  document.getElementById('svcFotoTirar').hidden=!caminho; document.getElementById('svcFotoArq').value='';
+}
+function previaFotoSvc(inp){
+  const a=inp.files[0]; if(!a) return;
+  FOTO_SVC={arquivo:a,tirar:false};
+  const p=document.getElementById('svcFotoPrev'); p.style.backgroundImage=`url("${URL.createObjectURL(a)}")`; p.textContent='';
+  document.getElementById('svcFotoTirar').hidden=false;
+}
+function tirarFotoSvc(){
+  FOTO_SVC={arquivo:null,tirar:true};
+  const p=document.getElementById('svcFotoPrev'); p.style.backgroundImage=''; p.textContent='📷';
+  document.getElementById('svcFotoTirar').hidden=true; document.getElementById('svcFotoArq').value='';
+}
 function novoServico(tipo){
   SVC_EDIT=null;
   ['svcNome','svcDur','svcH','svcM','svcInt','svcPreco','svcPromo'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('svcTipo').value=tipo;
   document.getElementById('novaCatBox').hidden=true;
+  document.getElementById('svcDesc').value=''; mostrarFotoSvc(null);
   document.getElementById('svcTitulo').textContent='Novo serviço';
   openDrawer('novoServicoDrawer');
 }
@@ -2257,6 +2293,7 @@ function editarServico(id){
   document.getElementById('svcPromo').value=fmtNum(s.promo);
   document.getElementById('svcTipo').value=s.tipo;
   document.getElementById('novaCatBox').hidden=true;
+  document.getElementById('svcDesc').value=s.desc||''; mostrarFotoSvc(s.foto);
   document.getElementById('svcTitulo').textContent='Editar serviço';
   openDrawer('novoServicoDrawer');
   requestAnimationFrame(ajustarNomeSvc);
@@ -2273,7 +2310,16 @@ async function salvarServico(){
   const nome=v('svcNome').replace(/\s+/g,' '), dur=parseInt(v('svcDur')), preco=parseValor(v('svcPreco'));
   if(!nome||!dur||preco==null){toast('Preencha nome, duração e preço');return}
   const dados={nome,tipo:v('svcTipo'),duracao_min:dur,intervalo_min:parseInt(v('svcInt'))||0,
-    preco,preco_promo:parseValor(v('svcPromo')),cor:corTipo(v('svcTipo'))};
+    preco,preco_promo:parseValor(v('svcPromo')),cor:corTipo(v('svcTipo')),descricao:v('svcDesc')||null};
+  // foto nova escolhida: reduz e envia; "Tirar foto" apaga a referência
+  if(FOTO_SVC.arquivo){
+    try{
+      toast('Enviando foto…');
+      const blob=await reduzirImagem(FOTO_SVC.arquivo), caminho=`${USER.id}/servico-${crypto.randomUUID()}.jpg`;
+      const up=await sb.storage.from('portfolio').upload(caminho,blob,{contentType:'image/jpeg',cacheControl:'31536000'});
+      if(up.error) throw up.error; dados.foto=caminho;
+    }catch(e){toast('Não deu para enviar a foto: '+(e.message||e));return}
+  } else if(FOTO_SVC.tirar) dados.foto=null;
   try{await q(SVC_EDIT?sb.from('servicos').update(dados).eq('id',SVC_EDIT):sb.from('servicos').insert(dados))}catch(e){return}
   ['svcNome','svcDur','svcH','svcM','svcInt','svcPreco','svcPromo'].forEach(id=>document.getElementById(id).value='');
   closeDrawer('novoServicoDrawer');
@@ -2580,6 +2626,7 @@ function configGroups(){
     {icon:'',label:'Dias de folga',sub:folgas?`${folgas} folga${folgas>1?'s':''} programada${folgas>1?'s':''}`:'Nenhuma folga programada',action:()=>openDrawer('folga2Drawer')},
     {icon:'',label:'Bloquear horário',sub:'Bloquear horário específico',action:()=>openDrawer('bloquearDrawer')},
     {icon:'',label:'Agendamento online',sub:PERFIL.agendamento_online&&PERFIL.slug?'Ativo · '+linkAgendamento().replace(/^https?:\/\//,''):'Link para as clientes marcarem sozinhas',action:()=>abrirPerfil(true)},
+    {icon:'',label:'Divulgar minha agenda',sub:'Imagem pronta para Status, Instagram e WhatsApp',action:()=>abrirDivulgar()},
   ],
   [
     {icon:'',label:'Lembretes de amanhã',sub:resumoLembretes(),action:()=>abrirLembretesDia()},
@@ -3505,15 +3552,17 @@ function renderPnLTable() {
 let FOTOS=[];
 const urlFoto=caminho=>sb.storage.from('portfolio').getPublicUrl(caminho).data.publicUrl;
 function renderPortfolio() {
+  const fl=document.getElementById('portfolioFiltros');
+  if(fl) fl.innerHTML=[{id:'todos',name:'Todos'}].concat(PORTFOLIO_CATS_()).map(c=>`<div class="pill${c.id===portfolioFilter?' active':''}" onclick="filterPortfolio('${esc(c.id)}',this)">${esc(c.name)}</div>`).join('');
   const el = document.getElementById('galeriaGrid');
-  const cat = PORTFOLIO_CATS.find(c=>c.id===portfolioFilter);
+  const cat = PORTFOLIO_CATS_().find(c=>c.id===portfolioFilter);
   const fotos = FOTOS.filter(f=>portfolioFilter==='todos'||f.categoria===portfolioFilter);
   if(!fotos.length){el.innerHTML=`<div class="card empty-state">Nenhuma foto${cat?' em '+esc(cat.name.toLowerCase()):''} ainda.<br><span style="color:var(--fg-soft)">Toque em “Adicionar fotos” para montar o portfólio.</span></div>`;return}
   el.innerHTML='<div class="gallery-grid">'+fotos.map(f=>`<div class="gallery-item" onclick="verFoto('${f.id}')"><img src="${esc(urlFoto(f.caminho))}" alt="${esc(f.legenda||'')}" loading="lazy"></div>`).join('')+'</div>';
 }
 function novaFoto(){
   const sel=document.getElementById('fotoCat');
-  sel.innerHTML=PORTFOLIO_CATS.map(c=>`<option value="${c.id}"${c.id===portfolioFilter?' selected':''}>${c.name}</option>`).join('');
+  sel.innerHTML=PORTFOLIO_CATS_().map(c=>`<option value="${c.id}"${c.id===portfolioFilter?' selected':''}>${c.name}</option>`).join('');
   document.getElementById('fotoArquivo').value='';
   document.getElementById('fotoStatus').textContent='';
   openDrawer('fotoDrawer');
@@ -3558,7 +3607,7 @@ async function enviarFotos(){
 }
 function verFoto(id){
   const f=FOTOS.find(x=>x.id===id);if(!f)return;
-  const cat=PORTFOLIO_CATS.find(c=>c.id===f.categoria);
+  const cat=PORTFOLIO_CATS_().find(c=>c.id===f.categoria);
   document.getElementById('verFotoBody').innerHTML=`
     <img src="${esc(urlFoto(f.caminho))}" alt="" style="width:100%;border-radius:12px;display:block;margin-bottom:12px">
     <div style="font-weight:500">${esc(cat?.name||'')}</div>
@@ -3740,6 +3789,88 @@ async function inscreverPush(){
 // tocou na notificação do celular: o service worker manda abrir o agendamento
 navigator.serviceWorker?.addEventListener('message',e=>{ if(e.data?.abrir) setTimeout(()=>abrirAgendamentoPorId(e.data.abrir),300) });
 { const p=new URLSearchParams(location.search).get('abrir'); if(p) window._abrirDepois=p; }
+
+// ── Divulgar a agenda: imagem com nome, foto, QR Code e link (Story 1080×1920 ou Post 1080×1350) ──
+let FORMATO_DIV='story', CARTAZ_BLOB=null;
+function carregarScript(src){return new Promise((ok,erro)=>{if(document.querySelector(`script[src="${src}"]`))return ok();const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=erro;document.head.appendChild(s)})}
+function carregarImagem(url){return new Promise(ok=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>ok(i);i.onerror=()=>ok(null);i.src=url})}
+function quebrarLinhas(ctx,texto,largura){const out=[];let l='';for(const p of texto.split(' ')){const t=l?l+' '+p:p;if(ctx.measureText(t).width>largura&&l){out.push(l);l=p}else l=t}if(l)out.push(l);return out}
+function retArredondado(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function desenharLirio(ctx,x,y,tam){ // mesmo desenho do ícone do app
+  ctx.save();ctx.translate(x,y);ctx.scale(tam/96,tam/96);
+  ctx.fillStyle='#B85E78';retArredondado(ctx,0,0,96,96,26);ctx.fill();
+  ctx.fillStyle='#FFF8F6';ctx.fill(new Path2D('M48 18 C59 31 60 50 48 66 C36 50 37 31 48 18 Z'));
+  ctx.fillStyle='#F6D9DF';ctx.fill(new Path2D('M44 66 C30 65 20 53 21 38 C33 42 42 52 44 66 Z'));ctx.fill(new Path2D('M52 66 C66 65 76 53 75 38 C63 42 54 52 52 66 Z'));
+  ctx.fillStyle='#E8C487';retArredondado(ctx,34,70,28,4,2);ctx.fill();ctx.restore();
+}
+async function gerarCartaz(formato){
+  await carregarScript('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js');
+  await Promise.all([document.fonts.load('600 80px Fraunces'),document.fonts.load('500 40px "DM Sans"'),document.fonts.load('700 40px "DM Sans"')]).catch(()=>{});
+  const story=formato==='story', W=1080, H=story?1920:1350, c=document.createElement('canvas'); c.width=W; c.height=H;
+  const ctx=c.getContext('2d'), link=linkAgendamento(), nome=PERFIL.nome||'Meu studio';
+  const VINHO='#4A2A35', ROSA='#A44E68', SUAVE='#7C5A64';
+  // fundo rosê com dois círculos suaves
+  const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#FDF3F5'); g.addColorStop(1,'#F2D6DE'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(184,94,120,.08)'; ctx.beginPath(); ctx.arc(W*.92,H*.08,260,0,7); ctx.fill(); ctx.beginPath(); ctx.arc(W*.05,H*.9,320,0,7); ctx.fill();
+  let y=story?150:90;
+  // foto de capa (ou o lírio, se não tiver foto)
+  const foto=PERFIL.foto_capa?await carregarImagem(urlFoto(PERFIL.foto_capa)):null;
+  const fw=story?760:560, fh=story?560:340;
+  if(foto){
+    ctx.save(); retArredondado(ctx,(W-fw)/2,y,fw,fh,48); ctx.clip();
+    const k=Math.max(fw/foto.width,fh/foto.height); ctx.drawImage(foto,(W-foto.width*k)/2,y+(fh-foto.height*k)/2,foto.width*k,foto.height*k); ctx.restore();
+    y+=fh+70;
+  } else { desenharLirio(ctx,(W-200)/2,y,200); y+=270; }
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  // nome do studio
+  ctx.fillStyle=ROSA; ctx.font='700 40px "DM Sans"'; ctx.fillText(nome.toUpperCase(),W/2,y); y+=story?95:80;
+  // título
+  ctx.fillStyle=VINHO; ctx.font=`600 ${story?92:78}px Fraunces, Georgia, serif`;
+  for(const l of ['Conheça minha','nova agenda online ✨']){ctx.fillText(l,W/2,y); y+=story?104:88}
+  y+=story?10:0;
+  ctx.fillStyle=SUAVE; ctx.font=`500 ${story?40:36}px "DM Sans"`;
+  for(const l of quebrarLinhas(ctx,'Escolha o serviço, o dia e o horário em menos de 1 minuto — a qualquer hora.',W-220)){ctx.fillText(l,W/2,y); y+=story?54:48}
+  y+=story?50:30;
+  // QR Code num cartão branco
+  const qs=story?400:300, pad=36;
+  ctx.fillStyle='#fff'; ctx.shadowColor='rgba(74,42,53,.15)'; ctx.shadowBlur=40; ctx.shadowOffsetY=12;
+  retArredondado(ctx,(W-qs)/2-pad,y,qs+pad*2,qs+pad*2,40); ctx.fill(); ctx.shadowColor='transparent';
+  const qr=qrcode(0,'M'); qr.addData(link); qr.make();
+  const n=qr.getModuleCount(), cel=qs/n, qx=(W-qs)/2, qy=y+pad; ctx.fillStyle=VINHO;
+  for(let r=0;r<n;r++)for(let col=0;col<n;col++) if(qr.isDark(r,col)) ctx.fillRect(qx+col*cel,qy+r*cel,Math.ceil(cel),Math.ceil(cel));
+  y+=qs+pad*2+(story?70:56);
+  ctx.fillStyle=SUAVE; ctx.font=`500 ${story?34:30}px "DM Sans"`; ctx.fillText('Aponte a câmera ou acesse:',W/2,y); y+=story?40:34;
+  // link num "botão"
+  ctx.font=`700 ${story?44:38}px "DM Sans"`; const txt=link.replace(/^https?:\/\//,''), lw=ctx.measureText(txt).width+90, lh=story?92:80;
+  ctx.fillStyle=ROSA; retArredondado(ctx,(W-lw)/2,y,lw,lh,lh/2); ctx.fill(); ctx.fillStyle='#fff'; ctx.fillText(txt,W/2,y+lh/2+15);
+  // rodapé
+  desenharLirio(ctx,W/2-150,H-(story?120:92),48); ctx.textAlign='left'; ctx.fillStyle=SUAVE; ctx.font='500 28px "DM Sans"';
+  ctx.fillText('Agendamento por Bellisa',W/2-88,H-(story?86:58));
+  return new Promise(ok=>c.toBlob(b=>ok(b),'image/png'));
+}
+function textoDivulgar(){return `✨ Novidade! Agora você pode agendar seu horário comigo online, a qualquer hora 💅\nÉ só escolher o serviço, o dia e o horário: ${linkAgendamento()}`}
+async function abrirDivulgar(){
+  if(!PERFIL.agendamento_online||!PERFIL.slug){toast('Ative o agendamento online primeiro');abrirPerfil(true);return}
+  closeDrawer('perfilDrawer'); document.getElementById('divTexto').value=textoDivulgar();
+  openDrawer('divulgarDrawer'); setFormatoDivulgar(FORMATO_DIV);
+}
+async function setFormatoDivulgar(f){
+  FORMATO_DIV=f; document.querySelectorAll('#divFormato .tab-item').forEach(b=>b.classList.toggle('active',b.dataset.f===f));
+  const box=document.getElementById('divPrevia'); box.innerHTML='<div class="empty-state">Montando a imagem…</div>';
+  try{
+    CARTAZ_BLOB=await gerarCartaz(f);
+    box.innerHTML=`<img src="${URL.createObjectURL(CARTAZ_BLOB)}" alt="Prévia" style="max-height:${f==='story'?'52vh':'44vh'};max-width:100%;border-radius:18px;box-shadow:var(--shadow-md)">`;
+  }catch(e){console.error(e);box.innerHTML='<div class="empty-state">Não consegui montar a imagem agora. Tente de novo.</div>'}
+}
+const nomeArquivoDiv=()=>`agenda-${PERFIL.slug||'studio'}-${FORMATO_DIV}.png`;
+async function compartilharDivulgar(){
+  if(!CARTAZ_BLOB) return; const txt=document.getElementById('divTexto').value;
+  const arq=new File([CARTAZ_BLOB],nomeArquivoDiv(),{type:'image/png'});
+  if(navigator.canShare?.({files:[arq]})){try{await navigator.share({files:[arq],text:txt});return}catch(e){if(e.name==='AbortError')return}}
+  baixarDivulgar(); copiarTextoDivulgar(); toast('Imagem salva e texto copiado — é só colar no Status ou no Instagram');
+}
+function baixarDivulgar(){ if(!CARTAZ_BLOB) return; const a=document.createElement('a'); a.href=URL.createObjectURL(CARTAZ_BLOB); a.download=nomeArquivoDiv(); a.click(); }
+async function copiarTextoDivulgar(){ try{await navigator.clipboard.writeText(document.getElementById('divTexto').value);toast('Texto copiado')}catch(e){toast('Não deu para copiar — selecione o texto e copie')} }
 
 // ── Versão: aparece na tela de entrada; quando sai uma nova, avisa e oferece atualizar ──
 { const v=document.getElementById('loginVersao'); if(v) v.textContent=`Bellisa · versão ${VERSAO_APP}`; }
