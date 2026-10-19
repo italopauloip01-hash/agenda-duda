@@ -58,11 +58,24 @@ Deno.serve(async (req) => {
     // devolve à fila o que ficou "enviando" por mais de 5 min (robô caiu no meio)
     await admin.from("fila_whatsapp").update({ status: "pendente" }).eq("owner_id", owner).eq("status", "enviando")
       .lt("criado_em", new Date(Date.now() - 5 * 60e3).toISOString());
-    const { data } = await admin.from("fila_whatsapp").select("id, telefone, texto, tentativas")
+    const { data } = await admin.from("fila_whatsapp").select("id, telefone, texto, tentativas, tipo, agendamento_id")
       .eq("owner_id", owner).eq("status", "pendente").order("criado_em").limit(10);
-    const ids = (data || []).map((m) => m.id);
+    // a mesma mensagem do mesmo horário nunca sai duas vezes (ex.: tocou "Confirmar" duas vezes)
+    const vistos = new Set<string>(), duplicadas: string[] = [], enviar = [];
+    for (const m of data || []) {
+      if (m.agendamento_id && m.tipo) {
+        const k = m.agendamento_id + "|" + m.tipo;
+        const { count } = await admin.from("fila_whatsapp").select("id", { count: "exact", head: true })
+          .eq("agendamento_id", m.agendamento_id).eq("tipo", m.tipo).in("status", ["enviado", "enviando"]);
+        if (vistos.has(k) || (count || 0) > 0) { duplicadas.push(m.id); continue; }
+        vistos.add(k);
+      }
+      enviar.push(m);
+    }
+    if (duplicadas.length) await admin.from("fila_whatsapp").update({ status: "erro", erro: "duplicada (não enviada)" }).in("id", duplicadas);
+    const ids = enviar.map((m) => m.id);
     if (ids.length) await admin.from("fila_whatsapp").update({ status: "enviando" }).in("id", ids);
-    return json(200, { mensagens: data || [] });
+    return json(200, { mensagens: enviar.map(({ id, telefone, texto, tentativas }) => ({ id, telefone, texto, tentativas })) });
   }
   if (corpo.acao === "resultado" && corpo.id) {
     const { data: m } = await admin.from("fila_whatsapp").select("tentativas").eq("id", corpo.id).eq("owner_id", owner).maybeSingle();
