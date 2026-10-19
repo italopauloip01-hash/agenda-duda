@@ -1452,7 +1452,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.38'; const VERSAO_DATA='19/10/2026 00:06';
+const VERSAO_APP='3.39'; const VERSAO_DATA='19/10/2026 00:11';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -1701,12 +1701,23 @@ async function carregarAgendamentos(){
       lembreteEm:r.lembrete_enviado_em?new Date(r.lembrete_enviado_em):null,origem:r.origem};
   });
 }
+// o banco entrega no máximo 1000 linhas por consulta: busca as clientes em lotes até acabar
+async function carregarClientes(){
+  let out=[], from=0;
+  for(;;){
+    const rows=await q(sb.from('clientes_resumo').select('*').order('nome').order('id').range(from,from+999));
+    out=out.concat(rows);
+    if(rows.length<1000) break;
+    from+=1000;
+  }
+  return out;
+}
 async function recarregar(){
   if(!USER)return;
   const anoIni=ymd(new Date(new Date().getFullYear(),0,1));
   try{
     const [cli,svc,prod,desp,aval,notif,bloq,appts]=await Promise.all([
-      q(sb.from('clientes_resumo').select('*').order('nome')),
+      carregarClientes(),
       q(sb.from('servicos').select('*').eq('ativo',true).order('nome')),
       q(sb.from('produtos').select('*').order('nome')),
       q(sb.from('despesas').select('*').gte('data',anoIni).order('data',{ascending:false})),
@@ -2042,20 +2053,25 @@ function setClientFilter(f,el) {
   el.classList.add('active');
   renderClients();
 }
+// a lista mostra 100 por vez (desenhar centenas de linhas de uma vez deixa o celular lento)
+let LIMITE_CLI=100, ultimaBuscaCli='';
 function renderClients() {
-  const search = (document.getElementById('clientSearch')||{value:''}).value.toLowerCase();
+  const search = semAcento((document.getElementById('clientSearch')||{value:''}).value.trim());
+  const dig = search.replace(/\D/g,'');
+  if(search!==ultimaBuscaCli){ ultimaBuscaCli=search; LIMITE_CLI=100; }
   const filter = currentClientFilter;
   const list = document.getElementById('clientList');
   list.innerHTML = '';
-  const rows=CLIENTS
+  const todas=CLIENTS
     .filter(c => {
-      if (search && !c.name.toLowerCase().includes(search) && !c.phone.includes(search)) return false;
+      if (search && !semAcento(c.name).includes(search) && !(dig.length>=3&&c.phone.includes(dig))) return false;
       if (filter==='esmalteria') return c.type==='esmalteria'||c.type==='ambos';
       if (filter==='podologia')  return c.type==='podologia'||c.type==='ambos';
       if (filter==='vip')        return c.vip;
       if (filter==='faltou')     return c.faltou>0;
       return true;
     });
+  const rows=todas.slice(0,LIMITE_CLI);
   if(!rows.length) list.innerHTML=`<div class="empty-state">${CLIENTS.length?'Nenhuma cliente encontrada.':'Nenhuma cliente cadastrada ainda.'}</div>`;
   rows.forEach(c => {
       const typeL = c.type==='ambos'?'Ambos':nomeTipo(c.type);
@@ -2071,6 +2087,7 @@ function renderClients() {
       row.onclick = ()=>openFicha(c);
       list.appendChild(row);
     });
+  if(todas.length>rows.length) list.insertAdjacentHTML('beforeend',`<button class="btn btn-ghost btn-sm" style="margin:10px 0" onclick="LIMITE_CLI+=100;renderClients()">Mostrar mais (${todas.length-rows.length} restantes)</button>`);
 }
 function openFicha(c) {
   const typeL = c.type==='ambos'?'Esmalteria e podologia':nomeTipo(c.type);
