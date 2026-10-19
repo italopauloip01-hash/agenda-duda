@@ -258,7 +258,7 @@ const IC={
   zap:'<svg class="i" viewBox="0 0 24 24" style="stroke:none;fill:currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-3.3-.8-2.8-1.1-4.5-4-4.6-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.6 2.1 1.1 1 2 1.3 2.3 1.4.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.3z"/></svg>',
 };
 
-let A=null, escolha={tipo:null,svc:null,dia:null,hora:null}, filtroFoto='todos', verTodas=false, fotosVisiveis=[], fotoAtual=0;
+let A=null, escolha={tipo:null,svc:null,sel:[],dia:null,hora:null}, filtroFoto='todos', verTodas=false, fotosVisiveis=[], fotoAtual=0;
 const ocupadosCache={};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad=n=>String(n).padStart(2,'0');
@@ -458,16 +458,29 @@ function renderServicos(){
     .concat([...new Set(A.servicos.map(s=>s.tipo))].filter(t=>!TIPO_NOME[t]).sort((a,b)=>a.localeCompare(b,'pt-BR')));
   const lista=A.servicos.filter(s=>s.tipo===escolha.tipo);
   document.getElementById('etapa').innerHTML=`
-    <div class="etapa-tit"><h3>Qual serviço?</h3></div>
+    <div class="etapa-tit"><h3>Quais serviços?</h3><small style="color:var(--muted)">pode escolher mais de um</small></div>
     ${tipos.length>1?`<div class="abas">${tipos.map(t=>`<button class="${escolha.tipo===t?'on':''}" onclick="escolha.tipo='${t}';renderServicos()">${TIPO_NOME[t]||t}</button>`).join('')}</div>`:''}
     <div class="svcs">${lista.map((s,i)=>`
-      <button class="svc" style="animation-delay:${i*40}ms" onclick="escolherSvc('${s.id}')">
-        <span class="ic">${icTipo(s.tipo)}</span>
+      <button class="svc${escolha.sel.includes(s.id)?' on':''}" style="animation-delay:${i*40}ms" onclick="escolherSvc('${s.id}')">
+        <span class="ic">${escolha.sel.includes(s.id)?'✓':icTipo(s.tipo)}</span>
         <span class="n"><b>${esc(s.nome)}</b><span>${fmtDur(s.duracao_min)}</span></span>
         <span class="p">${reais(s.preco)}</span>
       </button>`).join('')}</div>`;
 }
-function escolherSvc(id){escolha.svc=A.servicos.find(s=>s.id===id);escolha.hora=null;renderAgendamento();rolarPara()}
+// pode escolher mais de um serviço: tocar põe/tira; o botão Continuar junta tudo (tempo e valor somam)
+function combinarSvcs(ids){
+  const l=ids.map(id=>A.servicos.find(s=>s.id===id)).filter(Boolean); if(!l.length) return null;
+  return {id:l[0].id,ids:l.map(s=>s.id),tipo:l[0].tipo,nome:l.map(s=>s.nome).join(' + '),
+    duracao_min:l.reduce((a,s)=>a+s.duracao_min,0),intervalo_min:Math.max(...l.map(s=>s.intervalo_min||0)),preco:l.reduce((a,s)=>a+Number(s.preco_promo??s.preco),0)};
+}
+function escolherSvc(id){
+  const i=escolha.sel.indexOf(id); if(i>=0) escolha.sel.splice(i,1); else if(escolha.sel.length<6) escolha.sel.push(id);
+  renderServicos(); atualizarBarra();
+}
+function continuarSvcs(){
+  escolha.svc=combinarSvcs(escolha.sel); if(!escolha.svc) return;
+  escolha.hora=null; renderAgendamento(); rolarPara();
+}
 
 function renderDias(){
   const dias=diasDisponiveis();
@@ -516,7 +529,10 @@ function atualizarBarra(){
   b.classList.add('vis');
   const e=etapaAtual();
   btn.disabled=false;
-  if(e===1){t.innerHTML='<b>Agende online</b>em menos de 1 minuto';btn.textContent='Começar';btn.onclick=()=>document.getElementById('agendar').scrollIntoView({behavior:'smooth'});return}
+  if(e===1){
+    const c=combinarSvcs(escolha.sel);
+    if(c){t.innerHTML=`<b>${c.ids.length} serviço${c.ids.length>1?'s':''} · ${reais(c.preco)}</b>${fmtDur(c.duracao_min)}`;btn.textContent='Continuar';btn.onclick=continuarSvcs;return}
+    t.innerHTML='<b>Agende online</b>em menos de 1 minuto';btn.textContent='Começar';btn.onclick=()=>document.getElementById('agendar').scrollIntoView({behavior:'smooth'});return}
   const d=escolha.dia?`${rotuloDia(escolha.dia)} ${escolha.dia.getDate()}/${pad(escolha.dia.getMonth()+1)}`:'';
   t.innerHTML=`<b>${esc(escolha.svc.nome)}</b>${d}${escolha.hora?' às '+escolha.hora:''}${d?' · ':''}${reais(escolha.svc.preco)}`;
   if(e===2){btn.textContent='Escolher dia';btn.onclick=rolarPara}
@@ -549,7 +565,7 @@ async function confirmar(){
   if(document.getElementById('lembrar').checked) store.set('agenda_cliente',{nome,tel}); else store.del('agenda_cliente');
   const btn=document.getElementById('barraBtn');btn.disabled=true;btn.textContent='Agendando…';
   try{
-    await rpc('agendar_online',{p_slug:SLUG,p_servico:escolha.svc.id,p_inicio:`${ymd(escolha.dia)}T${escolha.hora}:00-03:00`,p_nome:nome,p_telefone:tel,p_obs:obs||null,p_cpf:cpf||null});
+    await rpc('agendar_online',{p_slug:SLUG,p_servico:escolha.svc.id,p_inicio:`${ymd(escolha.dia)}T${escolha.hora}:00-03:00`,p_nome:nome,p_telefone:tel,p_obs:obs||null,p_cpf:cpf||null,p_extras:(escolha.svc.ids||[]).slice(1)});
     sucesso(nome);
   }catch(e){
     btn.disabled=false;atualizarBarra();

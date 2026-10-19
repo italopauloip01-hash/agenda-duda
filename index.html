@@ -511,6 +511,9 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
 .campo-tempo .form-input{font-size:22px;font-weight:600;padding-right:70px}
 .mais-opcoes{margin:4px 0 16px;font-size:14px}
 .mais-opcoes summary{cursor:pointer;color:var(--accent-2);font-weight:600;padding:6px 0}
+.svc-escolhidos{display:flex;flex-wrap:wrap;gap:6px}
+.chip-svc{display:inline-flex;align-items:center;gap:6px;padding:6px 6px 6px 12px;border-radius:999px;background:color-mix(in srgb,var(--accent) 14%,var(--bg-card));color:var(--fg);font-size:13px;font-weight:600}
+.chip-svc button{border:none;background:var(--bg-card);color:var(--fg-muted);width:22px;height:22px;border-radius:50%;font-size:11px;cursor:pointer}
 .tipo-tabs{overflow-x:auto;scrollbar-width:none}.tipo-tabs::-webkit-scrollbar{display:none}
 .tipo-tabs .tab-item{flex:1 0 auto;padding:8px 12px}
 .svc-grid .pick-item{flex-direction:column;align-items:flex-start;gap:3px;min-height:72px}
@@ -964,6 +967,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
     <input type="hidden" id="inputTipo" value="esmalteria">
     <input type="hidden" id="inputServico" value="">
     <input class="form-input" type="search" id="svcBusca" placeholder="Buscar serviço…" autocomplete="off" oninput="loadServicesForm()" style="margin-bottom:8px">
+    <div id="svcEscolhidos"></div>
     <div class="tab-bar tipo-tabs" id="tipoTabs" style="margin-bottom:8px"></div>
     <div id="svcLista" class="pick-list svc-grid"></div>
   </div>
@@ -1653,7 +1657,7 @@ async function carregarAgendamentos(){
     const i=new Date(r.inicio), f=new Date(r.fim);
     const pagos=(r.pagamentos||[]).map(p=>({id:p.id,valor:Number(p.valor),forma:p.forma,em:new Date(p.pago_em)})).sort((a,b)=>a.em-b.em);
     const pago=pagos.reduce((s,p)=>s+p.valor,0), price=Number(r.valor);
-    return {id:r.id,cliente_id:r.cliente_id,servico_id:r.servico_id,ini:i,fim:f,time:hhmm(i),end:hhmm(f),
+    return {id:r.id,cliente_id:r.cliente_id,servico_id:r.servico_id,servicosIds:Array.isArray(r.servicos)?r.servicos.map(x=>x.id):(r.servico_id?[r.servico_id]:[]),ini:i,fim:f,time:hhmm(i),end:hhmm(f),
       name:r.clientes?.nome||'—',phone:r.clientes?.telefone||'',color:r.clientes?.cor||'#C2637A',
       service:r.servico_nome,type:r.tipo,status:r.status,price,
       dur:Math.round((f-i)/6e4),obs:r.observacoes,local:r.local,
@@ -1977,17 +1981,18 @@ function remarcar(id){
   const a=ALL_APPTS.find(x=>x.id===id);if(!a)return;
   closeDrawer('detailDrawer');
   remarcandoId=id;
-  novoAgendamentoPara(a.name,a.servico_id,a.type);
+  novoAgendamentoPara(a.name,(a.servicosIds||[]).join(',')||a.servico_id,a.type);
 }
 function novoAgendamentoPara(nome,servicoId,tipo){
   document.getElementById('inputCliente').value=nome||'';
   const achada=nome&&CLIENTS.find(c=>c.name===nome);
   CLI_ESCOLHIDA=achada?achada.id:null; renderBuscaCliente();
   if(tipo) document.getElementById('inputTipo').value=tipo;
-  if(servicoId) document.getElementById('inputServico').value=servicoId;
+  document.getElementById('inputServico').value=servicoId||''; // pode ser vários: "id1,id2"
   loadServicesForm();
   document.getElementById('inputData').value=ymd(selectedDate<hoje0()?hoje0():selectedDate);
   loadSlots();
+  if(svcSelecionado()) calcSlotDuration();
   openDrawer('novoAgendDrawer');
 }
 
@@ -3005,9 +3010,15 @@ function exportarDespesas(){
 
 
 // ── FORM / SLOTS ──────────────────────────────────────────────────
+// pode ter vários serviços no mesmo horário: soma tempo e valor (o 1º define o tipo)
+function svcIdsSel(){return document.getElementById('inputServico').value.split(',').filter(Boolean)}
 function svcSelecionado(){
-  const id=document.getElementById('inputServico').value;
-  return Object.values(SVCS_TIPO).flat().find(s=>s.id===id);
+  const todos=Object.values(SVCS_TIPO).flat();
+  const itens=svcIdsSel().map(id=>todos.find(s=>s.id===id)).filter(Boolean);
+  if(!itens.length) return null;
+  if(itens.length===1) return {...itens[0],itens};
+  return {id:itens[0].id,itens,name:itens.map(s=>s.name).join(' + '),tipo:itens[0].tipo,color:itens[0].color,
+    dur:itens.reduce((a,s)=>a+s.dur,0),int:Math.max(...itens.map(s=>s.int||0)),price:itens.reduce((a,s)=>a+(s.promo??s.price),0),promo:null};
 }
 // ── escolha de serviço: abas por tipo + cartões
 function setTipoServico(tipo){ document.getElementById('inputTipo').value=tipo; loadServicesForm(); }
@@ -3021,23 +3032,32 @@ function loadServicesForm() {
   const svcs = (termo?Object.values(SVCS_TIPO).flat().filter(s=>semAcento(s.name).includes(termo)):(SVCS_TIPO[tipo]||[]))
     .slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
   const hid = document.getElementById('inputServico');
-  if(!Object.values(SVCS_TIPO).flat().some(s=>s.id===hid.value)) hid.value='';
+  const todos=Object.values(SVCS_TIPO).flat();
+  const sel=svcIdsSel().filter(id=>todos.some(s=>s.id===id)); hid.value=sel.join(',');
   const tabs=document.getElementById('tipoTabs');
   tabs.hidden=!!termo||tipos.length<2;
   tabs.innerHTML=tipos.map(t=>`<button type="button" class="tab-item${t.id===tipo?' active':''}" onclick="setTipoServico('${t.id}')">${t.nome}</button>`).join('');
+  // escolhidos aparecem em cima, com o total; dá para tirar tocando no ✕
+  const tot=svcSelecionado();
+  document.getElementById('svcEscolhidos').innerHTML=tot?`
+    <div class="svc-escolhidos">${tot.itens.map(s=>`<span class="chip-svc">${esc(s.name)}<button type="button" onclick="escolherServico('${s.id}')" aria-label="Tirar">✕</button></span>`).join('')}</div>
+    <div class="pick-sub" style="margin:4px 2px 8px">${tot.itens.length>1?`${tot.itens.length} serviços · `:''}${fmtDur(tot.dur)} · <b>${fmtR(tot.price)}</b>${tot.itens.length===1?' · toque em outro para somar':''}</div>`:'<div class="pick-sub" style="margin:0 2px 8px">Pode escolher mais de um serviço — o tempo e o valor somam.</div>';
   document.getElementById('svcLista').innerHTML = svcs.length
-    ? svcs.map(s=>`<button type="button" class="pick-item${s.id===hid.value?' sel':''}" onclick="escolherServico('${s.id}')">
-        <span class="pick-nome">${esc(s.name)}</span><span class="pick-sub">${fmtDur(s.dur)}</span>
+    ? svcs.map(s=>`<button type="button" class="pick-item${sel.includes(s.id)?' sel':''}" onclick="escolherServico('${s.id}')">
+        <span class="pick-nome">${sel.includes(s.id)?'✓ ':''}${esc(s.name)}</span><span class="pick-sub">${fmtDur(s.dur)}</span>
         <span class="pick-preco">${fmtR(s.promo??s.price)}</span></button>`).join('')
     : `<div class="pick-sub" style="grid-column:1/-1;padding:6px 2px">${termo?'Nenhum serviço com esse nome.':'Nenhum serviço deste tipo. Cadastre na aba Serviços.'}</div>`;
   loadSlots();
 }
+// toque: põe ou tira o serviço da lista do horário
 function escolherServico(id){
-  document.getElementById('inputServico').value=id;
-  const s=svcSelecionado(); if(s) document.getElementById('inputTipo').value=s.tipo;
+  const sel=svcIdsSel(); const i=sel.indexOf(id);
+  if(i>=0) sel.splice(i,1); else sel.push(id);
+  document.getElementById('inputServico').value=sel.join(',');
   document.getElementById('svcBusca').value='';
   loadServicesForm();
-  calcSlotDuration(); // preenche o valor mesmo em dia fechado (sem grade de horários)
+  if(svcSelecionado()) calcSlotDuration(); // preenche o valor mesmo em dia fechado (sem grade de horários)
+  else { document.getElementById('inputValor').value=''; document.getElementById('inputDuracao').value=''; }
 }
 // ── escolha de cliente: busca por nome/telefone, toque para escolher
 let CLI_ESCOLHIDA=null;
@@ -3163,7 +3183,8 @@ async function salvarAgendamento() {
     if(remarcandoId) await q(sb.from('agendamentos').update({status:'cancelado'}).eq('id',remarcandoId));
   }catch(e){return}
   const {data:novo,error}=await sb.from('agendamentos').insert({
-    cliente_id:cli.id,servico_id:svc.id,servico_nome:svc.name,tipo:svc.tipo,
+    cliente_id:cli.id,servico_id:svc.id,servico_nome:svc.name.slice(0,200),tipo:svc.tipo,
+    servicos:svc.itens.length>1?svc.itens.map(s=>({id:s.id,nome:s.name,dur:s.dur,preco:s.promo??s.price})):null,
     inicio:ini.toISOString(),fim:fim.toISOString(),valor,pagar_ate:pagarAte,
     local:document.getElementById('inputLocal').value,
     observacoes:document.getElementById('inputObs').value.trim()||null}).select('id').single();
@@ -3188,6 +3209,7 @@ async function salvarAgendamento() {
   closeDrawer('novoAgendDrawer');
   ['inputCliente','inputObs'].forEach(id=>document.getElementById(id).value='');
   CLI_ESCOLHIDA=null; renderBuscaCliente();
+  document.getElementById('inputServico').value=''; loadServicesForm();
   selectedDate=new Date(ini.getFullYear(),ini.getMonth(),ini.getDate());
   toast(foiRemarcacao?`Remarcado para ${labelDia(selectedDate).toLowerCase()} às ${hhmm(ini)}`:`${nome} — ${labelDia(selectedDate).toLowerCase()} às ${hhmm(ini)}`);
   await recarregar();
