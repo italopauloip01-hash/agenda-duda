@@ -127,7 +127,7 @@ svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stro
 .nav-item.active svg{stroke-width:2}
 
 /* Section headers */
-.section-label{font-size:13px;font-weight:500;color:var(--fg-muted);margin:26px 0 10px;display:flex;align-items:center;justify-content:space-between;letter-spacing:-.005em}
+.section-label{font-size:13px;font-weight:500;color:var(--fg-muted);margin:18px 0 8px;display:flex;align-items:center;justify-content:space-between;letter-spacing:-.005em}
 .section-label:first-child{margin-top:6px}
 .section-action{font-size:13px;color:var(--fg);cursor:pointer}
 
@@ -289,12 +289,14 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
 .divider{height:1px;background:var(--border);margin:12px 0}
 
 /* Settings rows */
-.settings-row{display:flex;align-items:center;gap:12px;padding:13px 2px;cursor:pointer;transition:opacity .15s}
+.settings-row{display:flex;align-items:center;gap:12px;padding:11px 2px;cursor:pointer;transition:opacity .15s}
 .settings-row:active{opacity:.6}
 .settings-row+.settings-row{border-top:1px solid var(--border)}
 .settings-icon{display:none}
 .settings-text{flex:1;min-width:0}
 .settings-label{font-size:15px;font-weight:500}
+#page-config .card{padding:2px 14px}
+#page-config>.section-label:first-child{margin-top:6px}
 .settings-sub{font-size:12.5px;color:var(--fg-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Birthday rows */
@@ -926,13 +928,25 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
   <div class="card">
     <div id="configRows3"></div>
   </div>
-  <div class="section-label">Robô do WhatsApp</div>
-  <div class="card" id="botCard"></div>
-  <div class="section-label">Conta Google</div>
-  <div class="card" id="googleCard"></div>
-  <div class="section-label">Lembretes automáticos</div>
-  <div class="card" id="lembretesCard"></div>
 </main>
+
+<!-- Robô do WhatsApp (abre pela linha em Ajustes) -->
+<div class="modal-overlay" id="botDrawer"><div class="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">Robô do WhatsApp</div>
+  <div class="card" id="botCard"></div>
+  <div class="section-label">Lembretes</div>
+  <div class="card" id="lembretesCard"></div>
+  <button class="btn btn-ghost" style="margin-top:14px" onclick="closeDrawer('botDrawer')">Fechar</button>
+</div></div>
+
+<!-- Conta Google (abre pela linha em Ajustes) -->
+<div class="modal-overlay" id="googleDrawer"><div class="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">Conta Google</div>
+  <div class="card" id="googleCard"></div>
+  <button class="btn btn-ghost" style="margin-top:14px" onclick="closeDrawer('googleDrawer')">Fechar</button>
+</div></div>
 
 <!-- Bottom Nav -->
 <nav class="bottom-nav" style="justify-content:space-around">
@@ -1460,7 +1474,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.41'; const VERSAO_DATA='19/10/2026 01:43';
+const VERSAO_APP='3.42'; const VERSAO_DATA='19/10/2026 15:59';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2662,7 +2676,8 @@ function configGroups(){
   [
     {icon:'',label:'Lembretes de amanhã',sub:resumoLembretes(),action:()=>abrirLembretesDia()},
     {icon:'',label:'Mensagens prontas',sub:`${todasMensagens().length} mensagens · editar, criar e enviar`,action:()=>abrirModelos()},
-    {icon:'',label:'Robô do WhatsApp',sub:'Envio automático precisa de um servidor (próxima etapa)',action:()=>toast('Por enquanto os lembretes são enviados com um toque, em “Lembretes de amanhã”.')},
+    {icon:'',label:'Robô do WhatsApp',sub:(BOT.conectado&&BOT.visto&&Date.now()-BOT.visto<3*60e3?'Conectado':'Desligado')+(PERFIL.whatsapp_auto?' · envio automático ligado':' · envio automático desligado'),action:()=>{carregarBot();openDrawer('botDrawer')}},
+    {icon:'',label:'Conta Google',sub:GOOGLE.conectado?'Conectado · '+(GOOGLE.email||''):'Contatos e Google Agenda',action:()=>{renderGoogleCard();openDrawer('googleDrawer')}},
   ],
   [
     {icon:'',label:'Portfólio',sub:FOTOS.length?`${FOTOS.length} foto${FOTOS.length>1?'s':''}`:'Adicione fotos dos trabalhos',action:()=>{gotoPage('financeiro',document.querySelectorAll('.nav-item')[3]);setFinTab('galeria',document.querySelectorAll('#page-financeiro .tab-item')[3])}},
@@ -2976,7 +2991,7 @@ const botAtivo=()=>!!PERFIL.whatsapp_auto&&BOT.conectado&&BOT.visto&&(Date.now()
 async function carregarBot(){
   const {data}=await sb.from('whatsapp_bot').select('conectado,numero,visto_em').maybeSingle();
   BOT={conectado:!!data?.conectado,numero:data?.numero||null,visto:data?.visto_em?new Date(data.visto_em).getTime():null};
-  renderBotCard();
+  renderBotCard(); renderConfig(); // a linha "Robô do WhatsApp" em Ajustes mostra a situação
 }
 function renderBotCard(){
   const el=document.getElementById('botCard'); if(!el) return;
