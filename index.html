@@ -468,11 +468,15 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
 /* puxar para atualizar */
 html,body{overscroll-behavior-y:contain}
 #ptr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translate(-50%,-70px);opacity:0;z-index:40;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--bg-card);color:var(--fg);box-shadow:var(--shadow-md);font-size:13px;font-weight:600;pointer-events:none}
-#ptr .ptr-ic{display:inline-block;transition:transform .2s;color:var(--accent)}
-#ptr.pronto .ptr-ic{transform:rotate(180deg)}
-#ptr.girando .ptr-ic{animation:ptrGira .8s linear infinite}
-#ptr.girando .ptr-ic::before{content:''}
-@keyframes ptrGira{to{transform:rotate(360deg)}}
+#ptr .ptr-ic{width:18px;height:18px;flex:none;transform:rotate(-90deg)}
+#ptr .ptr-ic circle{fill:none;stroke-width:2.6;stroke-linecap:round}
+#ptr .ptr-ic .trilha{stroke:color-mix(in srgb,var(--accent) 22%,transparent)}
+#ptr .ptr-ic .arco{stroke:var(--accent);stroke-dasharray:56.55;stroke-dashoffset:calc(56.55 * (1 - var(--p,0)));transition:stroke-dashoffset .08s linear}
+#ptr.pronto .ptr-ic .arco{stroke-dashoffset:0}
+#ptr.girando .ptr-ic{animation:ptrGira .75s linear infinite}
+#ptr.girando .ptr-ic .arco{stroke-dashoffset:40;transition:none}
+
+@keyframes ptrGira{from{transform:rotate(-90deg)}to{transform:rotate(270deg)}}
 
 /* Botões */
 .btn{border-radius:999px;font-weight:600}
@@ -3651,7 +3655,7 @@ async function atualizarAgora(mostrar){
 setInterval(()=>{ if(!document.hidden&&!gavetasAbertas().length&&Date.now()-ultimaAtualizacao>55e3) atualizarAgora(false) },60e3);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&!gavetasAbertas().length&&Date.now()-ultimaAtualizacao>15e3) atualizarAgora(false) });
 (()=>{
-  const ind=document.createElement('div'); ind.id='ptr'; ind.innerHTML='<span class="ptr-ic">↓</span><span class="ptr-txt">Puxe para atualizar</span>';
+  const ind=document.createElement('div'); ind.id='ptr'; ind.innerHTML='<svg class="ptr-ic" viewBox="0 0 24 24"><circle class="trilha" cx="12" cy="12" r="9"/><circle class="arco" cx="12" cy="12" r="9"/></svg><span class="ptr-txt">Puxe para atualizar</span>';
   document.body.appendChild(ind);
   let y0=null, dy=0, ativo=false, ocupado=false;
   const reset=()=>{ind.style.transition='transform .25s,opacity .25s';ind.style.transform='translate(-50%,-70px)';ind.style.opacity='0';ind.classList.remove('pronto','girando')};
@@ -3666,6 +3670,7 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&!gavetas
     e.preventDefault();
     const d=Math.min(dy*.5,90);
     ind.style.opacity=String(Math.min(1,d/50)); ind.style.transform=`translate(-50%,${d-50}px)`;
+    ind.style.setProperty('--p',String(Math.min(1,Math.max(0,dy)/130))); // o círculo vai se completando conforme puxa
     const pronto=dy>130; ind.classList.toggle('pronto',pronto);
     ind.querySelector('.ptr-txt').textContent=pronto?'Solte para atualizar':'Puxe para atualizar';
   },{passive:false});
