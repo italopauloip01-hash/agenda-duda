@@ -39,8 +39,15 @@ Deno.serve(async (req) => {
       .replace(/\s+([.!?,])/g, "$1").replace(/ {2,}/g, " ").trim();
 
   if (corpo.acao === "status") {
-    await admin.from("whatsapp_bot").upsert({ owner_id: owner, conectado: !!corpo.conectado,
-      numero: corpo.numero ? String(corpo.numero).replace(/\D/g, "").slice(0, 15) : null, visto_em: new Date().toISOString() });
+    const numero = corpo.numero ? String(corpo.numero).replace(/\D/g, "").slice(0, 15) : null;
+    await admin.from("whatsapp_bot").upsert({ owner_id: owner, conectado: !!corpo.conectado, numero, visto_em: new Date().toISOString() });
+    // o WhatsApp do studio (botão do site, mensagens) passa a ser sempre o número vinculado ao robô.
+    // No Brasil o WhatsApp às vezes guarda o celular sem o 9: 55 33 9828-9160 → 55 33 9 9828-9160
+    if (corpo.conectado && numero) {
+      const m = numero.match(/^55(\d{2})([6-9]\d{7})$/);
+      const completo = m ? `55${m[1]}9${m[2]}` : numero;
+      await admin.from("perfil").update({ whatsapp: completo }).eq("owner_id", owner).or(`whatsapp.is.null,whatsapp.neq.${completo}`);
+    }
     return json(200, { ok: true });
   }
   if (corpo.acao === "config") {

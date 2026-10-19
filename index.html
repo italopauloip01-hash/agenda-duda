@@ -2640,6 +2640,13 @@ function abrirPerfil(focarOnline){
   const p=PERFIL;
   document.getElementById('perfNome').value=p.nome||'';
   document.getElementById('perfWhats').value=p.whatsapp?fmtTel(p.whatsapp):'';
+  // com o robô vinculado, o WhatsApp do studio é sempre o número dele (atualiza sozinho)
+  const wEl=document.getElementById('perfWhats'), viaRobo=!!BOT.numero;
+  wEl.readOnly=viaRobo; wEl.style.opacity=viaRobo?'.7':'';
+  wEl.title=viaRobo?'Número do WhatsApp vinculado ao robô':'';
+  let dica=document.getElementById('perfWhatsDica');
+  if(!dica){dica=document.createElement('div');dica.id='perfWhatsDica';dica.className='pick-sub';dica.style.marginTop='4px';wEl.after(dica)}
+  dica.textContent=viaRobo?'Vem do WhatsApp vinculado ao robô — muda sozinho se você vincular outro número.':'';
   document.getElementById('perfBio').value=p.bio||'';
   document.getElementById('perfOnline').checked=!!p.agendamento_online;
   document.getElementById('perfSlug').value=p.slug||'';
