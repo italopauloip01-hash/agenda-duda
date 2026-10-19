@@ -2720,10 +2720,10 @@ const MSGS_PADRAO=[
     texto:'{saudacao}, {nome}! Seu horário de {servico} está confirmado para {dia} às {hora}. Te espero! 💖'},
   {id:'remarcado',titulo:'Horário remarcado',uso:'Aviso ao remarcar',
     texto:'{saudacao}, {nome}! Seu horário de {servico} foi remarcado para {dia} às {hora}. Qualquer coisa é só me chamar 💖'},
-  {id:'lembrete24',titulo:'Lembrete 24h antes (robô)',uso:'Robô: 24 horas antes do horário',
-    texto:'{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} amanhã, {dia} às {hora} 💅 Qualquer imprevisto é só me avisar por aqui.'},
-  {id:'lembrete5',titulo:'Lembrete 5h antes (robô)',uso:'Robô: 5 horas antes do horário',
-    texto:'{saudacao}, {nome}! Seu horário de {servico} é hoje às {hora} 💖 Te espero!'},
+  {id:'lembrete24',titulo:'Lembrete 1 — com antecedência (robô)',uso:'Robô: no tempo do Lembrete 1 (Ajustes → Robô)',
+    texto:'{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora} 💅 Qualquer imprevisto é só me avisar por aqui.'},
+  {id:'lembrete5',titulo:'Lembrete 2 — perto do horário (robô)',uso:'Robô: no tempo do Lembrete 2 (Ajustes → Robô)',
+    texto:'{saudacao}, {nome}! Seu horário de {servico} é {dia} às {hora} 💖 Te espero!'},
   {id:'pedido_recebido',titulo:'Pedido recebido pelo link (robô)',uso:'Robô: quando a cliente agenda pelo link',
     texto:'{saudacao}, {nome}! Recebemos seu pedido de {servico} para {dia} às {hora} 💖 Assim que for confirmado eu te aviso por aqui.'},
   {id:'auto_resposta',titulo:'Resposta automática (robô)',uso:'Robô: quando alguém chama no WhatsApp (1x por conversa)',
@@ -2888,7 +2888,20 @@ function renderBotCard(){
     <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Envio automático</div>
       <div class="toggle-sub">Confirmação, remarcação, cancelamento, lembretes 24h e 5h antes, e resposta automática (só conversas individuais, 1x por hora).</div></div>
       <label class="toggle"><input type="checkbox" ${PERFIL.whatsapp_auto?'checked':''} onchange="ligarBot(this.checked)"><div class="toggle-track"></div></label></div>
+    <div class="toggle-row" style="flex-wrap:wrap;gap:8px"><div class="toggle-info"><div class="toggle-label">Lembretes automáticos</div>
+      <div class="toggle-sub">Nada sai entre 21h e 7h — o que cair à noite vai às 7h.</div></div></div>
+    <div class="form-row" style="margin-bottom:10px">
+      <div class="form-group"><label class="form-label">Lembrete 1</label><select class="form-input" onchange="salvarLembretes('lembrete1_h',this.value)">${opcoesHoras(PERFIL.lembrete1_h??24)}</select></div>
+      <div class="form-group"><label class="form-label">Lembrete 2</label><select class="form-input" onchange="salvarLembretes('lembrete2_h',this.value)">${opcoesHoras(PERFIL.lembrete2_h??5)}</select></div>
+    </div>
     <button class="btn btn-ghost btn-sm" onclick="carregarBot()">Atualizar situação</button>`;
+}
+const opcoesHoras=v=>[[0,'Desligado'],[1,'1h antes'],[2,'2h antes'],[3,'3h antes'],[5,'5h antes'],[8,'8h antes'],[12,'12h antes'],[24,'24h antes (1 dia)'],[48,'48h antes (2 dias)']]
+  .map(([h,l])=>`<option value="${h}" ${Number(v)===h?'selected':''}>${l}</option>`).join('');
+async function salvarLembretes(campo,v){
+  const {error}=await sb.from('perfil').update({[campo]:Number(v)}).eq('owner_id',USER.id);
+  if(error){toast('Erro: '+error.message);return}
+  PERFIL[campo]=Number(v); toast('Lembrete salvo'); renderLembretesCard();
 }
 async function ligarBot(v){
   const {error}=await sb.from('perfil').update({whatsapp_auto:v}).eq('owner_id',USER.id);
@@ -2947,6 +2960,14 @@ function resumoLembretes(){
 }
 function renderLembretesCard(){
   const l=paraLembrar(), faltam=l.filter(a=>!a.lembreteEm&&a.phone).length;
+  // com o robô ligado, os lembretes saem sozinhos — o botão fica só como opção manual
+  if(PERFIL.whatsapp_auto){
+    const t=[PERFIL.lembrete1_h??24,PERFIL.lembrete2_h??5].filter(h=>h>0).sort((a,b)=>b-a).map(h=>h+'h');
+    document.getElementById('lembretesCard').innerHTML=`
+      <div class="toggle-sub" style="font-size:13.5px;padding:4px 0 12px">🤖 <b>O robô envia sozinho</b>${t.length?` ${t.join(' e ')} antes de cada horário confirmado`:' — lembretes desligados em Ajustes → Robô'} (nunca entre 21h e 7h). ${l.length?`Amanhã: ${l.length} cliente${l.length>1?'s':''}.`:'Ninguém marcado para amanhã.'}</div>
+      <button class="btn btn-ghost btn-sm" onclick="abrirLembretesDia()">Mandar lembrete manual</button>`;
+    return;
+  }
   document.getElementById('lembretesCard').innerHTML=`
     <div class="toggle-sub" style="font-size:13.5px;padding:4px 0 12px">${l.length?`${l.length} cliente${l.length>1?'s':''} amanhã${faltam?` · ${faltam} sem lembrete`:' · todos lembrados'}.`:'Ninguém marcado para amanhã.'} Cada lembrete abre o WhatsApp com a mensagem pronta.</div>
     <button class="btn btn-primary btn-sm" onclick="abrirLembretesDia()">Abrir lembretes de amanhã</button>`;
