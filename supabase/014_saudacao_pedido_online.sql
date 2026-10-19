@@ -1,0 +1,2 @@
+-- Saudação automática (Bom dia / Boa tarde / Boa noite) no aviso de pedido recebido; mesma função da 013 + {saudacao}
+-- (ver migração aplicada 014_saudacao_pedido_online no Supabase)

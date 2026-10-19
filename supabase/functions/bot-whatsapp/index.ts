@@ -13,10 +13,12 @@ const sha256 = async (s: string) =>
     .map((b) => b.toString(16).padStart(2, "0")).join("");
 const SITE = "https://bellisa.vercel.app/";
 const PADRAO: Record<string, string> = {
-  lembrete24: "Oi {nome}! Passando para lembrar do seu horário de {servico} amanhã, {dia} às {hora} 💅 Qualquer imprevisto é só me avisar por aqui.",
-  lembrete5: "Oi {nome}! Seu horário de {servico} é hoje às {hora} 💖 Te espero!",
-  auto_resposta: "Oi! Aqui é do {studio} 💅 Já vi sua mensagem e logo te respondo. Se quiser agendar agora, escolha o dia e o horário por aqui: {link}",
+  lembrete24: "{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} amanhã, {dia} às {hora} 💅 Qualquer imprevisto é só me avisar por aqui.",
+  lembrete5: "{saudacao}, {nome}! Seu horário de {servico} é hoje às {hora} 💖 Te espero!",
+  auto_resposta: "{saudacao}! Aqui é do {studio} 💅 Já vi sua mensagem e logo te respondo. Se quiser agendar agora, escolha o dia e o horário por aqui: {link}",
 };
+// Bom dia (5h–12h) · Boa tarde (12h–18h) · Boa noite (18h–5h), horário de Brasília
+const saudacao = () => { const h = Number(new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }).format(new Date())) % 24; return h >= 5 && h < 12 ? "Bom dia" : h >= 12 && h < 18 ? "Boa tarde" : "Boa noite"; };
 const fmt = (d: Date, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", ...o }).format(d);
 
 Deno.serve(async (req) => {
@@ -33,7 +35,7 @@ Deno.serve(async (req) => {
   const textos = (perfil?.modelos?.textos || {}) as Record<string, string>;
   const link = perfil?.agendamento_online && perfil?.slug ? SITE + perfil.slug : "";
   const preencher = (t: string, v: Record<string, string>) =>
-    t.replace(/\{(\w+)\}/g, (m, k) => v[k] ?? ({ studio: perfil?.nome || "studio", link } as Record<string, string>)[k] ?? m)
+    t.replace(/\{(\w+)\}/g, (m, k) => v[k] ?? ({ studio: perfil?.nome || "studio", link, saudacao: saudacao() } as Record<string, string>)[k] ?? m)
       .replace(/\s+([.!?,])/g, "$1").replace(/ {2,}/g, " ").trim();
 
   if (corpo.acao === "status") {
@@ -42,7 +44,7 @@ Deno.serve(async (req) => {
     return json(200, { ok: true });
   }
   if (corpo.acao === "config") {
-    return json(200, { ligado: !!perfil?.whatsapp_auto, auto_resposta: preencher(textos.auto_resposta || PADRAO.auto_resposta, {}) });
+    return json(200, { ligado: !!perfil?.whatsapp_auto, auto_resposta: preencher(textos.auto_resposta || PADRAO.auto_resposta, { saudacao: "{saudacao}" }) }); // o robô põe a saudação na hora de enviar
   }
   if (corpo.acao === "pendentes") {
     if (perfil?.whatsapp_auto) await gerarLembretes();

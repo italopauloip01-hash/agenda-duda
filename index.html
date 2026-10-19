@@ -2703,49 +2703,49 @@ async function copiarLink(){
 // As de "uso" são chamadas pelos botões do app (lembrete, cobrança…).
 const MSGS_PADRAO=[
   {id:'lembrete',titulo:'Lembrete do horário',uso:'Botão Lembrete e Lembretes de amanhã',
-    texto:'Oi {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora}. Posso confirmar? 💅'},
+    texto:'{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora}. Posso confirmar? 💅'},
   {id:'confirmacao',titulo:'Confirmação de agendamento',uso:'Aviso ao marcar um horário',
-    texto:'Oi {nome}! Seu horário de {servico} está confirmado para {dia} às {hora}. Te espero! 💖'},
+    texto:'{saudacao}, {nome}! Seu horário de {servico} está confirmado para {dia} às {hora}. Te espero! 💖'},
   {id:'remarcado',titulo:'Horário remarcado',uso:'Aviso ao remarcar',
-    texto:'Oi {nome}! Seu horário de {servico} foi remarcado para {dia} às {hora}. Qualquer coisa é só me chamar 💖'},
+    texto:'{saudacao}, {nome}! Seu horário de {servico} foi remarcado para {dia} às {hora}. Qualquer coisa é só me chamar 💖'},
   {id:'lembrete24',titulo:'Lembrete 24h antes (robô)',uso:'Robô: 24 horas antes do horário',
-    texto:'Oi {nome}! Passando para lembrar do seu horário de {servico} amanhã, {dia} às {hora} 💅 Qualquer imprevisto é só me avisar por aqui.'},
+    texto:'{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} amanhã, {dia} às {hora} 💅 Qualquer imprevisto é só me avisar por aqui.'},
   {id:'lembrete5',titulo:'Lembrete 5h antes (robô)',uso:'Robô: 5 horas antes do horário',
-    texto:'Oi {nome}! Seu horário de {servico} é hoje às {hora} 💖 Te espero!'},
+    texto:'{saudacao}, {nome}! Seu horário de {servico} é hoje às {hora} 💖 Te espero!'},
   {id:'pedido_recebido',titulo:'Pedido recebido pelo link (robô)',uso:'Robô: quando a cliente agenda pelo link',
-    texto:'Oi {nome}! Recebemos seu pedido de {servico} para {dia} às {hora} 💖 Assim que for confirmado eu te aviso por aqui.'},
+    texto:'{saudacao}, {nome}! Recebemos seu pedido de {servico} para {dia} às {hora} 💖 Assim que for confirmado eu te aviso por aqui.'},
   {id:'auto_resposta',titulo:'Resposta automática (robô)',uso:'Robô: quando alguém chama no WhatsApp (1x por conversa)',
-    texto:'Oi! Aqui é do {studio} 💅 Já vi sua mensagem e logo te respondo. Se quiser agendar agora, escolha o dia e o horário por aqui: {link}'},
+    texto:'{saudacao}! Aqui é do {studio} 💅 Já vi sua mensagem e logo te respondo. Se quiser agendar agora, escolha o dia e o horário por aqui: {link}'},
   {id:'recusado',titulo:'Pedido recusado',uso:'Aviso ao recusar um pedido do link',
-    texto:'Oi {nome}! Infelizmente não consigo te atender {dia} às {hora} 😔 Pode escolher outro horário por aqui: {link}'},
+    texto:'{saudacao}, {nome}! Infelizmente não consigo te atender {dia} às {hora} 😔 Pode escolher outro horário por aqui: {link}'},
   {id:'cancelamento',titulo:'Horário cancelado',uso:'Aviso ao cancelar',
-    texto:'Oi {nome}, seu horário de {servico} de {dia} às {hora} foi cancelado. Quer marcar outro dia? {link}'},
+    texto:'{saudacao}, {nome}, seu horário de {servico} de {dia} às {hora} foi cancelado. Quer marcar outro dia? {link}'},
   {id:'boas_vindas',titulo:'Boas-vindas (cliente nova)',
-    texto:'Oi {nome}, seja muito bem-vinda! 💕 Qualquer dúvida sobre o atendimento é só me chamar por aqui. Para agendar online: {link}'},
+    texto:'{saudacao}, {nome}, seja muito bem-vinda! 💕 Qualquer dúvida sobre o atendimento é só me chamar por aqui. Para agendar online: {link}'},
   {id:'remarcar',titulo:'Remarcação',
-    texto:'Oi {nome}! Precisei ajustar a agenda — podemos remarcar seu {servico} de {dia} às {hora}? Me diz o melhor horário para você 🙏'},
+    texto:'{saudacao}, {nome}! Precisei ajustar a agenda — podemos remarcar seu {servico} de {dia} às {hora}? Me diz o melhor horário para você 🙏'},
   {id:'atraso',titulo:'Aviso de atraso',
-    texto:'Oi {nome}! Estou com um pequeno atraso, em uns 10 minutinhos te atendo. Obrigada pela paciência 💕'},
+    texto:'{saudacao}, {nome}! Estou com um pequeno atraso, em uns 10 minutinhos te atendo. Obrigada pela paciência 💕'},
   {id:'falta',titulo:'Faltou ao horário',
-    texto:'Oi {nome}, sentimos sua falta hoje no horário de {servico}. Aconteceu alguma coisa? Quer remarcar? {link}'},
+    texto:'{saudacao}, {nome}, sentimos sua falta hoje no horário de {servico}. Aconteceu alguma coisa? Quer remarcar? {link}'},
   {id:'cuidados_unhas',titulo:'Cuidados pós-unhas',
-    texto:'Oi {nome}! Para seu {servico} durar mais: evite água quente nas primeiras horas, use luvas para limpeza e passe óleo de cutícula todo dia 💅'},
+    texto:'{saudacao}, {nome}! Para seu {servico} durar mais: evite água quente nas primeiras horas, use luvas para limpeza e passe óleo de cutícula todo dia 💅'},
   {id:'cuidados_pes',titulo:'Cuidados pós-podologia',
-    texto:'Oi {nome}! Depois da podologia: mantenha os pés secos, hidrate todos os dias (menos entre os dedos) e evite sapatos apertados nas próximas 48h 🦶'},
+    texto:'{saudacao}, {nome}! Depois da podologia: mantenha os pés secos, hidrate todos os dias (menos entre os dedos) e evite sapatos apertados nas próximas 48h 🦶'},
   {id:'avaliacao',titulo:'Pedido de avaliação',uso:'Botão Pedir avaliação',
-    texto:'Oi {nome}! Obrigada pela visita 💖 Se puder, me conta de 1 a 5 o que achou do atendimento?'},
+    texto:'{saudacao}, {nome}! Obrigada pela visita 💖 Se puder, me conta de 1 a 5 o que achou do atendimento?'},
   {id:'cobranca',titulo:'Cobrança',uso:'Botão Cobrar pelo WhatsApp',
-    texto:'Oi {nome}! Tudo bem? Passando para lembrar do valor de {valor} do {servico} do dia {data}. Pode ser por Pix 😊'},
+    texto:'{saudacao}, {nome}! Tudo bem? Passando para lembrar do valor de {valor} do {servico} do dia {data}. Pode ser por Pix 😊'},
   {id:'saudade',titulo:'Faz tempo que não vem',
-    texto:'Oi {nome}, que saudade! 💕 Já faz um tempinho desde o seu último horário. Que tal agendar? {link}'},
+    texto:'{saudacao}, {nome}, que saudade! 💕 Já faz um tempinho desde o seu último horário. Que tal agendar? {link}'},
   {id:'aniversario',titulo:'Aniversário',uso:'Botão Parabéns',
     texto:'Feliz aniversário, {nome}! 🎂🎉 Um beijo de {studio} ✨'},
   {id:'promocao',titulo:'Promoção',
-    texto:'Oi {nome}! Essa semana tem condição especial em {servico}. Garanta seu horário: {link} ✨'},
+    texto:'{saudacao}, {nome}! Essa semana tem condição especial em {servico}. Garanta seu horário: {link} ✨'},
   {id:'link',titulo:'Link para agendar',
-    texto:'Oi {nome}! Para agendar é só escolher o dia e o horário por aqui: {link} 💅'},
+    texto:'{saudacao}, {nome}! Para agendar é só escolher o dia e o horário por aqui: {link} 💅'},
 ];
-const VARIAVEIS=[['{nome}','nome da cliente'],['{servico}','serviço'],['{dia}','dia'],['{hora}','hora'],['{data}','data'],['{valor}','valor'],['{link}','link de agendamento'],['{studio}','nome do studio']];
+const VARIAVEIS=[['{saudacao}','bom dia / boa tarde / boa noite'],['{nome}','nome da cliente'],['{servico}','serviço'],['{dia}','dia'],['{hora}','hora'],['{data}','data'],['{valor}','valor'],['{link}','link de agendamento'],['{studio}','nome do studio']];
 function modelosCfg(){
   const m=PERFIL.modelos||{};
   // formato antigo: {lembrete:'...', cobranca:'...'}
@@ -2763,8 +2763,10 @@ function modelo(tipo,vars){
   const m=todasMensagens().find(x=>x.id===tipo)||MSGS_PADRAO.find(x=>x.id===tipo);
   return preencher(m.texto,vars);
 }
+// Bom dia (5h–12h) · Boa tarde (12h–18h) · Boa noite (18h–5h), no horário de Brasília
+function saudacao(d=new Date()){const h=Number(new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',hour12:false}).format(d))%24;return h>=5&&h<12?'Bom dia':h>=12&&h<18?'Boa tarde':'Boa noite'}
 function preencher(texto,vars){
-  const base={studio:PERFIL.nome||'Duda',link:PERFIL.agendamento_online&&PERFIL.slug?linkAgendamento():''};
+  const base={studio:PERFIL.nome||'Duda',link:PERFIL.agendamento_online&&PERFIL.slug?linkAgendamento():'',saudacao:saudacao()};
   return texto.replace(/\{(\w+)\}/g,(m,k)=>(vars?.[k]??base[k]??m)).replace(/\s+([.!?,])/g,'$1').replace(/ {2,}/g,' ').trim();
 }
 function varsAgendamento(a){
