@@ -1508,7 +1508,8 @@ function relTempo(d){
   if(m<60)return Math.max(m,1)+' min';if(m<1440)return Math.round(m/60)+'h';return Math.round(m/1440)+' d';
 }
 function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
-function waLink(tel,msg){const t=normTel(tel);return t?`https://wa.me/${t}?text=${encodeURIComponent(msg||'')}`:null}
+// api.whatsapp.com em vez de wa.me: o wa.me estraga emojis em alguns Androids
+function waLink(tel,msg){const t=normTel(tel);return t?`https://api.whatsapp.com/send?phone=${t}&text=${encodeURIComponent(msg||'')}`:null}
 let toastTimer;
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3200)}
 async function q(req){

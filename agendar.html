@@ -267,7 +267,8 @@ const toMin=t=>{const [h,m]=String(t).split(':').map(Number);return h*60+m};
 const hhmm=m=>`${pad(Math.floor(m/60))}:${pad(m%60)}`;
 const reais=v=>'R$ '+Number(v).toFixed(2).replace('.',',').replace(',00','');
 const foto=c=>`${SUPABASE_URL}/storage/v1/object/public/portfolio/${c.split('/').map(encodeURIComponent).join('/')}`;
-const telLink=(t,msg)=>t?`https://wa.me/${String(t).replace(/\D/g,'')}${msg?'?text='+encodeURIComponent(msg):''}`:null;
+// api.whatsapp.com em vez de wa.me: o wa.me estraga emojis em alguns Androids (ex.: navegador Samsung)
+const telLink=(t,msg)=>t?`https://api.whatsapp.com/send?phone=${String(t).replace(/\D/g,'')}${msg?'&text='+encodeURIComponent(msg):''}`:null;
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 
 async function rpc(fn,args){
