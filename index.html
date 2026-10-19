@@ -1790,7 +1790,7 @@ function renderAppointments() {
     if(ATIVOS(a)) total+=a.falta;
     const dot = a.type==='esmalteria'?'var(--nail)':'var(--pod)';
     const typeB = '';
-    const stB = `<span class="badge ${STATUS_MAP[a.status].cls}">${STATUS_MAP[a.status].label}</span>`;
+    const stB = statusBadge(a);
     const [h,m] = a.time.split(':');
     const card = document.createElement('div');
     card.className = 'appt-card';
@@ -1824,6 +1824,8 @@ function renderAlerts() {
   const anivAmanha=CLIENTS.filter(x=>x.bday&&md(x.bday)===md(ymd(amanha)));
   const baixo=INVENTORY.filter(p=>p.qtd<p.min).length;
   let h='';
+  const pedidos=ALL_APPTS.filter(PEND).sort((x,y)=>x.ini-y.ini);
+  if(pedidos.length) h+=`<div class="alert alert-warn" style="cursor:pointer" onclick="openDetail(ALL_APPTS.find(x=>x.id==='${pedidos[0].id}'))"><span style="flex:1"><b>${pedidos.length} pedido${pedidos.length>1?'s':''} pelo link</b> aguardando sua confirmação — toque para ver</span></div>`;
   if(pend) h+=`<div class="alert alert-warn"><span>${pend} cliente${pend>1?'s':''} ainda não confirm${pend>1?'aram':'ou'} para amanhã.</span></div>`;
   if(anivHoje.length) h+=`<div class="alert alert-info"><span>Aniversário hoje: ${anivHoje.map(x=>esc(x.name)).join(', ')}</span></div>`;
   if(anivAmanha.length) h+=`<div class="alert alert-info"><span>Aniversário amanhã: ${anivAmanha.map(x=>esc(x.name)).join(', ')}</span></div>`;
@@ -1841,15 +1843,16 @@ function openDetail(a) {
   const gasto=ALL_APPTS.filter(x=>x.cliente_id===a.cliente_id&&x.status==='concluido').reduce((s,x)=>s+x.price,0);
   const lembrete=waLink(a.phone,modelo('lembrete',varsAgendamento(a)));
   document.getElementById('detailTitle').textContent = a.name;
-  document.getElementById('detailBody').innerHTML = `
+  document.getElementById('detailBody').innerHTML = `${PEND(a)?`<div class="alert alert-warn" style="flex-direction:column;align-items:stretch;gap:10px"><span><b>Pedido pelo link</b> — aguardando sua confirmação. Ao confirmar ou recusar, a mensagem para a cliente já vem pronta.</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn btn-primary btn-sm" onclick="mudarStatus('${a.id}','confirmado')">✓ Confirmar horário</button><button class="btn btn-danger btn-sm" onclick="if(confirm('Recusar o pedido de ${esc(a.name.split(' ')[0].replace(/'/g,''))}?'))mudarStatus('${a.id}','cancelado','recusado')">Recusar</button></div></div>`:''}
     <div class="card" style="margin-bottom:12px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px">
         <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Serviço</div><span style="font-weight:500">${esc(a.service)}</span></div>
         <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Horário</div><span style="font-weight:500">${a.time} – ${a.end}</span></div>
         <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Duração</div><span style="font-weight:500">${fmtDur(a.dur)}</span></div>
         <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Valor</div><span style="font-weight:500">${fmtR(a.price)}</span></div>
-        <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Tipo</div><span class="badge ${a.type==='esmalteria'?'badge-nail':'badge-pod'}">${a.type==='esmalteria'?'Esmalteria':'Podologia'}</span></div>
-        <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Status</div><span class="badge ${STATUS_MAP[a.status].cls}">${STATUS_MAP[a.status].label}</span></div>
+        <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Tipo</div><span class="badge" style="background:color-mix(in srgb,${corTipo(a.type)} 16%,transparent);color:${corTipo(a.type)}">${esc(nomeTipo(a.type))}</span></div>
+        <div><div style="color:var(--fg-muted);font-size:12px;margin-bottom:3px">Status</div>${statusBadge(a)}</div>
       </div>
       ${a.obs?`<div style="font-size:12px;color:var(--fg-muted);margin-top:10px">${esc(a.obs)}</div>`:''}
     </div>
@@ -1869,7 +1872,10 @@ function openDetail(a) {
     <button class="btn btn-ghost" style="margin-top:14px" onclick="closeDrawer('detailDrawer')">Fechar</button>`;
   openDrawer('detailDrawer');
 }
-async function mudarStatus(id,status){
+// pedido feito pela cliente no link e ainda não confirmado pela profissional
+const PEND=a=>a.origem==='online'&&a.status==='agendado'&&a.fim>new Date();
+const statusBadge=a=>PEND(a)?'<span class="badge badge-warn">Aguardando confirmação</span>':`<span class="badge ${STATUS_MAP[a.status].cls}">${STATUS_MAP[a.status].label}</span>`;
+async function mudarStatus(id,status,motivo){
   try{await q(sb.from('agendamentos').update({status}).eq('id',id))}catch(e){return}
   syncEmSegundoPlano(id);
   await recarregar();
@@ -1883,7 +1889,9 @@ async function mudarStatus(id,status){
   }
   closeDrawer('detailDrawer');
   toast('Status: '+STATUS_MAP[status].label);
-  if(status==='cancelado') setTimeout(()=>avisarCliente('cancelamento',id),350);
+  // avisa a cliente: confirmação, cancelamento ou recusa do pedido
+  const aviso=status==='confirmado'?'confirmacao':status==='cancelado'?(motivo==='recusado'?'recusado':'cancelamento'):null;
+  if(aviso) setTimeout(()=>avisarCliente(aviso,id),350);
 }
 
 // ── PAGAMENTOS ────────────────────────────────────────────────────
@@ -2689,6 +2697,8 @@ const MSGS_PADRAO=[
     texto:'Oi {nome}! Seu horário de {servico} está confirmado para {dia} às {hora}. Te espero! 💖'},
   {id:'remarcado',titulo:'Horário remarcado',uso:'Aviso ao remarcar',
     texto:'Oi {nome}! Seu horário de {servico} foi remarcado para {dia} às {hora}. Qualquer coisa é só me chamar 💖'},
+  {id:'recusado',titulo:'Pedido recusado',uso:'Aviso ao recusar um pedido do link',
+    texto:'Oi {nome}! Infelizmente não consigo te atender {dia} às {hora} 😔 Pode escolher outro horário por aqui: {link}'},
   {id:'cancelamento',titulo:'Horário cancelado',uso:'Aviso ao cancelar',
     texto:'Oi {nome}, seu horário de {servico} de {dia} às {hora} foi cancelado. Quer marcar outro dia? {link}'},
   {id:'boas_vindas',titulo:'Boas-vindas (cliente nova)',
@@ -2825,7 +2835,7 @@ async function restaurarOcultas(){
 // Escolher e enviar (da ficha da cliente ou do agendamento)
 let envioCtx=null;
 // Depois de marcar, remarcar ou cancelar: pergunta se quer avisar a cliente, com a mensagem pronta (editável)
-const AVISO_TITULO={confirmacao:'Horário marcado',remarcado:'Horário remarcado',cancelamento:'Horário cancelado'};
+const AVISO_TITULO={confirmacao:'Horário confirmado',remarcado:'Horário remarcado',cancelamento:'Horário cancelado',recusado:'Pedido recusado'};
 function avisarCliente(tipo,apptId){
   const a=ALL_APPTS.find(x=>x.id===apptId); if(!a) return;
   if(!a.phone){toast(`${AVISO_TITULO[tipo]} — ${a.name.split(' ')[0]} não tem WhatsApp cadastrado`);return}

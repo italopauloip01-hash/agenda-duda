@@ -573,8 +573,8 @@ function sucesso(nome){
   document.getElementById('app').innerHTML=`
     <div class="sucesso">
       <div class="sucesso-ic"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
-      <h1 class="serif surge" style="animation-delay:.15s">Horário <em>reservado!</em></h1>
-      <p class="surge" style="animation-delay:.25s">Obrigada, ${esc(nome.split(' ')[0])}! A confirmação chega pelo seu WhatsApp. 💕</p>
+      <h1 class="serif surge" style="animation-delay:.15s">Pedido <em>enviado!</em></h1>
+      <p class="surge" style="animation-delay:.25s">Obrigada, ${esc(nome.split(' ')[0])}! Seu horário já está reservado. Assim que ${esc((A.nome||'o studio').replace(/^Studio d[aeo] /i,''))} confirmar, você recebe a confirmação no seu WhatsApp. 💕</p>
     </div>
     <div class="cartao surge" style="animation-delay:.35s">
       <div><span>Serviço</span><b>${esc(escolha.svc.nome)}</b></div>
