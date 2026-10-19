@@ -1452,7 +1452,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.37'; const VERSAO_DATA='18/10/2026 23:59';
+const VERSAO_APP='3.38'; const VERSAO_DATA='19/10/2026 00:06';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -1692,7 +1692,7 @@ async function carregarAgendamentos(){
     const i=new Date(r.inicio), f=new Date(r.fim);
     const pagos=(r.pagamentos||[]).map(p=>({id:p.id,valor:Number(p.valor),forma:p.forma,em:new Date(p.pago_em)})).sort((a,b)=>a.em-b.em);
     const pago=pagos.reduce((s,p)=>s+p.valor,0), price=Number(r.valor);
-    return {id:r.id,cliente_id:r.cliente_id,servico_id:r.servico_id,servicosIds:Array.isArray(r.servicos)?r.servicos.map(x=>x.id):(r.servico_id?[r.servico_id]:[]),ini:i,fim:f,time:hhmm(i),end:hhmm(f),
+    return {id:r.id,cliente_id:r.cliente_id,servico_id:r.servico_id,avaliacaoToken:r.avaliacao_token,servicosIds:Array.isArray(r.servicos)?r.servicos.map(x=>x.id):(r.servico_id?[r.servico_id]:[]),ini:i,fim:f,time:hhmm(i),end:hhmm(f),
       name:r.clientes?.nome||'—',phone:r.clientes?.telefone||'',color:r.clientes?.cor||'#C2637A',
       service:r.servico_nome,type:r.tipo,status:r.status,price,
       dur:Math.round((f-i)/6e4),obs:r.observacoes,local:r.local,
@@ -1952,7 +1952,9 @@ function pagamentoHTML(a){
   const pct=a.price?Math.min(100,Math.round(a.pago/a.price*100)):100;
   const linha=(rot,val,cor)=>`<div style="display:flex;justify-content:space-between;font-size:14px;padding:3px 0"><span style="color:var(--fg-muted)">${rot}</span><span style="font-weight:500;font-variant-numeric:tabular-nums${cor?';color:'+cor:''}">${val}</span></div>`;
   const cobrar=a.falta>0&&EM_ABERTO(a)?waLink(a.phone,modelo('cobranca',varsAgendamento(a))):null;
-  const avaliar=a.status==='concluido'?waLink(a.phone,modelo('avaliacao',varsAgendamento(a))):null;
+  // pedido de avaliação com o link (se o texto editado não tiver o link, ele vai no fim)
+  const txtAval=a.status==='concluido'?((t,l)=>l&&!t.includes(l)?t+' '+l:t)(modelo('avaliacao',varsAgendamento(a)),varsAgendamento(a).link_avaliacao):'';
+  const avaliar=a.status==='concluido'?waLink(a.phone,txtAval):null;
   return `
     <div style="font-size:13px;color:var(--fg-muted);font-weight:500;margin-bottom:8px">Pagamento</div>
     <div class="card" style="margin-bottom:12px">
@@ -1973,7 +1975,7 @@ function pagamentoHTML(a){
         <button class="btn btn-primary btn-sm" onclick="registrarPagamento('${a.id}')">Registrar pagamento</button>
         <div class="form-group" style="margin:12px 0 0"><label class="form-label">Combinado para pagar o restante em</label><input class="form-input" type="date" value="${a.pagarAte?ymd(a.pagarAte):''}" onchange="salvarPagarAte('${a.id}',this.value)"></div>
         ${cobrar?`<a class="btn btn-ghost btn-sm" style="margin-top:10px" href="${cobrar}" target="_blank" rel="noopener">Cobrar pelo WhatsApp</a>`:''}`:''}
-      ${avaliar?`<a class="btn btn-ghost btn-sm" style="margin-top:10px" href="${avaliar}" target="_blank" rel="noopener">Pedir avaliação</a>`:''}
+      ${avaliar?`<a class="btn btn-ghost btn-sm" style="margin-top:10px" href="${avaliar}" target="_blank" rel="noopener" onclick="sb.from('agendamentos').update({avaliacao_pedida_em:new Date().toISOString()}).eq('id','${a.id}').then(()=>{})">Pedir avaliação</a>`:''}
     </div>`;
 }
 async function reabrirDetalhe(id){
@@ -2551,21 +2553,25 @@ function renderAvaliacoes() {
   document.getElementById('avTotal').textContent=AVALIACOES.length;
   document.getElementById('avMedia').textContent=AVALIACOES.length?(AVALIACOES.reduce((s,a)=>s+a.nota,0)/AVALIACOES.length).toFixed(1)+' ⭐':'—';
   document.getElementById('avPendAlert').innerHTML=pend?`<div class="alert alert-warn"><span>${pend} avaliaç${pend>1?'ões':'ão'} aguardando aprovação</span></div>`:'';
-  if(!AVALIACOES.length) el.innerHTML='<div class="empty-state">Nenhuma avaliação ainda. Elas chegam pelo robô do WhatsApp.</div>';
+  if(!AVALIACOES.length) el.innerHTML='<div class="empty-state">Nenhuma avaliação ainda. Com o robô ligado, a cliente recebe o link para avaliar 1h depois de você marcar o atendimento como Concluído.</div>';
   AVALIACOES.forEach(a => {
     const d = document.createElement('div');
     d.className = 'card'; d.style.marginBottom='9px';
     d.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span style="font-weight:600;font-size:14px">${esc(a.name)}</span>
-        ${a.pendente?'<span class="badge badge-warn">Aguardando</span>':'<span class="badge badge-ok">Publicada</span>'}
+        ${a.pendente?'<span class="badge badge-warn">Só você vê</span>':'<span class="badge badge-ok">Publicada</span>'}
       </div>
       <div class="stars">${'★'.repeat(a.nota)}<span style="color:var(--border-strong)">${'★'.repeat(5-a.nota)}</span></div>
       ${a.comentario?`<div style="font-size:13px;color:var(--fg-muted);margin-top:7px;line-height:1.5">"${esc(a.comentario)}"</div>`:''}
       <div style="font-size:11px;color:var(--fg-soft);margin-top:6px">${esc(a.data)}</div>
-      ${a.pendente?`<div style="display:flex;gap:7px;margin-top:10px"><button class="btn btn-ok btn-sm" onclick="aprovarAvaliacao('${a.id}',true)">Aprovar</button><button class="btn btn-danger btn-sm" onclick="aprovarAvaliacao('${a.id}',false)">Recusar</button></div>`:''}`;
+      ${a.pendente?`<div style="display:flex;gap:7px;margin-top:10px"><button class="btn btn-ok btn-sm" onclick="aprovarAvaliacao('${a.id}',true)">Mostrar no site</button><button class="btn btn-danger btn-sm" onclick="aprovarAvaliacao('${a.id}',false)">Apagar</button></div>`:`<button class="btn btn-ghost btn-sm" style="margin-top:10px;width:auto;padding:6px 12px" onclick="tirarDoSite('${a.id}')">Tirar do site</button>`}`;
     el.appendChild(d);
   });
+}
+async function tirarDoSite(id){
+  try{await q(sb.from('avaliacoes').update({publicada:false}).eq('id',id))}catch(e){return}
+  toast('Avaliação tirada do site — continua aqui só para você'); await recarregar();
 }
 async function aprovarAvaliacao(id,ok){
   try{
@@ -2813,8 +2819,8 @@ const MSGS_PADRAO=[
     texto:'{saudacao}, {nome}! Para seu {servico} durar mais: evite água quente nas primeiras horas, use luvas para limpeza e passe óleo de cutícula todo dia 💅'},
   {id:'cuidados_pes',titulo:'Cuidados pós-podologia',
     texto:'{saudacao}, {nome}! Depois da podologia: mantenha os pés secos, hidrate todos os dias (menos entre os dedos) e evite sapatos apertados nas próximas 48h 🦶'},
-  {id:'avaliacao',titulo:'Pedido de avaliação',uso:'Botão Pedir avaliação',
-    texto:'{saudacao}, {nome}! Obrigada pela visita 💖 Se puder, me conta de 1 a 5 o que achou do atendimento?'},
+  {id:'avaliacao',titulo:'Pedido de avaliação',uso:'Robô: 1h depois de concluir · botão Pedir avaliação',
+    texto:'{saudacao}, {nome}! Obrigada pela visita 💖 Pode me contar como foi seu {servico}? Leva só 10 segundinhos: {link_avaliacao}'},
   {id:'cobranca',titulo:'Cobrança',uso:'Botão Cobrar pelo WhatsApp',
     texto:'{saudacao}, {nome}! Tudo bem? Passando para lembrar do valor de {valor} do {servico} do dia {data}. Pode ser por Pix 😊'},
   {id:'saudade',titulo:'Faz tempo que não vem',
@@ -2826,7 +2832,7 @@ const MSGS_PADRAO=[
   {id:'link',titulo:'Link para agendar',
     texto:'{saudacao}, {nome}! Para agendar é só escolher o dia e o horário por aqui: {link} 💅'},
 ];
-const VARIAVEIS=[['{saudacao}','bom dia / boa tarde / boa noite'],['{nome}','nome da cliente'],['{servico}','serviço'],['{dia}','dia'],['{hora}','hora'],['{data}','data'],['{valor}','valor'],['{link}','link de agendamento'],['{studio}','nome do studio']];
+const VARIAVEIS=[['{saudacao}','bom dia / boa tarde / boa noite'],['{nome}','nome da cliente'],['{servico}','serviço'],['{dia}','dia'],['{hora}','hora'],['{data}','data'],['{valor}','valor'],['{link}','link de agendamento'],['{link_avaliacao}','link para a cliente avaliar'],['{studio}','nome do studio']];
 function modelosCfg(){
   const m=PERFIL.modelos||{};
   // formato antigo: {lembrete:'...', cobranca:'...'}
@@ -2853,7 +2859,8 @@ function preencher(texto,vars){
 function varsAgendamento(a){
   const dia=labelDia(new Date(a.ini.getFullYear(),a.ini.getMonth(),a.ini.getDate())).toLowerCase();
   return {nome:a.name.split(' ')[0],servico:a.service,dia:/^(hoje|amanhã|ontem)$/.test(dia)?dia:'dia '+a.ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}),
-    hora:a.time,data:a.ini.toLocaleDateString('pt-BR'),valor:fmtR(a.falta||a.price)};
+    hora:a.time,data:a.ini.toLocaleDateString('pt-BR'),valor:fmtR(a.falta||a.price),
+    link_avaliacao:a.avaliacaoToken?LINK_CLIENTES+'avaliar.html?t='+a.avaliacaoToken:''};
 }
 async function gravarModelos(c){
   const {error}=await sb.from('perfil').upsert({modelos:c,atualizado_em:new Date().toISOString()},{onConflict:'owner_id'});

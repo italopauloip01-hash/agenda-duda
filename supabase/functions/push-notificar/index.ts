@@ -21,7 +21,8 @@ Deno.serve(async (req) => {
   if (!n) return json(404, { erro: "notificacao" });
   const { data: subs } = await admin.from("push_inscricoes").select("id, endpoint, p256dh, auth").eq("owner_id", n.owner_id);
 
-  const payload = JSON.stringify({ titulo: "Novo agendamento", texto: n.texto, agendamento_id: n.agendamento_id, tag: "agend-" + (n.agendamento_id || notificacao_id) });
+  const titulo = n.icone === "⭐" ? "Nova avaliação" : "Novo agendamento";
+  const payload = JSON.stringify({ titulo, texto: n.texto, agendamento_id: n.agendamento_id, tag: "agend-" + (n.agendamento_id || notificacao_id) });
   let ok = 0;
   for (const s of subs || []) {
     try {

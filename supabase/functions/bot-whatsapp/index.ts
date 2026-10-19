@@ -15,6 +15,7 @@ const SITE = "https://bellisa.vercel.app/";
 const PADRAO: Record<string, string> = {
   lembrete24: "{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora} 💅 Qualquer imprevisto é só me avisar por aqui.",
   lembrete5: "{saudacao}, {nome}! Seu horário de {servico} é {dia} às {hora} 💖 Te espero!",
+  avaliacao: "{saudacao}, {nome}! Obrigada pela visita 💖 Pode me contar como foi seu {servico}? Leva só 10 segundinhos: {link_avaliacao}",
   auto_resposta: "{saudacao}! Aqui é do {studio} 💅 Já vi sua mensagem e logo te respondo. Se quiser agendar agora, escolha o dia e o horário por aqui: {link}",
 };
 // Bom dia (5h–12h) · Boa tarde (12h–18h) · Boa noite (18h–5h), horário de Brasília
@@ -54,7 +55,7 @@ Deno.serve(async (req) => {
     return json(200, { ligado: !!perfil?.whatsapp_auto, auto_resposta: preencher(textos.auto_resposta || PADRAO.auto_resposta, { saudacao: "{saudacao}" }) }); // o robô põe a saudação na hora de enviar
   }
   if (corpo.acao === "pendentes") {
-    if (perfil?.whatsapp_auto) await gerarLembretes();
+    if (perfil?.whatsapp_auto) { await gerarLembretes(); await pedirAvaliacoes(); }
     // devolve à fila o que ficou "enviando" por mais de 5 min (robô caiu no meio)
     await admin.from("fila_whatsapp").update({ status: "pendente" }).eq("owner_id", owner).eq("status", "enviando")
       .lt("criado_em", new Date(Date.now() - 5 * 60e3).toISOString());
@@ -128,6 +129,28 @@ Deno.serve(async (req) => {
       if (!marcou?.length) continue;
       await admin.from("fila_whatsapp").insert({ owner_id: owner, telefone: cli.telefone,
         texto: preencher(textos[tipo] || PADRAO[tipo], v), tipo, agendamento_id: a.id });
+    }
+  }
+  // Pedido de avaliação: 1h depois do fim de um atendimento CONCLUÍDO (até 3 dias depois), uma vez só.
+  async function pedirAvaliacoes() {
+    const agora = Date.now();
+    const horaLocal = Number(fmt(new Date(), { hour: "2-digit", hour12: false })) % 24;
+    if (horaLocal >= 21 || horaLocal < 8) return;
+    const { data: ags } = await admin.from("agendamentos")
+      .select("id, fim, servico_nome, avaliacao_token, clientes(nome, telefone)")
+      .eq("owner_id", owner).eq("status", "concluido").is("avaliacao_pedida_em", null)
+      .lt("fim", new Date(agora - 60 * 60e3).toISOString()).gt("fim", new Date(agora - 3 * 864e5).toISOString()).limit(20);
+    for (const a of ags || []) {
+      // deno-lint-ignore no-explicit-any
+      const cli = (a as any).clientes; if (!cli?.telefone) continue;
+      const { count } = await admin.from("avaliacoes").select("id", { count: "exact", head: true }).eq("agendamento_id", a.id);
+      const { data: marcou } = await admin.from("agendamentos").update({ avaliacao_pedida_em: new Date().toISOString() })
+        .eq("id", a.id).is("avaliacao_pedida_em", null).select("id");
+      if (!marcou?.length || (count || 0) > 0) continue;
+      await admin.from("fila_whatsapp").insert({ owner_id: owner, telefone: cli.telefone, tipo: "avaliacao", agendamento_id: a.id,
+        // se o texto editado não tiver o link, põe no fim (sem link a cliente não tem onde avaliar)
+        texto: preencher(((t) => t.includes("{link_avaliacao}") ? t : t + " {link_avaliacao}")(textos.avaliacao || PADRAO.avaliacao), { nome: String(cli.nome || "").split(" ")[0], servico: a.servico_nome,
+          link_avaliacao: SITE + "avaliar.html?t=" + a.avaliacao_token }) });
     }
   }
 });

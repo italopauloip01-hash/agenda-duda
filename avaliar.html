@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Avalie seu atendimento</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#FBEFF2">
+<link rel="icon" href="icons/bellisa.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
+<style>
+:root{--bg:#FBEFF2;--card:#fff;--fg:#3B2530;--muted:#86646F;--rose:#B85E78;--rose-2:#A44E68;--line:#F0DCE2;--ouro:#E8B04B}
+*{box-sizing:border-box;margin:0}
+body{font-family:'DM Sans',system-ui,sans-serif;background:linear-gradient(180deg,#FDF4F6,#F4DCE3) fixed;color:var(--fg);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.cx{width:100%;max-width:440px;background:var(--card);border-radius:28px;padding:32px 24px 26px;box-shadow:0 20px 60px -30px rgba(120,50,75,.45);text-align:center}
+.capa{width:84px;height:84px;border-radius:24px;margin:0 auto 16px;background:var(--rose) center/cover no-repeat;display:flex;align-items:center;justify-content:center}
+h1{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:27px;line-height:1.2;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:15px;margin-top:8px;line-height:1.45}
+.estrelas{display:flex;justify-content:center;gap:8px;margin:26px 0 8px}
+.estrelas button{border:none;background:none;font-size:44px;line-height:1;color:#E9DCE0;cursor:pointer;transition:transform .15s,color .15s;padding:0}
+.estrelas button.on{color:var(--ouro)}
+.estrelas button:active{transform:scale(1.2)}
+.rotulo{min-height:22px;font-weight:600;color:var(--rose-2);font-size:15px}
+textarea{width:100%;margin-top:18px;border:1.5px solid var(--line);border-radius:16px;padding:14px;font:inherit;font-size:15px;resize:none;color:var(--fg);outline:none}
+textarea:focus{border-color:var(--rose)}
+.btn{display:block;width:100%;margin-top:16px;border:none;border-radius:999px;padding:16px;font:inherit;font-weight:700;font-size:16px;color:#fff;background:linear-gradient(135deg,#C86B87,#A44E68);cursor:pointer;text-decoration:none}
+.btn:disabled{opacity:.5}
+.btn.claro{background:#FBEFF2;color:var(--rose-2)}
+.erro{color:#B4232A;font-size:14px;margin-top:12px;min-height:18px}
+.rodape{margin-top:22px;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--rose);border-radius:50%;animation:g .8s linear infinite;margin:40px auto}
+@keyframes g{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<main class="cx" id="app"><div class="spin"></div></main>
+<script>
+// Página de avaliação: a cliente recebe o link pelo WhatsApp depois do atendimento
+const SUPABASE_URL='https://rsrpfwtrkpclscpccaok.supabase.co', SUPABASE_KEY='sb_publishable_0FRlkE_cdq_RKIpX6pSjGA_boyTYEX0';
+const TOKEN=new URLSearchParams(location.search).get('t')||'';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const app=document.getElementById('app');
+const ROTULOS=['','Não gostei','Poderia ser melhor','Foi bom','Gostei muito!','Amei! 💖'];
+let D=null, nota=0;
+async function rpc(fn,args){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`,{method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify(args)});
+  const j=await r.json().catch(()=>null);
+  if(!r.ok){const e=new Error(j?.message||'erro');e.codigo=j?.message;throw e}
+  return j;
+}
+const rodape='<div class="rodape"><img src="icons/bellisa.svg" width="16" height="16" alt="" style="border-radius:5px">Agendamento por Bellisa</div>';
+const capa=()=>D.foto_capa?`<div class="capa" style="background-image:url('${SUPABASE_URL}/storage/v1/object/public/portfolio/${D.foto_capa.split('/').map(encodeURIComponent).join('/')}')"></div>`:'<div class="capa"><img src="icons/bellisa.svg" width="84" height="84" alt=""></div>';
+const linkAgendar=()=>D.slug?`<a class="btn claro" href="./${encodeURIComponent(D.slug)}">Agendar meu próximo horário</a>`:'';
+function tela(){
+  app.innerHTML=`${capa()}<h1>Como foi seu atendimento, ${esc(D.nome)}?</h1>
+    <p class="sub">${esc(D.servico)} no ${esc(D.studio)} · dia ${esc(D.dia)}</p>
+    <div class="estrelas" id="est">${[1,2,3,4,5].map(n=>`<button type="button" aria-label="${n} estrela${n>1?'s':''}" onclick="marcar(${n})">★</button>`).join('')}</div>
+    <div class="rotulo" id="rot">Toque nas estrelas</div>
+    <textarea id="com" rows="3" maxlength="500" placeholder="Quer contar mais? (opcional)"></textarea>
+    <button class="btn" id="env" onclick="enviar()" disabled>Enviar avaliação</button>
+    <div class="erro" id="erro"></div>${rodape}`;
+}
+function marcar(n){nota=n;document.querySelectorAll('#est button').forEach((b,i)=>b.classList.toggle('on',i<n));
+  document.getElementById('rot').textContent=ROTULOS[n];document.getElementById('env').disabled=false}
+async function enviar(){
+  const btn=document.getElementById('env');btn.disabled=true;btn.textContent='Enviando…';
+  try{
+    await rpc('avaliar',{p_token:TOKEN,p_nota:nota,p_comentario:document.getElementById('com').value.trim()||null});
+    app.innerHTML=`${capa()}<h1>Obrigada, ${esc(D.nome)}! 💖</h1><p class="sub">Sua avaliação ajuda muito o ${esc(D.studio)}.</p>${linkAgendar()}${rodape}`;
+  }catch(e){
+    if(e.codigo==='ja_avaliou'){jaFeito();return}
+    btn.disabled=false;btn.textContent='Enviar avaliação';document.getElementById('erro').textContent='Não deu certo agora. Tente de novo em instantes.';
+  }
+}
+function jaFeito(){app.innerHTML=`${capa()}<h1>Você já avaliou este atendimento 💖</h1><p class="sub">Obrigada pelo carinho!</p>${linkAgendar()}${rodape}`}
+(async()=>{
+  try{ D=TOKEN?await rpc('dados_avaliacao',{p_token:TOKEN}):null }catch(e){ D=null }
+  if(!D){app.innerHTML=`<h1>Link de avaliação inválido</h1><p class="sub">Confira se o link está completo ou peça um novo para o studio.</p>${rodape}`;return}
+  D.ja_avaliou?jaFeito():tela();
+})();
+</script>
+</body>
+</html>
