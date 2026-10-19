@@ -524,6 +524,9 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
 .mais-opcoes{margin:4px 0 16px;font-size:14px}
 .mais-opcoes summary{cursor:pointer;color:var(--accent-2);font-weight:600;padding:6px 0}
 .svc-escolhidos{display:flex;flex-wrap:wrap;gap:6px}
+.previas-fotos{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.previas-fotos:empty{display:none}
+.previas-fotos div{aspect-ratio:1;border-radius:12px;background:var(--bg-subtle) center/cover no-repeat}
 .chip-svc{display:inline-flex;align-items:center;gap:6px;padding:6px 6px 6px 12px;border-radius:999px;background:color-mix(in srgb,var(--accent) 14%,var(--bg-card));color:var(--fg);font-size:13px;font-weight:600}
 .chip-svc button{border:none;background:var(--bg-card);color:var(--fg-muted);width:22px;height:22px;border-radius:50%;font-size:11px;cursor:pointer}
 .tipo-tabs{overflow-x:auto;scrollbar-width:none}.tipo-tabs::-webkit-scrollbar{display:none}
@@ -1181,7 +1184,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
       <div id="svcFotoPrev" style="width:84px;height:84px;border-radius:18px;background:var(--bg-subtle) center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;color:var(--fg-soft);font-size:26px">📷</div>
       <div style="flex:1;display:flex;flex-direction:column;gap:6px">
         <label class="btn btn-ghost btn-sm" style="cursor:pointer">Escolher foto<input type="file" id="svcFotoArq" accept="image/*" hidden onchange="previaFotoSvc(this)"></label>
-        <button type="button" class="btn btn-ghost btn-sm" id="svcFotoTirar" onclick="tirarFotoSvc()" hidden>Tirar foto</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="svcFotoTirar" onclick="tirarFotoSvc()" hidden>Remover foto</button>
       </div>
     </div></div>
   <div class="form-group"><label class="form-label big">Como é o serviço <span style="font-weight:400;color:var(--fg-muted)">(opcional)</span></label>
@@ -1243,7 +1246,9 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
   <div class="drawer-title">Adicionar fotos</div>
   <div class="form-group"><label class="form-label">Categoria</label><select class="form-input" id="fotoCat"></select></div>
   <div class="form-group"><label class="form-label">Legenda (opcional)</label><input class="form-input" id="fotoLegenda" placeholder="Ex: francesinha com glitter"></div>
-  <div class="form-group"><label class="form-label">Fotos</label><input class="form-input" type="file" id="fotoArquivo" accept="image/*" multiple></div>
+  <div class="form-group"><label class="form-label">Fotos</label>
+    <label class="btn btn-ghost" style="cursor:pointer">📷 Escolher fotos do celular<input type="file" id="fotoArquivo" accept="image/*" multiple hidden onchange="previaFotosPortfolio(this)"></label>
+    <div id="fotoPrevias" class="previas-fotos"></div></div>
   <div class="client-sub" id="fotoStatus" style="margin-bottom:10px"></div>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="closeDrawer('fotoDrawer')">Fechar</button>
@@ -1312,8 +1317,11 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
   <div class="form-group"><label class="form-label">Apresentação</label><textarea class="form-input" id="perfBio" rows="2" placeholder="Aparece na página de agendamento"></textarea></div>
   <div class="form-group"><label class="form-label">Foto de capa (aparece no link de agendamento)</label>
     <div style="display:flex;gap:10px;align-items:center">
-      <div id="perfFotoPrev" style="width:56px;height:56px;border-radius:12px;background:var(--bg-subtle);background-size:cover;background-position:center;flex-shrink:0"></div>
-      <input class="form-input" type="file" id="perfFoto" accept="image/*" onchange="enviarFotoCapa(this)">
+      <div id="perfFotoPrev" style="width:84px;height:84px;border-radius:18px;background:var(--bg-subtle);background-size:cover;background-position:center;flex-shrink:0"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer">📷 Escolher foto de capa<input type="file" id="perfFoto" accept="image/*" hidden onchange="enviarFotoCapa(this)"></label>
+        <span class="pick-sub">Aparece no topo do link e na imagem de divulgação</span>
+      </div>
     </div>
   </div>
 
@@ -1452,7 +1460,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.40'; const VERSAO_DATA='19/10/2026 00:12';
+const VERSAO_APP='3.41'; const VERSAO_DATA='19/10/2026 01:43';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -3584,7 +3592,13 @@ function renderPortfolio() {
   if(!fotos.length){el.innerHTML=`<div class="card empty-state">Nenhuma foto${cat?' em '+esc(cat.name.toLowerCase()):''} ainda.<br><span style="color:var(--fg-soft)">Toque em “Adicionar fotos” para montar o portfólio.</span></div>`;return}
   el.innerHTML='<div class="gallery-grid">'+fotos.map(f=>`<div class="gallery-item" onclick="verFoto('${f.id}')"><img src="${esc(urlFoto(f.caminho))}" alt="${esc(f.legenda||'')}" loading="lazy"></div>`).join('')+'</div>';
 }
+// miniaturas das fotos escolhidas antes de enviar
+function previaFotosPortfolio(inp){
+  const box=document.getElementById('fotoPrevias'), arqs=[...inp.files];
+  box.innerHTML=arqs.slice(0,12).map(a=>`<div style="background-image:url('${URL.createObjectURL(a)}')"></div>`).join('')+(arqs.length>12?`<span class="pick-sub">+${arqs.length-12}</span>`:'');
+}
 function novaFoto(){
+  document.getElementById('fotoPrevias').innerHTML='';
   const sel=document.getElementById('fotoCat');
   sel.innerHTML=PORTFOLIO_CATS_().map(c=>`<option value="${c.id}"${c.id===portfolioFilter?' selected':''}>${c.name}</option>`).join('');
   document.getElementById('fotoArquivo').value='';
