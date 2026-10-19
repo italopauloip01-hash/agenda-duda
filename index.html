@@ -906,6 +906,8 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
   <div class="card">
     <div id="configRows3"></div>
   </div>
+  <div class="section-label">Robô do WhatsApp</div>
+  <div class="card" id="botCard"></div>
   <div class="section-label">Conta Google</div>
   <div class="card" id="googleCard"></div>
   <div class="section-label">Lembretes automáticos</div>
@@ -1713,6 +1715,7 @@ function renderTudo(){
   renderNotifs();
   renderConfig();
   renderLembretesCard();
+  carregarBot();
 
   renderGoogleCard();
   buildCalendar();
@@ -2697,6 +2700,14 @@ const MSGS_PADRAO=[
     texto:'Oi {nome}! Seu horário de {servico} está confirmado para {dia} às {hora}. Te espero! 💖'},
   {id:'remarcado',titulo:'Horário remarcado',uso:'Aviso ao remarcar',
     texto:'Oi {nome}! Seu horário de {servico} foi remarcado para {dia} às {hora}. Qualquer coisa é só me chamar 💖'},
+  {id:'lembrete24',titulo:'Lembrete 24h antes (robô)',uso:'Robô: 24 horas antes do horário',
+    texto:'Oi {nome}! Passando para lembrar do seu horário de {servico} amanhã, {dia} às {hora} 💅 Qualquer imprevisto é só me avisar por aqui.'},
+  {id:'lembrete5',titulo:'Lembrete 5h antes (robô)',uso:'Robô: 5 horas antes do horário',
+    texto:'Oi {nome}! Seu horário de {servico} é hoje às {hora} 💖 Te espero!'},
+  {id:'pedido_recebido',titulo:'Pedido recebido pelo link (robô)',uso:'Robô: quando a cliente agenda pelo link',
+    texto:'Oi {nome}! Recebemos seu pedido de {servico} para {dia} às {hora} 💖 Assim que for confirmado eu te aviso por aqui.'},
+  {id:'auto_resposta',titulo:'Resposta automática (robô)',uso:'Robô: quando alguém chama no WhatsApp (1x por conversa)',
+    texto:'Oi! Aqui é do {studio} 💅 Já vi sua mensagem e logo te respondo. Se quiser agendar agora, escolha o dia e o horário por aqui: {link}'},
   {id:'recusado',titulo:'Pedido recusado',uso:'Aviso ao recusar um pedido do link',
     texto:'Oi {nome}! Infelizmente não consigo te atender {dia} às {hora} 😔 Pode escolher outro horário por aqui: {link}'},
   {id:'cancelamento',titulo:'Horário cancelado',uso:'Aviso ao cancelar',
@@ -2836,9 +2847,42 @@ async function restaurarOcultas(){
 let envioCtx=null;
 // Depois de marcar, remarcar ou cancelar: pergunta se quer avisar a cliente, com a mensagem pronta (editável)
 const AVISO_TITULO={confirmacao:'Horário confirmado',remarcado:'Horário remarcado',cancelamento:'Horário cancelado',recusado:'Pedido recusado'};
-function avisarCliente(tipo,apptId){
+// ── Robô do WhatsApp: situação e envio automático ──────────────────
+let BOT={conectado:false,numero:null,visto:null};
+const botAtivo=()=>!!PERFIL.whatsapp_auto&&BOT.conectado&&BOT.visto&&(Date.now()-BOT.visto<3*60e3);
+async function carregarBot(){
+  const {data}=await sb.from('whatsapp_bot').select('conectado,numero,visto_em').maybeSingle();
+  BOT={conectado:!!data?.conectado,numero:data?.numero||null,visto:data?.visto_em?new Date(data.visto_em).getTime():null};
+  renderBotCard();
+}
+function renderBotCard(){
+  const el=document.getElementById('botCard'); if(!el) return;
+  const online=BOT.conectado&&BOT.visto&&(Date.now()-BOT.visto<3*60e3);
+  const visto=BOT.visto?new Date(BOT.visto).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'nunca';
+  el.innerHTML=`
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">${online?'Conectado':'Desligado'}</div>
+      <div class="toggle-sub">${online?'WhatsApp '+esc(fmtTel(BOT.numero||'')):'Visto por último: '+visto+'. O robô precisa estar rodando no computador.'}</div></div>
+      <span class="badge ${online?'badge-ok':'badge-warn'}">${online?'Online':'Offline'}</span></div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Envio automático</div>
+      <div class="toggle-sub">Confirmação, remarcação, cancelamento, lembretes 24h e 5h antes, e resposta automática (só conversas individuais, 1x por hora).</div></div>
+      <label class="toggle"><input type="checkbox" ${PERFIL.whatsapp_auto?'checked':''} onchange="ligarBot(this.checked)"><div class="toggle-track"></div></label></div>
+    <button class="btn btn-ghost btn-sm" onclick="carregarBot()">Atualizar situação</button>`;
+}
+async function ligarBot(v){
+  const {error}=await sb.from('perfil').update({whatsapp_auto:v}).eq('owner_id',USER.id);
+  if(error){toast('Erro: '+error.message);renderBotCard();return}
+  PERFIL.whatsapp_auto=v; toast(v?'Envio automático ligado':'Envio automático desligado'); renderBotCard();
+}
+async function avisarCliente(tipo,apptId){
   const a=ALL_APPTS.find(x=>x.id===apptId); if(!a) return;
   if(!a.phone){toast(`${AVISO_TITULO[tipo]} — ${a.name.split(' ')[0]} não tem WhatsApp cadastrado`);return}
+  // robô ligado: vai direto para a fila, sem precisar tocar em nada
+  await carregarBot().catch(()=>{});
+  if(botAtivo()){
+    const {error}=await sb.from('fila_whatsapp').insert({telefone:normTel(a.phone),texto:modelo(tipo,varsAgendamento(a)),tipo,agendamento_id:a.id});
+    if(!error){toast(`${AVISO_TITULO[tipo]} — o robô vai avisar ${a.name.split(' ')[0]} no WhatsApp`);return}
+    console.error(error);
+  }
   document.getElementById('avisoTitulo').textContent=`${AVISO_TITULO[tipo]} · avisar ${a.name.split(' ')[0]}?`;
   const txt=document.getElementById('avisoTexto');
   txt.value=modelo(tipo,varsAgendamento(a));
