@@ -369,8 +369,8 @@ function renderBook(){
   fotosVisiveis=A.fotos.filter(f=>filtroFoto==='todos'||f.categoria===filtroFoto);
   document.getElementById('bookArea').innerHTML=`
     ${cats.length>1?`<div class="pills"><button class="pill ${filtroFoto==='todos'?'on':''}" onclick="filtrar('todos')">Todos</button>${cats.map(c=>`<button class="pill ${filtroFoto===c?'on':''}" onclick="filtrar('${c}')">${CATS[c]||c}</button>`).join('')}</div>`:''}
-    <div class="book">${fotosVisiveis.slice(0,verTodas?60:7).map((f,i)=>`<button style="background-image:url('${foto(f.caminho)}');animation-delay:${i*45}ms" aria-label="${esc(f.legenda||CATS[f.categoria]||'Foto')}" onclick="abrirFoto(${i})"></button>`).join('')}</div>
-    ${!verTodas&&fotosVisiveis.length>7?`<div class="mais"><button class="link" onclick="verTodas=true;renderBook()">Ver todas as ${fotosVisiveis.length} fotos</button></div>`:''}`;
+    <div class="book">${fotosVisiveis.slice(0,verTodas?60:9).map((f,i)=>`<button style="background-image:url('${foto(f.caminho)}');animation-delay:${i*45}ms" aria-label="${esc(f.legenda||CATS[f.categoria]||'Foto')}" onclick="abrirFoto(${i})"></button>`).join('')}</div>
+    ${!verTodas&&fotosVisiveis.length>9?`<div class="mais"><button class="link" onclick="verTodas=true;renderBook()">Ver todas as ${fotosVisiveis.length} fotos</button></div>`:''}`;
 }
 function filtrar(c){filtroFoto=c;verTodas=false;renderBook()}
 function abrirFoto(i){fotoAtual=i;mostrarFoto();document.getElementById('lightbox').hidden=false;document.body.style.overflow='hidden'}

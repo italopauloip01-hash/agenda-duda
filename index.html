@@ -1474,7 +1474,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.43'; const VERSAO_DATA='20/10/2026 10:44';
+const VERSAO_APP='3.44'; const VERSAO_DATA='20/10/2026 10:46';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -1753,7 +1753,8 @@ async function recarregar(){
       sb.from('horarios').select('*'),
       sb.from('perfil').select('*').maybeSingle(),
     ]);
-    FOTOS=fotos||[];
+    // ordem escolhida (a 1ª é o destaque); sem ordem, as mais novas primeiro
+    FOTOS=(fotos||[]).sort((a,b)=>(a.ordem??1e9)-(b.ordem??1e9)||new Date(b.criado_em)-new Date(a.criado_em));
     PERFIL=perf||{};
     HORARIOS=[0,1,2,3,4,5,6].map(d=>{
       const h=(hors||[]).find(x=>x.dia_semana===d);
@@ -3605,7 +3606,8 @@ function renderPortfolio() {
   const cat = PORTFOLIO_CATS_().find(c=>c.id===portfolioFilter);
   const fotos = FOTOS.filter(f=>portfolioFilter==='todos'||f.categoria===portfolioFilter);
   if(!fotos.length){el.innerHTML=`<div class="card empty-state">Nenhuma foto${cat?' em '+esc(cat.name.toLowerCase()):''} ainda.<br><span style="color:var(--fg-soft)">Toque em “Adicionar fotos” para montar o portfólio.</span></div>`;return}
-  el.innerHTML='<div class="gallery-grid">'+fotos.map(f=>`<div class="gallery-item" onclick="verFoto('${f.id}')"><img src="${esc(urlFoto(f.caminho))}" alt="${esc(f.legenda||'')}" loading="lazy"></div>`).join('')+'</div>';
+  el.innerHTML='<div class="gallery-grid">'+fotos.map(f=>`<div class="gallery-item" style="position:relative" onclick="verFoto('${f.id}')"><img src="${esc(urlFoto(f.caminho))}" alt="${esc(f.legenda||'')}" loading="lazy">${f.id===FOTOS[0]?.id?'<span style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px">⭐ Destaque</span>':''}</div>`).join('')+'</div>'
+    +'<div class="pick-sub" style="margin-top:8px;text-align:center">Toque numa foto para mudar a ordem ou colocar em destaque no link.</div>';
 }
 // miniaturas das fotos escolhidas antes de enviar
 function previaFotosPortfolio(inp){
@@ -3665,12 +3667,31 @@ function verFoto(id){
     <img src="${esc(urlFoto(f.caminho))}" alt="" style="width:100%;border-radius:12px;display:block;margin-bottom:12px">
     <div style="font-weight:500">${esc(cat?.name||'')}</div>
     ${f.legenda?`<div class="client-sub" style="margin-top:2px;white-space:normal">${esc(f.legenda)}</div>`:''}
+    ${(()=>{const i=FOTOS.findIndex(x=>x.id===f.id);return `<div class="pick-sub" style="margin-top:10px">${i===0?'⭐ É a foto em destaque no link das clientes':`Posição ${i+1} de ${FOTOS.length} no book do link`}</div>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="btn btn-ghost btn-sm" ${i===0?'disabled':''} onclick="moverFoto('${f.id}',-1)">← Antes</button>
+      <button class="btn btn-ghost btn-sm" ${i===FOTOS.length-1?'disabled':''} onclick="moverFoto('${f.id}',1)">Depois →</button>
+    </div>
+    ${i?`<button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="moverFoto('${f.id}','destaque')">⭐ Colocar em destaque</button>`:''}`})()}
     <div class="btn-row" style="margin-top:14px">
       ${navigator.share?`<button class="btn btn-ghost" onclick="compartilharFoto('${f.id}')">Compartilhar</button>`:''}
       <button class="btn btn-danger" onclick="apagarFoto('${f.id}')">Apagar</button>
     </div>
     <button class="btn btn-ghost" style="margin-top:10px" onclick="closeDrawer('verFotoDrawer')">Fechar</button>`;
   openDrawer('verFotoDrawer');
+}
+// muda a ordem do book: 'destaque' leva para o 1º lugar; -1/+1 troca com a vizinha
+async function moverFoto(id,mov){
+  const lista=FOTOS.slice(), i=lista.findIndex(x=>x.id===id); if(i<0) return;
+  const [f]=lista.splice(i,1);
+  const novo=mov==='destaque'?0:Math.max(0,Math.min(lista.length,i+mov));
+  lista.splice(novo,0,f);
+  // grava a posição de todas que mudaram (numeradas de 1 em diante)
+  const mudou=lista.map((x,k)=>({x,k})).filter(({x,k})=>x.ordem!==k+1);
+  try{ await Promise.all(mudou.map(({x,k})=>q(sb.from('portfolio_fotos').update({ordem:k+1}).eq('id',x.id)))) }catch(e){return}
+  lista.forEach((x,k)=>x.ordem=k+1); FOTOS=lista;
+  toast(mov==='destaque'?'Foto em destaque no link':'Ordem atualizada');
+  renderPortfolio(); verFoto(id);
 }
 async function compartilharFoto(id){
   const f=FOTOS.find(x=>x.id===id);if(!f)return;
