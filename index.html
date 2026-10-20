@@ -878,7 +878,6 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
   <!-- Galeria / Portfólio -->
   <div id="finTabGaleria" class="fin-tab" hidden>
     <div class="pill-tabs" id="portfolioFiltros"></div>
-    </div>
     <span id="viewGrid" hidden></span><span id="viewList" hidden></span>
     <div id="galeriaGrid"></div>
     <button class="btn btn-primary" style="margin-top:12px" onclick="novaFoto()">Adicionar fotos</button>
@@ -1475,7 +1474,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.46'; const VERSAO_DATA='20/10/2026 11:20';
+const VERSAO_APP='3.47'; const VERSAO_DATA='20/10/2026 11:26';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -4063,8 +4062,8 @@ window.addEventListener('popstate',()=>{
 // ── GOOGLE: CONEXÃO ───────────────────────────────────────────────
 async function salvarConexaoGoogle(session){
   const ident=session.user.identities?.find(i=>i.provider==='google');
-  const {error}=await sb.from('google_conexao').upsert({owner_id:session.user.id,refresh_token:session.provider_refresh_token,
-    email_google:ident?.identity_data?.email||session.user.email,atualizado_em:new Date().toISOString()},{onConflict:'owner_id'});
+  // o token do Google é gravado pelo servidor e nunca mais lido pelo navegador
+  const {error}=await sb.rpc('salvar_conexao_google',{p_refresh:session.provider_refresh_token,p_email:ident?.identity_data?.email||session.user.email});
   if(error){console.error(error);toast('Não consegui salvar a conexão com o Google: '+error.message);return}
   GOOGLE={...GOOGLE,conectado:true,email:ident?.identity_data?.email||session.user.email,
     token:session.provider_token,expira:Date.now()+50*6e4};
