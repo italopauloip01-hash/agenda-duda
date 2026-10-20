@@ -82,12 +82,17 @@ function tela(){
 }
 const ERROS={ja_passou:'Este horário já passou.',nao_ativo:'Este horário não está mais ativo.',link_invalido:'Link inválido.'};
 async function responder(acao){
+  if(TOKEN==='demo'){ D.status=acao==='confirmar'?'confirmado':'cancelado'; tela(); return }
   try{ const r=await rpc('responder_compromisso',{p_token:TOKEN,p_acao:acao}); D.status=r.status; tela(); }
   catch(e){ const el=document.getElementById('erro'); if(el) el.textContent=ERROS[e.codigo]||'Não deu certo agora. Tente de novo em instantes.'; const b=document.getElementById('btnOk'); if(b){b.disabled=false;b.textContent='Confirmar'} }
 }
 function confirmar(){const b=document.getElementById('btnOk');b.disabled=true;b.textContent='Confirmando…';responder('confirmar')}
 function cancelar(){ if(confirm('Cancelar este horário? Ele fica livre para outra pessoa.')) responder('cancelar') }
 (async()=>{
+  // ?t=demo: prévia com dados de exemplo (não grava nada)
+  if(TOKEN==='demo'){ const i=new Date(Date.now()+864e5); i.setHours(14,0,0,0);
+    D={studio:'Studio da Duda',nome:'Maria',servico:'Design de sobrancelha',valor:60,inicio:i.toISOString(),fim:new Date(+i+36e5).toISOString(),
+      status:'agendado',passou:false,endereco:'Rua Exemplo, 123 - Centro',whatsapp:'5533998289160',slug:'duda'}; tela(); return }
   try{ D=TOKEN?await rpc('dados_compromisso',{p_token:TOKEN}):null }catch(e){ D=null }
   if(!D){app.innerHTML=`<h1>Link inválido</h1><p class="sub">Confira se o link está completo ou fale com o studio.</p>${rodape}`;return}
   tela();
