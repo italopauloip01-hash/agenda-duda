@@ -2,7 +2,7 @@
 // - Página: rede primeiro (sempre a versão mais nova), cache se estiver offline.
 // - Fontes e biblioteca do Supabase (CDN): cache primeiro.
 // - API do Supabase: nunca passa pelo cache.
-const VERSAO = 'bellisa-v47';
+const VERSAO = 'bellisa-v48';
 const BASICO = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -39,10 +39,17 @@ self.addEventListener('fetch', e => {
   if (url.hostname.endsWith('supabase.co')) return;
 
   if (req.mode === 'navigate' || url.origin === location.origin) {
-    e.respondWith(fetch(req).then(r => {
+    // internet fraca: espera a rede no máximo 4s; depois abre a cópia guardada (a rede segue atualizando o cache)
+    const rede = fetch(req).then(r => {
       if (r.ok) { const copia = r.clone(); caches.open(VERSAO).then(c => c.put(req, copia)); }
       return r;
-    }).catch(() => caches.match(req).then(r => r || caches.match('./index.html'))));
+    });
+    rede.catch(() => {});
+    const guardada = () => caches.match(req, { ignoreSearch: req.mode === 'navigate' });
+    const prazo = new Promise((_, falha) => setTimeout(() => falha(new Error('lento')), 4000));
+    e.respondWith(Promise.race([rede, prazo])
+      .catch(() => guardada().then(r => r || rede))
+      .catch(() => guardada().then(r => r || caches.match('./index.html'))));
     return;
   }
   if (/fonts\.(googleapis|gstatic)\.com|cdn\.jsdelivr\.net/.test(url.hostname)) {

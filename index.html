@@ -478,6 +478,9 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
 /* puxar para atualizar */
 html,body{overscroll-behavior-y:contain}
 #ptr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translate(-50%,-70px);opacity:0;z-index:40;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--bg-card);color:var(--fg);box-shadow:var(--shadow-md);font-size:13px;font-weight:600;pointer-events:none}
+/* faixa "Sem internet · N horários para enviar" */
+#faixaRede{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 66px);z-index:30;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:6px 14px;border-radius:999px;background:var(--bg-card);color:var(--fg);border:1px solid var(--border);box-shadow:var(--shadow-md);font-size:12.5px;font-weight:600;cursor:pointer}
+#faixaRede.off{background:color-mix(in srgb,var(--warn) 18%,var(--bg-card));border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
 #ptr .ptr-ic{width:18px;height:18px;flex:none;transform:rotate(-90deg)}
 #ptr .ptr-ic circle{fill:none;stroke-width:2.6;stroke-linecap:round}
 #ptr .ptr-ic .trilha{stroke:color-mix(in srgb,var(--accent) 22%,transparent)}
@@ -1436,7 +1439,16 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
 // A chave publishable pode ficar aqui: sem login o banco não mostra nem aceita nada (RLS).
 const SUPABASE_URL = 'https://rsrpfwtrkpclscpccaok.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_0FRlkE_cdq_RKIpX6pSjGA_boyTYEX0';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// internet fraca: nenhuma chamada ao banco fica pendurada — depois de 15s vale o modo sem internet
+// (fotos e funções do servidor ficam de fora: podem demorar mais)
+const fetchComPrazo=(url,op={})=>{
+  if(op.signal||/\/(storage|functions)\/v1\//.test(String(url))) return fetch(url,op);
+  const c=new AbortController(), t=setTimeout(()=>c.abort(),15000);
+  return fetch(url,{...op,signal:c.signal}).finally(()=>clearTimeout(t));
+};
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {global:{fetch:fetchComPrazo}});
+// erro de rede (sem internet, caiu no meio, demorou demais) — diferente de erro do banco
+const semRede=e=>!navigator.onLine||/fetch|network|abort|load failed|timed? ?out/i.test(String(e?.message||e||''));
 const REDIRECT = location.origin + location.pathname;
 let USER = null, SESSAO = null;
 const GOOGLE_SCOPES = [
@@ -1474,7 +1486,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.47'; const VERSAO_DATA='20/10/2026 11:26';
+const VERSAO_APP='3.48'; const VERSAO_DATA='20/10/2026 19:27';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -1563,7 +1575,7 @@ let toastTimer;
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3200)}
 async function q(req){
   const {data,error}=await req;
-  if(error){console.error(error);toast('Erro: '+error.message);throw error}
+  if(error){console.error(error);toast(semRede(error)?'Sem internet agora — tente de novo quando voltar':'Erro: '+error.message);throw error}
   return data;
 }
 
@@ -1577,11 +1589,19 @@ async function initAuth(){
     if(session&&(!USER||USER.id!==session.user.id)) setTimeout(()=>entrar(session.user),0);
     if(ev==='SIGNED_OUT') mostrarLogin();
   });
+  // sem internet: entra direto com a conta guardada no aparelho (sem esperar o login tentar renovar);
+  // a sessão se renova sozinha quando a internet voltar
+  const guardada=sessaoGuardada();
+  if(guardada&&!navigator.onLine){SESSAO=guardada;entrar(guardada.user);return}
   const {data:{session}}=await sb.auth.getSession();
   if(session){SESSAO=session;entrar(session.user);return}
+  if(guardada&&semRede()){SESSAO=guardada;entrar(guardada.user);return}
   // volta do "Entrar com Google": a sessão abre pelo listener acima
   if(await concluirLoginGoogle()) return;
   mostrarLogin();
+}
+function sessaoGuardada(){
+  try{const s=JSON.parse(localStorage.getItem('sb-rsrpfwtrkpclscpccaok-auth-token')||'null');return s?.user?s:null}catch(e){return null}
 }
 function mostrarLogin(){
   USER=null;
@@ -1702,7 +1722,7 @@ async function carregarAgendamentos(){
   const ini=new Date(ano,0,1), fim=new Date(ano+2,0,1);
   let out=[], from=0;
   for(;;){
-    const rows=await q(sb.from('agendamentos')
+    const rows=await qq(sb.from('agendamentos')
       .select('*, clientes(nome,telefone,cor), pagamentos(id,valor,forma,pago_em)')
       .gte('inicio',ini.toISOString()).lt('inicio',fim.toISOString())
       .order('inicio').range(from,from+999));
@@ -1710,7 +1730,9 @@ async function carregarAgendamentos(){
     if(rows.length<1000)break;
     from+=1000;
   }
-  return out.map(r=>{
+  return out; // linhas do banco (vão para a cópia do aparelho); mapAgend transforma para a tela
+}
+function mapAgend(r){
     const i=new Date(r.inicio), f=new Date(r.fim);
     const pagos=(r.pagamentos||[]).map(p=>({id:p.id,valor:Number(p.valor),forma:p.forma,em:new Date(p.pago_em)})).sort((a,b)=>a.em-b.em);
     const pago=pagos.reduce((s,p)=>s+p.valor,0), price=Number(r.valor);
@@ -1721,38 +1743,154 @@ async function carregarAgendamentos(){
       pagos,pago,falta:Math.max(0,Math.round((price-pago)*100)/100),
       pagarAte:r.pagar_ate?new Date(r.pagar_ate+'T12:00:00'):null,
       lembreteEm:r.lembrete_enviado_em?new Date(r.lembrete_enviado_em):null,origem:r.origem};
-  });
 }
 // o banco entrega no máximo 1000 linhas por consulta: busca as clientes em lotes até acabar
 async function carregarClientes(){
   let out=[], from=0;
   for(;;){
-    const rows=await q(sb.from('clientes_resumo').select('*').order('nome').order('id').range(from,from+999));
+    const rows=await qq(sb.from('clientes_resumo').select('*').order('nome').order('id').range(from,from+999));
     out=out.concat(rows);
     if(rows.length<1000) break;
     from+=1000;
   }
   return out;
 }
+// consulta sem aviso na tela (a carga geral decide o que mostrar se falhar)
+async function qq(req){const {data,error}=await req;if(error)throw error;return data}
+// consulta opcional: erro do banco vira vazio, mas falta de internet interrompe a carga
+async function qOpc(req){const {data,error}=await req;if(error&&semRede(error))throw error;return data}
+async function buscarDados(){
+  const anoIni=ymd(new Date(new Date().getFullYear(),0,1));
+  const [cli,svc,prod,desp,aval,notif,bloq,appts]=await Promise.all([
+    carregarClientes(),
+    qq(sb.from('servicos').select('*').eq('ativo',true).order('nome')),
+    qq(sb.from('produtos').select('*').order('nome')),
+    qq(sb.from('despesas').select('*').gte('data',anoIni).order('data',{ascending:false})),
+    qq(sb.from('avaliacoes').select('*').order('criado_em',{ascending:false}).limit(200)),
+    qq(sb.from('notificacoes').select('*').order('criado_em',{ascending:false}).limit(30)),
+    qq(sb.from('bloqueios').select('*').gte('fim',new Date(Date.now()-90*864e5).toISOString()).order('inicio')),
+    carregarAgendamentos(),
+  ]);
+  const [fotos,hors,perf,gc]=await Promise.all([
+    qOpc(sb.from('portfolio_fotos').select('*').order('criado_em',{ascending:false})),
+    qOpc(sb.from('horarios').select('*')),
+    qOpc(sb.from('perfil').select('*').maybeSingle()),
+    qOpc(sb.from('google_conexao').select('email_google,calendario_id,contatos_sync_em').maybeSingle()),
+  ]);
+  return {cli,svc,prod,desp,aval,notif,bloq,appts,fotos,hors,perf,gc};
+}
+
+// ── SEM INTERNET ──────────────────────────────────────────────────
+// 1) Cópia dos dados no aparelho: o app abre na hora e funciona sem internet.
+// 2) Fila de agendamentos: marcado sem internet fica guardado no aparelho e é enviado
+//    sozinho quando a internet volta — aí o robô manda o WhatsApp para a cliente.
+//    Os códigos (id) já nascem no aparelho, então reenviar nunca duplica nada.
+const CHAVE_CACHE=()=>'bellisa_dados_'+USER.id, CHAVE_FILA=()=>'bellisa_fila_'+USER.id;
+let ULTIMOS_DADOS=null, SEM_REDE=false, ENVIANDO_FILA=false;
+function guardarCache(d){try{localStorage.setItem(CHAVE_CACHE(),JSON.stringify(d))}catch(e){console.warn('cópia local',e)}}
+function lerCache(){try{return JSON.parse(localStorage.getItem(CHAVE_CACHE())||'null')}catch(e){return null}}
+function lerFila(){if(!USER)return [];try{return JSON.parse(localStorage.getItem(CHAVE_FILA())||'[]')}catch(e){return []}}
+function gravarFila(f){try{localStorage.setItem(CHAVE_FILA(),JSON.stringify(f))}catch(e){toast('Não consegui guardar no aparelho: '+e.message)}}
+
 async function recarregar(){
   if(!USER)return;
-  const anoIni=ymd(new Date(new Date().getFullYear(),0,1));
+  // abre na hora com a cópia do aparelho; a versão do servidor substitui logo depois
+  if(!ULTIMOS_DADOS){const c=lerCache(); if(c){ULTIMOS_DADOS=c; try{mostrarDados()}catch(e){console.error(e)}}}
+  let d;
+  try{d=await buscarDados()}
+  catch(e){
+    console.error(e);
+    if(semRede(e)){SEM_REDE=true;atualizarFaixaRede()}
+    else toast('Erro: '+(e.message||e));
+    return;
+  }
+  SEM_REDE=false;
+  ULTIMOS_DADOS=d; guardarCache(d);
+  mostrarDados();
+  if(lerFila().length) enviarFila();
+}
+function mostrarDados(){
+  if(!ULTIMOS_DADOS) return;
+  aplicarDados(ULTIMOS_DADOS);
+  aplicarFila();
+  calcFinanceiro();
+  renderTudo();
+  atualizarFaixaRede();
+}
+// os agendamentos guardados no aparelho aparecem na agenda (com o selo "envia quando tiver internet")
+function aplicarFila(){
+  for(const it of lerFila()){
+    if(it.cliente&&!CLIENTS.some(c=>c.id===it.cliente.id))
+      CLIENTS.push({id:it.cliente.id,name:it.cliente.nome,type:it.cliente.tipo,visits:0,last:'—',color:it.cliente.cor,phone:'',bday:null,cpf:'',origem:null,vip:false,faltou:0,pref:null,obs:null});
+    if(it.remarcandoId){const v=ALL_APPTS.find(a=>a.id===it.remarcandoId); if(v) v.status='cancelado'}
+    if(ALL_APPTS.some(a=>a.id===it.id)) continue;
+    const c=CLIENTS.find(x=>x.id===it.agendamento.cliente_id);
+    const a=mapAgend({...it.agendamento,status:'agendado',origem:'painel',
+      clientes:{nome:c?.name||it.cliente?.nome||'—',telefone:c?.phone||'',cor:c?.color},
+      pagamentos:it.pagamento?[{id:it.pagamento.id,valor:it.pagamento.valor,forma:it.pagamento.forma,pago_em:new Date(it.criado).toISOString()}]:[]});
+    a.pendente=true;
+    ALL_APPTS.push(a);
+  }
+  ALL_APPTS.sort((x,y)=>x.ini-y.ini);
+}
+// grava um agendamento no banco (usado na hora e no reenvio da fila); tudo pode ser repetido sem duplicar
+async function executarAgendamento(it){
+  const ok=r=>{if(r.error&&r.error.code!=='23505')throw r.error};
+  if(it.cliente) ok(await sb.from('clientes').insert(it.cliente));
+  if(it.remarcandoId) ok(await sb.from('agendamentos').update({status:'cancelado'}).eq('id',it.remarcandoId));
+  const r=await sb.from('agendamentos').insert(it.agendamento);
+  if(r.error&&r.error.code!=='23505'){
+    // desfaz o cancelamento da remarcação se o novo horário não entrou
+    if(it.remarcandoId&&!semRede(r.error)) await sb.from('agendamentos').update({status:'agendado'}).eq('id',it.remarcandoId);
+    throw r.error;
+  }
+  // a remarcação leva junto o que já tinha sido pago
+  if(it.remarcandoId) ok(await sb.from('pagamentos').update({agendamento_id:it.id}).eq('agendamento_id',it.remarcandoId));
+  if(it.pagamento){
+    const p=await sb.from('pagamentos').insert(it.pagamento);
+    if(p.error&&p.error.code!=='23505'){ if(semRede(p.error)) throw p.error; toast('Agendado, mas o pagamento não foi salvo: '+p.error.message) }
+  }
+}
+// internet voltou: envia o que ficou guardado, em ordem, e avisa as clientes no WhatsApp
+async function enviarFila(){
+  if(ENVIANDO_FILA||!USER||!navigator.onLine) return;
+  const fila=lerFila(); if(!fila.length) return;
+  ENVIANDO_FILA=true; atualizarFaixaRede();
+  const enviados=[], falhas=[];
   try{
-    const [cli,svc,prod,desp,aval,notif,bloq,appts]=await Promise.all([
-      carregarClientes(),
-      q(sb.from('servicos').select('*').eq('ativo',true).order('nome')),
-      q(sb.from('produtos').select('*').order('nome')),
-      q(sb.from('despesas').select('*').gte('data',anoIni).order('data',{ascending:false})),
-      q(sb.from('avaliacoes').select('*').order('criado_em',{ascending:false}).limit(200)),
-      q(sb.from('notificacoes').select('*').order('criado_em',{ascending:false}).limit(30)),
-      q(sb.from('bloqueios').select('*').gte('fim',new Date(Date.now()-90*864e5).toISOString()).order('inicio')),
-      carregarAgendamentos(),
-    ]);
-    const [{data:fotos},{data:hors},{data:perf}]=await Promise.all([
-      sb.from('portfolio_fotos').select('*').order('criado_em',{ascending:false}),
-      sb.from('horarios').select('*'),
-      sb.from('perfil').select('*').maybeSingle(),
-    ]);
+    for(const it of fila){
+      try{await executarAgendamento(it);enviados.push(it)}
+      catch(e){if(semRede(e))break;falhas.push({it,e})}
+    }
+  }finally{
+    const feitos=new Set([...enviados,...falhas.map(x=>x.it)].map(x=>x.id));
+    gravarFila(lerFila().filter(x=>!feitos.has(x.id)));
+    ENVIANDO_FILA=false;
+  }
+  if(!enviados.length&&!falhas.length){atualizarFaixaRede();return}
+  for(const {it,e} of falhas){
+    const ini=new Date(it.agendamento.inicio), nome=CLIENTS.find(c=>c.id===it.agendamento.cliente_id)?.name||it.cliente?.nome||'cliente';
+    const motivo=e.code==='23P01'?'o horário foi ocupado enquanto você estava sem internet':(e.message||'erro');
+    await sb.from('notificacoes').insert({icone:'⚠️',texto:`Não deu para salvar o horário de ${nome} (${ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${hhmm(ini)}): ${motivo}. Marque de novo.`});
+  }
+  if(enviados.length) toast(`Internet voltou: ${enviados.length} horário${enviados.length>1?'s enviados':' enviado'}`);
+  await recarregar();
+  for(const it of enviados){syncEmSegundoPlano(it.id,it.remarcandoId);await avisarCliente(it.tipoAviso,it.id)}
+}
+function atualizarFaixaRede(){
+  let el=document.getElementById('faixaRede');
+  if(!el){el=document.createElement('div');el.id='faixaRede';el.onclick=()=>{if(navigator.onLine)recarregar()};document.body.appendChild(el)}
+  const n=lerFila().length, off=SEM_REDE||!navigator.onLine;
+  const h=n?` · ${n} horário${n>1?'s':''} para enviar`:'';
+  el.hidden=!USER||(!off&&!n);
+  el.className=off?'off':'';
+  el.textContent=off?`📴 Sem internet${h||' · usando a cópia do aparelho'}`:`⏳ Enviando${h}…`;
+}
+addEventListener('online',()=>{SEM_REDE=false;atualizarFaixaRede();recarregar()});
+addEventListener('offline',()=>{SEM_REDE=true;atualizarFaixaRede()});
+setInterval(()=>{if(USER&&navigator.onLine&&lerFila().length)enviarFila()},30000);
+
+function aplicarDados({cli,svc,prod,desp,aval,notif,bloq,appts,fotos,hors,perf,gc}){
     // ordem escolhida (a 1ª é o destaque); sem ordem, as mais novas primeiro
     FOTOS=(fotos||[]).sort((a,b)=>(a.ordem??1e9)-(b.ordem??1e9)||new Date(b.criado_em)-new Date(a.criado_em));
     PERFIL=perf||{};
@@ -1760,7 +1898,6 @@ async function recarregar(){
       const h=(hors||[]).find(x=>x.dia_semana===d);
       return h?{dia:d,aberto:!!h.abre,abre:hm(h.abre),fecha:hm(h.fecha),almIni:hm(h.almoco_inicio),almFim:hm(h.almoco_fim)}:horarioPadrao(d);
     });
-    const {data:gc}=await sb.from('google_conexao').select('email_google,calendario_id,contatos_sync_em').maybeSingle();
     GOOGLE.conectado=!!gc;
     if(gc){GOOGLE.email=gc.email_google;GOOGLE.calendarioId=gc.calendario_id;GOOGLE.contatosSyncEm=gc.contatos_sync_em}
     CLIENTS=cli.map(c=>({id:c.id,name:c.nome,type:c.tipo,visits:Number(c.visitas),last:relDia(c.ultima_visita),
@@ -1776,10 +1913,7 @@ async function recarregar(){
     AVALIACOES=aval.map(a=>({id:a.id,name:a.nome,nota:a.nota,comentario:a.comentario||'',pendente:!a.publicada,data:relDia(a.criado_em)}));
     NOTIFS=notif.map(n=>({id:n.id,icon:n.icone,text:n.texto,time:relTempo(n.criado_em),lida:n.lida,agendamento_id:n.agendamento_id}));
     BLOQUEIOS=bloq.map(b=>({id:b.id,tipo:b.tipo,ini:new Date(b.inicio),fim:new Date(b.fim),motivo:b.motivo}));
-    ALL_APPTS=appts;
-  }catch(e){return}
-  calcFinanceiro();
-  renderTudo();
+    ALL_APPTS=appts.map(mapAgend);
 }
 function renderTudo(){
   buildDateStrip();
@@ -1888,7 +2022,7 @@ function renderAppointments() {
       <div class="appt-body">
         <div class="appt-name">${esc(a.name)}</div>
         <div class="appt-service">${esc(a.service)} · até ${a.end}</div>
-        <div class="appt-meta">${typeB}${stB}${pagBadge(a)}${a.origem==='online'?'<span class="badge badge-info">Online</span>':''}</div>
+        <div class="appt-meta">${typeB}${stB}${pagBadge(a)}${a.origem==='online'?'<span class="badge badge-info">Online</span>':''}${a.pendente?'<span class="badge badge-warn">⏳ Envia quando tiver internet</span>':''}</div>
       </div>
       <div class="appt-price">${fmtR(a.price)}</div>`;
     card.onclick = ()=>openDetail(a);
@@ -1925,6 +2059,13 @@ function renderAlerts() {
   c.innerHTML = h;
 }
 function openDetail(a) {
+  // ainda está só no aparelho: dá para desfazer; o resto (pagamento, status…) depois que for enviado
+  if(a.pendente){
+    if(confirm(`${a.name} · ${a.time}\n\nEste horário está guardado no aparelho e vai ser enviado quando a internet voltar (aí a cliente recebe o WhatsApp).\n\nQuer desfazer este agendamento?`)){
+      gravarFila(lerFila().filter(x=>x.id!==a.id)); mostrarDados(); toast('Agendamento desfeito');
+    }
+    return;
+  }
   const cli=CLIENTS.find(c=>c.id===a.cliente_id);
   const gasto=ALL_APPTS.filter(x=>x.cliente_id===a.cliente_id&&x.status==='concluido').reduce((s,x)=>s+x.price,0);
   const lembrete=waLink(a.phone,modelo('lembrete',varsAgendamento(a)));
@@ -3328,36 +3469,34 @@ async function salvarAgendamento() {
   if(pagModo!=='depois'&&pagoAgora<=0){toast(pagModo==='pago'?'Digite o valor pago':'Digite o valor da entrada');document.getElementById('pagValor').focus();return}
   if(pagoAgora>valor+0.001){toast('O pagamento é maior que o valor do serviço');return}
   const pagarAte=pagModo==='pago'?null:(document.getElementById('pagarAte').value||null);
-  let cli=(CLI_ESCOLHIDA&&CLIENTS.find(c=>c.id===CLI_ESCOLHIDA))||CLIENTS.find(c=>c.name.toLowerCase()===nome.toLowerCase());
-  try{
-    if(!cli){
-      const r=await q(sb.from('clientes').insert({nome,tipo:svc.tipo,cor:CORES_CLIENTE[CLIENTS.length%CORES_CLIENTE.length]}).select('id').single());
-      cli={id:r.id,name:nome};
+  const cli=(CLI_ESCOLHIDA&&CLIENTS.find(c=>c.id===CLI_ESCOLHIDA))||CLIENTS.find(c=>c.name.toLowerCase()===nome.toLowerCase());
+  const novoId=crypto.randomUUID();
+  const it={id:novoId,criado:Date.now(),remarcandoId:remarcandoId||null,tipoAviso:remarcandoId?'remarcado':'pedir_confirmacao',
+    cliente:cli?null:{id:crypto.randomUUID(),nome,tipo:svc.tipo,cor:CORES_CLIENTE[CLIENTS.length%CORES_CLIENTE.length]},
+    agendamento:{id:novoId,cliente_id:null,servico_id:svc.id,servico_nome:svc.name.slice(0,200),tipo:svc.tipo,
+      servicos:svc.itens.length>1?svc.itens.map(s=>({id:s.id,nome:s.name,dur:s.dur,preco:s.promo??s.price})):null,
+      inicio:ini.toISOString(),fim:fim.toISOString(),valor,pagar_ate:pagarAte,
+      local:document.getElementById('inputLocal').value,
+      observacoes:document.getElementById('inputObs').value.trim()||null},
+    pagamento:pagoAgora>0?{id:crypto.randomUUID(),agendamento_id:novoId,valor:pagoAgora,forma:document.getElementById('pagForma').value}:null};
+  it.agendamento.cliente_id=cli?cli.id:it.cliente.id;
+  // sem internet (ou caiu no meio): guarda no aparelho e envia sozinho quando voltar
+  let offline=!navigator.onLine;
+  if(!offline){
+    try{await executarAgendamento(it)}
+    catch(error){
+      if(!semRede(error)){
+        toast(error.code==='23P01'?'Esse horário acabou de ser ocupado. Escolha outro.':'Erro: '+error.message);
+        await recarregar();
+        return;
+      }
+      offline=true;
     }
-    if(remarcandoId) await q(sb.from('agendamentos').update({status:'cancelado'}).eq('id',remarcandoId));
-  }catch(e){return}
-  const {data:novo,error}=await sb.from('agendamentos').insert({
-    cliente_id:cli.id,servico_id:svc.id,servico_nome:svc.name.slice(0,200),tipo:svc.tipo,
-    servicos:svc.itens.length>1?svc.itens.map(s=>({id:s.id,nome:s.name,dur:s.dur,preco:s.promo??s.price})):null,
-    inicio:ini.toISOString(),fim:fim.toISOString(),valor,pagar_ate:pagarAte,
-    local:document.getElementById('inputLocal').value,
-    observacoes:document.getElementById('inputObs').value.trim()||null}).select('id').single();
-  if(error){
-    // desfaz o cancelamento da remarcação se o novo horário falhou
-    if(remarcandoId) await sb.from('agendamentos').update({status:'agendado'}).eq('id',remarcandoId);
-    toast(error.code==='23P01'?'Esse horário acabou de ser ocupado. Escolha outro.':'Erro: '+error.message);
-    await recarregar();
-    return;
   }
-  // a remarcação leva junto o que já tinha sido pago
-  if(remarcandoId) await sb.from('pagamentos').update({agendamento_id:novo.id}).eq('agendamento_id',remarcandoId);
-  if(pagoAgora>0){
-    const {error:e2}=await sb.from('pagamentos').insert({agendamento_id:novo.id,valor:pagoAgora,forma:document.getElementById('pagForma').value});
-    if(e2) toast('Agendado, mas o pagamento não foi salvo: '+e2.message);
-  }
+  if(offline){const f=lerFila();f.push(it);gravarFila(f)}
   ['pagValor','pagarAte'].forEach(id=>document.getElementById(id).value='');
   setPagModo('depois');
-  syncEmSegundoPlano(novo.id,remarcandoId);
+  if(!offline) syncEmSegundoPlano(novoId,remarcandoId);
   const foiRemarcacao=!!remarcandoId;
   remarcandoId=null;
   closeDrawer('novoAgendDrawer');
@@ -3365,9 +3504,14 @@ async function salvarAgendamento() {
   CLI_ESCOLHIDA=null; renderBuscaCliente();
   document.getElementById('inputServico').value=''; loadServicesForm();
   selectedDate=new Date(ini.getFullYear(),ini.getMonth(),ini.getDate());
+  if(offline){
+    toast(`Sem internet: ${nome.split(' ')[0]} ficou guardada no aparelho — envio e WhatsApp saem quando a internet voltar`);
+    mostrarDados();
+    return;
+  }
   toast(foiRemarcacao?`Remarcado para ${labelDia(selectedDate).toLowerCase()} às ${hhmm(ini)}`:`${nome} — ${labelDia(selectedDate).toLowerCase()} às ${hhmm(ini)}`);
   await recarregar();
-  avisarCliente(foiRemarcacao?'remarcado':'pedir_confirmacao',novo.id);
+  avisarCliente(it.tipoAviso,novoId);
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────────
