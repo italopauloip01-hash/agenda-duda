@@ -251,7 +251,7 @@ const DIAS_LONGOS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sába
 const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 // categorias de serviço: nome na aba e ícone
 const fmtDur=m=>{m=Math.round(Number(m)||0);const h=Math.floor(m/60),r=m%60;return h?(r?h+'h'+String(r).padStart(2,'0'):h+'h'):r+' min'};
-const TIPO_NOME={esmalteria:'Unhas',podologia:'Pés & podologia',sobrancelha:'Sobrancelha',maquiagem:'Maquiagem'};
+const TIPO_NOME={esmalteria:'Unhas',podologia:'Podologia',sobrancelha:'Sobrancelha',maquiagem:'Maquiagem'};
 const icTipo=t=>({podologia:IC.pe,sobrancelha:IC.sob,maquiagem:IC.maq}[t]||IC.unha);
 const IC={
   unha:'<svg class="i" viewBox="0 0 24 24"><path d="M10 2.5h4v4.5h-4z"/><path d="M8.5 7h7l1.5 3.5V19a2.5 2.5 0 0 1-2.5 2.5h-5A2.5 2.5 0 0 1 7 19v-8.5z"/><path d="M7 13h10"/></svg>',
