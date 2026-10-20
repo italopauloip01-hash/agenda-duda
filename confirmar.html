@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Confirme seu horário</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#FBEFF2">
+<link rel="icon" href="icons/bellisa.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
+<style>
+:root{--card:#fff;--fg:#3B2530;--muted:#86646F;--rose:#B85E78;--rose-2:#A44E68;--line:#F0DCE2;--ok:#2F8F5B;--danger:#C0392B}
+*{box-sizing:border-box;margin:0}
+body{font-family:'DM Sans',system-ui,sans-serif;background:linear-gradient(180deg,#FDF4F6,#F4DCE3) fixed;color:var(--fg);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.cx{width:100%;max-width:440px;background:var(--card);border-radius:28px;padding:28px 22px 22px;box-shadow:0 20px 60px -30px rgba(120,50,75,.45)}
+.topo{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.capa{width:54px;height:54px;border-radius:16px;background:var(--rose) center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center}
+.topo b{display:block;font-size:16px}.topo span{font-size:13px;color:var(--muted)}
+h1{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:26px;line-height:1.2;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:14.5px;margin-top:6px;line-height:1.45}
+.lista{margin-top:18px;border-top:1px solid var(--line)}
+.item{display:flex;gap:14px;align-items:flex-start;padding:14px 2px;border-bottom:1px solid var(--line)}
+.item svg{width:22px;height:22px;flex:none;stroke:var(--rose);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-top:2px}
+.item b{display:block;font-size:15.5px}.item span{font-size:13.5px;color:var(--muted)}
+.item a{color:var(--rose-2);font-size:13.5px;text-decoration:none;font-weight:600}
+.btn{display:block;width:100%;margin-top:18px;border:none;border-radius:999px;padding:16px;font:inherit;font-weight:700;font-size:16px;color:#fff;background:linear-gradient(135deg,#C86B87,#A44E68);cursor:pointer;text-align:center;text-decoration:none}
+.btn:disabled{opacity:.5}
+.link{display:block;width:100%;margin-top:10px;border:none;background:none;font:inherit;font-weight:600;color:var(--danger);padding:12px;cursor:pointer}
+.selo{display:inline-flex;align-items:center;gap:6px;margin-top:14px;padding:8px 14px;border-radius:999px;font-weight:700;font-size:14px}
+.selo.ok{background:#E7F5EC;color:var(--ok)}.selo.no{background:#FBE9E7;color:var(--danger)}
+.rodape{margin-top:20px;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.erro{color:var(--danger);font-size:14px;margin-top:10px;text-align:center;min-height:18px}
+.spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--rose);border-radius:50%;animation:g .8s linear infinite;margin:40px auto}
+@keyframes g{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<main class="cx" id="app"><div class="spin"></div></main>
+<script>
+// "Confirme seu compromisso": a cliente recebe este link quando a profissional marca o horário para ela
+const SUPABASE_URL='https://rsrpfwtrkpclscpccaok.supabase.co', SUPABASE_KEY='sb_publishable_0FRlkE_cdq_RKIpX6pSjGA_boyTYEX0';
+const TOKEN=new URLSearchParams(location.search).get('t')||'';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const app=document.getElementById('app');
+const tz={timeZone:'America/Sao_Paulo'};
+const dataLonga=d=>d.toLocaleDateString('pt-BR',{...tz,weekday:'long',day:'numeric',month:'long'}).replace(/^./,c=>c.toUpperCase());
+const hora=d=>d.toLocaleTimeString('pt-BR',{...tz,hour:'2-digit',minute:'2-digit'});
+const reais=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const IC={rel:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  lista:'<svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>',
+  pin:'<svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+  zap:'<svg viewBox="0 0 24 24"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"/></svg>'};
+let D=null;
+async function rpc(fn,args){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`,{method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify(args)});
+  const j=await r.json().catch(()=>null);
+  if(!r.ok){const e=new Error(j?.message||'erro');e.codigo=j?.message;throw e}
+  return j;
+}
+const rodape='<div class="rodape"><img src="icons/bellisa.svg" width="16" height="16" alt="" style="border-radius:5px">Agendamento por Bellisa</div>';
+const topo=()=>`<div class="topo">${D.foto_capa?`<div class="capa" style="background-image:url('${SUPABASE_URL}/storage/v1/object/public/portfolio/${D.foto_capa.split('/').map(encodeURIComponent).join('/')}')"></div>`:'<div class="capa"><img src="icons/bellisa.svg" width="54" height="54" alt=""></div>'}<div><b>${esc(D.studio)}</b><span>Olá, ${esc(D.nome)}!</span></div></div>`;
+function detalhes(){
+  const i=new Date(D.inicio), f=new Date(D.fim);
+  const wa=D.whatsapp?`https://api.whatsapp.com/send?phone=${String(D.whatsapp).replace(/\D/g,'')}&text=${encodeURIComponent('Oi! Sobre meu horário de '+D.servico+' em '+dataLonga(i).toLowerCase()+' às '+hora(i)+'…')}`:'';
+  return `<div class="lista">
+    <div class="item">${IC.rel}<div><b>${esc(dataLonga(i))}</b><span>das ${hora(i)} às ${hora(f)}</span></div></div>
+    <div class="item">${IC.lista}<div><b>${esc(D.servico)}</b><span>${reais(D.valor)}</span></div></div>
+    ${D.endereco?`<div class="item">${IC.pin}<div><b>${esc(D.studio)}</b><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(D.endereco)}" target="_blank" rel="noopener">${esc(D.endereco)}</a></div></div>`:''}
+    ${wa?`<div class="item">${IC.zap}<div><b>Dúvidas?</b><a href="${wa}" target="_blank" rel="noopener">Falar no WhatsApp</a></div></div>`:''}
+  </div>`;
+}
+function tela(){
+  const st=D.status;
+  if(st==='cancelado'||st==='faltou'){ app.innerHTML=`${topo()}<h1>Este horário foi cancelado</h1>${detalhes()}${D.slug?`<a class="btn" href="./${encodeURIComponent(D.slug)}">Marcar outro horário</a>`:''}${rodape}`; return }
+  if(D.passou){ app.innerHTML=`${topo()}<h1>Este horário já passou</h1>${detalhes()}${rodape}`; return }
+  if(st==='confirmado'){ app.innerHTML=`${topo()}<h1>Seu horário está confirmado 💖</h1><div class="selo ok">✓ Confirmado</div>${detalhes()}<button class="link" onclick="cancelar()">Preciso cancelar</button><div class="erro" id="erro"></div>${rodape}`; return }
+  app.innerHTML=`${topo()}<h1>Confirme seu horário</h1><p class="sub">Toque em confirmar para garantir seu horário.</p>${detalhes()}
+    <button class="btn" id="btnOk" onclick="confirmar()">Confirmar</button>
+    <button class="link" onclick="cancelar()">Cancelar</button><div class="erro" id="erro"></div>${rodape}`;
+}
+const ERROS={ja_passou:'Este horário já passou.',nao_ativo:'Este horário não está mais ativo.',link_invalido:'Link inválido.'};
+async function responder(acao){
+  try{ const r=await rpc('responder_compromisso',{p_token:TOKEN,p_acao:acao}); D.status=r.status; tela(); }
+  catch(e){ const el=document.getElementById('erro'); if(el) el.textContent=ERROS[e.codigo]||'Não deu certo agora. Tente de novo em instantes.'; const b=document.getElementById('btnOk'); if(b){b.disabled=false;b.textContent='Confirmar'} }
+}
+function confirmar(){const b=document.getElementById('btnOk');b.disabled=true;b.textContent='Confirmando…';responder('confirmar')}
+function cancelar(){ if(confirm('Cancelar este horário? Ele fica livre para outra pessoa.')) responder('cancelar') }
+(async()=>{
+  try{ D=TOKEN?await rpc('dados_compromisso',{p_token:TOKEN}):null }catch(e){ D=null }
+  if(!D){app.innerHTML=`<h1>Link inválido</h1><p class="sub">Confira se o link está completo ou fale com o studio.</p>${rodape}`;return}
+  tela();
+})();
+</script>
+</body>
+</html>

@@ -1329,6 +1329,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
   <div class="form-group"><label class="form-label">Nome do studio ou profissional</label><input class="form-input" id="perfNome" placeholder="Ex: Studio da Duda"></div>
   <div class="form-group"><label class="form-label">WhatsApp do studio</label><input class="form-input" type="tel" id="perfWhats" placeholder="(00) 00000-0000"></div>
   <div class="form-group"><label class="form-label">Apresentação</label><textarea class="form-input" id="perfBio" rows="2" placeholder="Aparece na página de agendamento"></textarea></div>
+  <div class="form-group"><label class="form-label">Endereço do studio</label><input class="form-input" id="perfEndereco" maxlength="200" placeholder="Rua, número, bairro, cidade"><div class="pick-sub" style="margin-top:4px">Aparece com mapa na confirmação do horário que a cliente recebe.</div></div>
   <div class="form-group"><label class="form-label">Foto de capa (aparece no link de agendamento)</label>
     <div style="display:flex;gap:10px;align-items:center">
       <div id="perfFotoPrev" style="width:84px;height:84px;border-radius:18px;background:var(--bg-subtle);background-size:cover;background-position:center;flex-shrink:0"></div>
@@ -1474,7 +1475,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.44'; const VERSAO_DATA='20/10/2026 10:46';
+const VERSAO_APP='3.45'; const VERSAO_DATA='20/10/2026 10:52';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2764,6 +2765,7 @@ function abrirPerfil(focarOnline){
   if(!dica){dica=document.createElement('div');dica.id='perfWhatsDica';dica.className='pick-sub';dica.style.marginTop='4px';wEl.after(dica)}
   dica.textContent=viaRobo?'Vem do WhatsApp vinculado ao robô — muda sozinho se você vincular outro número.':'';
   document.getElementById('perfBio').value=p.bio||'';
+  document.getElementById('perfEndereco').value=p.endereco||'';
   document.getElementById('perfOnline').checked=!!p.agendamento_online;
   document.getElementById('perfSlug').value=p.slug||'';
   document.getElementById('perfAntec').value=String(p.antecedencia_min??120);
@@ -2785,7 +2787,7 @@ async function salvarPerfil(manterAberto){
   if(on&&!/^[a-z0-9-]{3,40}$/.test(slug)){toast('Endereço: só letras minúsculas, números e hífen (mín. 3)');return false}
   if(['icons','tools','supabase','index','agendar','privacidade','api','admin','login'].includes(slug)){toast('Esse endereço é reservado. Escolha outro.');return false}
   const row={nome:document.getElementById('perfNome').value.trim()||null,whatsapp:normTel(document.getElementById('perfWhats').value),
-    bio:document.getElementById('perfBio').value.trim()||null,agendamento_online:on,slug:slug||null,
+    bio:document.getElementById('perfBio').value.trim()||null,endereco:document.getElementById('perfEndereco').value.trim()||null,agendamento_online:on,slug:slug||null,
     antecedencia_min:parseInt(document.getElementById('perfAntec').value),dias_frente:parseInt(document.getElementById('perfDias').value),
     atualizado_em:new Date().toISOString()};
   const {error}=await sb.from('perfil').upsert(row,{onConflict:'owner_id'});
@@ -2834,8 +2836,10 @@ const MSGS_PADRAO=[
     texto:'{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora}. Posso confirmar? 💅'},
   {id:'confirmacao',titulo:'Confirmação de agendamento',uso:'Aviso ao marcar um horário',
     texto:'{saudacao}, {nome}! Seu horário de {servico} está confirmado para {dia} às {hora}. Te espero! 💖'},
+  {id:'pedir_confirmacao',titulo:'Horário marcado — pedir confirmação',uso:'Ao marcar pelo app: a cliente confirma ou cancela pelo link',
+    texto:'{saudacao}, {nome}! Marquei seu horário de {servico} para {dia} às {hora} 💅 Confirme por aqui, é rapidinho: {link_confirmar}'},
   {id:'remarcado',titulo:'Horário remarcado',uso:'Aviso ao remarcar',
-    texto:'{saudacao}, {nome}! Seu horário de {servico} foi remarcado para {dia} às {hora}. Qualquer coisa é só me chamar 💖'},
+    texto:'{saudacao}, {nome}! Seu horário de {servico} foi remarcado para {dia} às {hora} 💖 Confirme por aqui: {link_confirmar}'},
   {id:'lembrete24',titulo:'Lembrete 1 — com antecedência (robô)',uso:'Robô: no tempo do Lembrete 1 (Ajustes → Robô)',
     texto:'{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora} 💅 Qualquer imprevisto é só me avisar por aqui.'},
   {id:'lembrete5',titulo:'Lembrete 2 — perto do horário (robô)',uso:'Robô: no tempo do Lembrete 2 (Ajustes → Robô)',
@@ -2873,7 +2877,7 @@ const MSGS_PADRAO=[
   {id:'link',titulo:'Link para agendar',
     texto:'{saudacao}, {nome}! Para agendar é só escolher o dia e o horário por aqui: {link} 💅'},
 ];
-const VARIAVEIS=[['{saudacao}','bom dia / boa tarde / boa noite'],['{nome}','nome da cliente'],['{servico}','serviço'],['{dia}','dia'],['{hora}','hora'],['{data}','data'],['{valor}','valor'],['{link}','link de agendamento'],['{link_avaliacao}','link para a cliente avaliar'],['{studio}','nome do studio']];
+const VARIAVEIS=[['{saudacao}','bom dia / boa tarde / boa noite'],['{nome}','nome da cliente'],['{servico}','serviço'],['{dia}','dia'],['{hora}','hora'],['{data}','data'],['{valor}','valor'],['{link}','link de agendamento'],['{link_avaliacao}','link para a cliente avaliar'],['{link_confirmar}','link para a cliente confirmar ou cancelar'],['{studio}','nome do studio']];
 function modelosCfg(){
   const m=PERFIL.modelos||{};
   // formato antigo: {lembrete:'...', cobranca:'...'}
@@ -2901,7 +2905,8 @@ function varsAgendamento(a){
   const dia=labelDia(new Date(a.ini.getFullYear(),a.ini.getMonth(),a.ini.getDate())).toLowerCase();
   return {nome:a.name.split(' ')[0],servico:a.service,dia:/^(hoje|amanhã|ontem)$/.test(dia)?dia:'dia '+a.ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}),
     hora:a.time,data:a.ini.toLocaleDateString('pt-BR'),valor:fmtR(a.falta||a.price),
-    link_avaliacao:a.avaliacaoToken?LINK_CLIENTES+'avaliar.html?t='+a.avaliacaoToken:''};
+    link_avaliacao:a.avaliacaoToken?LINK_CLIENTES+'avaliar.html?t='+a.avaliacaoToken:'',
+    link_confirmar:a.avaliacaoToken?LINK_CLIENTES+'confirmar.html?t='+a.avaliacaoToken:''};
 }
 async function gravarModelos(c){
   const {error}=await sb.from('perfil').upsert({modelos:c,atualizado_em:new Date().toISOString()},{onConflict:'owner_id'});
@@ -2985,7 +2990,7 @@ async function restaurarOcultas(){
 // Escolher e enviar (da ficha da cliente ou do agendamento)
 let envioCtx=null;
 // Depois de marcar, remarcar ou cancelar: pergunta se quer avisar a cliente, com a mensagem pronta (editável)
-const AVISO_TITULO={confirmacao:'Horário confirmado',remarcado:'Horário remarcado',cancelamento:'Horário cancelado',recusado:'Pedido recusado'};
+const AVISO_TITULO={pedir_confirmacao:'Horário marcado',confirmacao:'Horário confirmado',remarcado:'Horário remarcado',cancelamento:'Horário cancelado',recusado:'Pedido recusado'};
 // ── Robô do WhatsApp: situação e envio automático ──────────────────
 let BOT={conectado:false,numero:null,visto:null};
 const botAtivo=()=>!!PERFIL.whatsapp_auto&&BOT.conectado&&BOT.visto&&(Date.now()-BOT.visto<3*60e3);
@@ -3025,19 +3030,24 @@ async function ligarBot(v){
   if(error){toast('Erro: '+error.message);renderBotCard();return}
   PERFIL.whatsapp_auto=v; toast(v?'Envio automático ligado':'Envio automático desligado'); renderBotCard();
 }
+// texto do aviso; nos pedidos de confirmação, o link vai junto mesmo se o texto editado não tiver
+function textoAviso(tipo,a){
+  const v=varsAgendamento(a), t=modelo(tipo,v);
+  return ['pedir_confirmacao','remarcado'].includes(tipo)&&v.link_confirmar&&!t.includes(v.link_confirmar)?t+' '+v.link_confirmar:t;
+}
 async function avisarCliente(tipo,apptId){
   const a=ALL_APPTS.find(x=>x.id===apptId); if(!a) return;
   if(!a.phone){toast(`${AVISO_TITULO[tipo]} — ${a.name.split(' ')[0]} não tem WhatsApp cadastrado`);return}
   // robô ligado: vai direto para a fila, sem precisar tocar em nada
   await carregarBot().catch(()=>{});
   if(botAtivo()){
-    const {error}=await sb.from('fila_whatsapp').insert({telefone:normTel(a.phone),texto:modelo(tipo,varsAgendamento(a)),tipo,agendamento_id:a.id});
+    const {error}=await sb.from('fila_whatsapp').insert({telefone:normTel(a.phone),texto:textoAviso(tipo,a),tipo,agendamento_id:a.id});
     if(!error){toast(`${AVISO_TITULO[tipo]} — o robô vai avisar ${a.name.split(' ')[0]} no WhatsApp`);return}
     console.error(error);
   }
   document.getElementById('avisoTitulo').textContent=`${AVISO_TITULO[tipo]} · avisar ${a.name.split(' ')[0]}?`;
   const txt=document.getElementById('avisoTexto');
-  txt.value=modelo(tipo,varsAgendamento(a));
+  txt.value=textoAviso(tipo,a);
   document.getElementById('avisoBtn').onclick=()=>{
     const l=waLink(a.phone,txt.value); if(l) window.open(l,'_blank','noopener');
     closeDrawer('avisoDrawer');
@@ -3358,7 +3368,7 @@ async function salvarAgendamento() {
   selectedDate=new Date(ini.getFullYear(),ini.getMonth(),ini.getDate());
   toast(foiRemarcacao?`Remarcado para ${labelDia(selectedDate).toLowerCase()} às ${hhmm(ini)}`:`${nome} — ${labelDia(selectedDate).toLowerCase()} às ${hhmm(ini)}`);
   await recarregar();
-  avisarCliente(foiRemarcacao?'remarcado':'confirmacao',novo.id);
+  avisarCliente(foiRemarcacao?'remarcado':'pedir_confirmacao',novo.id);
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────────
@@ -3825,18 +3835,20 @@ function abrirAgendamentoPorId(id){
   if(a){ gotoPage('agenda',document.querySelectorAll('.nav-item')[0]); openDetail(a); return true }
   return false;
 }
+// título do aviso conforme o tipo de notificação
+const tituloAviso=ic=>({'⭐':'Nova avaliação','⚠️':'Atenção','✅':'Horário confirmado','❌':'Horário cancelado'})[ic]||'Novo agendamento';
 function avisarNovo(n){
   somAviso();
   const sino=document.querySelector('.notif-badge')?.parentElement; if(sino){sino.classList.remove('sino-toca');void sino.offsetWidth;sino.classList.add('sino-toca')}
   let el=document.getElementById('avisoNovo');
   if(!el){el=document.createElement('div');el.id='avisoNovo';document.body.appendChild(el)}
-  el.innerHTML=`<div class="ic">${esc(n.icone||'📅')}</div><div style="flex:1;min-width:0"><b>Novo agendamento</b><span>${esc(n.texto)}</span></div>`;
+  el.innerHTML=`<div class="ic">${esc(n.icone||'📅')}</div><div style="flex:1;min-width:0"><b>${tituloAviso(n.icone)}</b><span>${esc(n.texto)}</span></div>`;
   el.onclick=()=>{el.classList.remove('vis'); setTimeout(()=>{ if(!n.agendamento_id||!abrirAgendamentoPorId(n.agendamento_id)) openDrawer('notifDrawer') },400)};
   requestAnimationFrame(()=>el.classList.add('vis'));
   clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('vis'),8000);
   // notificação do celular (aparece mesmo com o app minimizado)
   if(!window._temPush&&'Notification' in window&&Notification.permission==='granted'&&navigator.serviceWorker){ // com push, quem mostra é o próprio push
-    navigator.serviceWorker.ready.then(r=>r.showNotification('Novo agendamento',{body:n.texto,icon:'icons/icon-192.png',badge:'icons/favicon-32.png',
+    navigator.serviceWorker.ready.then(r=>r.showNotification(tituloAviso(n.icone),{body:n.texto,icon:'icons/icon-192.png',badge:'icons/favicon-32.png',
       tag:'agend-'+(n.agendamento_id||n.id),renotify:true,vibrate:[120,60,120],data:{agendamento_id:n.agendamento_id}})).catch(()=>{});
   }
 }
