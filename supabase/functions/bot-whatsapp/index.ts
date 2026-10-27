@@ -13,7 +13,7 @@ const sha256 = async (s: string) =>
     .map((b) => b.toString(16).padStart(2, "0")).join("");
 const SITE = "https://bellisa.vercel.app/";
 const PADRAO: Record<string, string> = {
-  lembrete24: "{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora} 💅 Qualquer imprevisto é só me avisar por aqui.",
+  lembrete24: "{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora} 💅\n\nSe não puder vir, cancele aqui ainda dentro do prazo de 24h, para evitar a cobrança de 1/3 do valor ({taxa}): {link_cancelar}",
   lembrete5: "{saudacao}, {nome}! Seu horário de {servico} é {dia} às {hora} 💖 Te espero!",
   avaliacao: "{saudacao}, {nome}! Obrigada pela visita 💖 Pode me contar como foi seu {servico}? Leva só 10 segundinhos: {link_avaliacao}",
   auto_resposta: "{saudacao}! Aqui é do {studio} 💅 Já vi sua mensagem e logo te respondo. Se quiser agendar agora, escolha o dia e o horário por aqui: {link}",
@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
     const maior = Math.max(l1, l2);
     if (!maior) return;
     const { data: ags } = await admin.from("agendamentos")
-      .select("id, inicio, criado_em, status, origem, servico_nome, lembrete24_em, lembrete5_em, avaliacao_token, clientes(nome, telefone)")
+      .select("id, inicio, criado_em, status, origem, servico_nome, valor, lembrete24_em, lembrete5_em, avaliacao_token, clientes(nome, telefone)")
       .eq("owner_id", owner).in("status", ["agendado", "confirmado"])
       .gt("inicio", new Date(agora).toISOString()).lt("inicio", new Date(agora + maior * 3600e3).toISOString());
     const hoje = fmt(new Date(), { day: "2-digit", month: "2-digit" }), amanha = fmt(new Date(agora + 864e5), { day: "2-digit", month: "2-digit" });
@@ -128,7 +128,8 @@ Deno.serve(async (req) => {
       const d = fmt(new Date(a.inicio), { day: "2-digit", month: "2-digit" });
       const v = { nome: String(cli.nome || "").split(" ")[0], servico: a.servico_nome,
         dia: d === hoje ? "hoje" : d === amanha ? "amanhã" : "dia " + d, data: d, hora: fmt(new Date(a.inicio), { hour: "2-digit", minute: "2-digit" }),
-        link_confirmar: SITE + "confirmar.html?t=" + a.avaliacao_token };
+        link_confirmar: SITE + "confirmar.html?t=" + a.avaliacao_token, link_cancelar: SITE + "confirmar.html?t=" + a.avaliacao_token,
+        taxa: (Math.round(Number(a.valor || 0) / 3 * 100) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) };
       // o lembrete "mais perto do horário" (menor número de horas) é o lembrete5; o outro é o lembrete24
       const perto = Math.min(l1 || 999, l2 || 999), longe = l1 && l2 ? Math.max(l1, l2) : 0;
       let tipo: "lembrete24" | "lembrete5" | null = null;
@@ -142,8 +143,10 @@ Deno.serve(async (req) => {
       const { data: marcou } = await admin.from("agendamentos").update(marca).eq("id", a.id).is(col, null).select("id");
       if (!marcou?.length) continue;
       await admin.from("fila_whatsapp").insert({ owner_id: owner, telefone: cli.telefone,
-        // ainda não confirmado pela cliente: o lembrete leva o link para confirmar ou cancelar
-        texto: ((t) => a.status === "agendado" && !t.includes(v.link_confirmar) ? t + " Confirme aqui: " + v.link_confirmar : t)(preencher(textos[tipo] || PADRAO[tipo], v)), tipo, agendamento_id: a.id });
+        // o link vai sempre junto: para confirmar (se ainda não confirmou) ou cancelar dentro do prazo de 24h
+        texto: ((t) => t.includes(v.link_confirmar) ? t
+          : a.status === "agendado" ? t + " Confirme ou cancele aqui: " + v.link_confirmar
+          : tipo === "lembrete24" ? t + " Se precisar cancelar: " + v.link_cancelar : t)(preencher(textos[tipo] || PADRAO[tipo], v)), tipo, agendamento_id: a.id });
     }
   }
   // Pedido de avaliação: 1h depois do fim de um atendimento CONCLUÍDO (até 3 dias depois), uma vez só.
