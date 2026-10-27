@@ -256,6 +256,11 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
 .slot:hover:not(.slot-taken){border-color:var(--fg)}
 .slot.selected{background:var(--fg);color:var(--on-fg);border-color:var(--fg)}
 .slot.slot-taken{color:var(--fg-soft);background:var(--bg-subtle);border-color:transparent;cursor:not-allowed;text-decoration:line-through;text-decoration-color:var(--border-strong)}
+/* já tem cliente nesse horário: a dona pode encaixar mesmo assim (vermelho = aviso) */
+.slot.slot-encaixe{color:var(--danger,#c0392b);background:color-mix(in srgb,var(--danger,#c0392b) 9%,var(--bg-card));border-color:color-mix(in srgb,var(--danger,#c0392b) 35%,transparent)}
+.slot.slot-encaixe.selected{background:var(--danger,#c0392b);color:#fff;border-color:var(--danger,#c0392b)}
+.aviso-encaixe{grid-column:1/-1;font-size:12.5px;color:var(--danger,#c0392b);background:color-mix(in srgb,var(--danger,#c0392b) 8%,transparent);border-radius:9px;padding:8px 10px;line-height:1.4}
+.badge-encaixe{background:color-mix(in srgb,var(--danger,#c0392b) 12%,transparent);color:var(--danger,#c0392b)}
 
 /* Alert */
 .alert{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:var(--r-sm);font-size:13.5px;margin-bottom:8px;background:var(--bg-card);border:1px solid var(--border);color:var(--fg);line-height:1.45}
@@ -1486,7 +1491,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.49'; const VERSAO_DATA='26/10/2026 21:44';
+const VERSAO_APP='3.50'; const VERSAO_DATA='26/10/2026 21:58';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2022,7 +2027,7 @@ function renderAppointments() {
       <div class="appt-body">
         <div class="appt-name">${esc(a.name)}</div>
         <div class="appt-service">${esc(a.service)} · até ${a.end}</div>
-        <div class="appt-meta">${typeB}${stB}${pagBadge(a)}${a.origem==='online'?'<span class="badge badge-info">Online</span>':''}${a.pendente?'<span class="badge badge-warn">⏳ Envia quando tiver internet</span>':''}</div>
+        <div class="appt-meta">${typeB}${stB}${pagBadge(a)}${a.origem==='online'?'<span class="badge badge-info">Online</span>':''}${a.pendente?'<span class="badge badge-warn">⏳ Envia quando tiver internet</span>':''}${ATIVOS(a)&&APPTS.some(b=>b!==a&&ATIVOS(b)&&b.ini<a.fim&&b.fim>a.ini)?'<span class="badge badge-encaixe">⚠️ Encaixe</span>':''}</div>
       </div>
       <div class="appt-price">${fmtR(a.price)}</div>`;
     card.onclick = ()=>openDetail(a);
@@ -3404,8 +3409,9 @@ function loadSlots() {
   const hor=HORARIOS[new Date(dataStr+'T12:00').getDay()];
   const busyG=BUSY_GOOGLE[dataStr]||[];
   if(GOOGLE.conectado&&!BUSY_GOOGLE[dataStr]) ocupadoGoogle(dataStr).then(()=>{if(document.getElementById('inputData').value===dataStr)loadSlots()});
+  // atendimentos: a dona pode encaixar por cima (fica vermelho); bloqueios, Google e almoço continuam fechados
+  const atendDia=ALL_APPTS.filter(a=>ATIVOS(a)&&a.id!==remarcandoId);
   const ocupados=[
-    ...ALL_APPTS.filter(a=>ATIVOS(a)&&a.id!==remarcandoId).map(a=>[a.ini,a.fim]),
     ...BLOQUEIOS.map(b=>[b.ini,b.fim]),
     ...busyG,
   ];
@@ -3424,18 +3430,22 @@ function loadSlots() {
     const t=pad2(Math.floor(min/60))+':'+pad2(min%60);
     const ini=new Date(dataStr+'T'+t), fim=new Date(ini.getTime()+durMin*6e4);
     const taken = ini<agora || fim>fimDia || ocupados.some(([oi,of])=>ini<of&&fim>oi);
-    if(!taken)livres++;
+    const choques = taken?[]:atendDia.filter(a=>ini<a.fim&&fim>a.ini);
+    if(!taken&&!choques.length)livres++;
     const d = document.createElement('div');
-    d.className='slot'+(taken?' slot-taken':'');
+    d.className='slot'+(taken?' slot-taken':choques.length?' slot-encaixe':'');
     d.textContent=t;
+    if(choques.length) d.title='Já tem '+choques.map(a=>a.name.split(' ')[0]+' '+a.time+'–'+a.end).join(', ');
     if(!taken) d.onclick=()=>{
       document.querySelectorAll('#slotGrid .slot').forEach(s=>s.classList.remove('selected'));
       d.classList.add('selected');
+      grid.querySelector('.aviso-encaixe')?.remove();
+      if(choques.length) d.insertAdjacentHTML('afterend',`<div class="aviso-encaixe">⚠️ Encaixe: nesse horário já tem ${choques.map(a=>`<b>${esc(a.name.split(' ')[0])}</b> (${a.time}–${a.end})`).join(' e ')}. Dá para marcar mesmo assim.</div>`);
       calcSlotDuration(t);
     };
     grid.appendChild(d);
   }
-  if(!livres) grid.insertAdjacentHTML('beforeend','<div style="grid-column:1/-1;font-size:12px;color:var(--fg-muted);text-align:center;padding:4px">Nenhum horário livre neste dia.</div>');
+  if(!livres) grid.insertAdjacentHTML('beforeend','<div style="grid-column:1/-1;font-size:12px;color:var(--fg-muted);text-align:center;padding:4px">Nenhum horário livre neste dia — os vermelhos dá para encaixar.</div>');
   if(!foraDoExpediente) grid.insertAdjacentHTML('beforeend','<a href="#" onclick="foraDoExpediente=true;loadSlots();return false" style="grid-column:1/-1;font-size:12px;color:var(--fg-soft);text-align:center;padding:2px">Ver horários fora do expediente</a>');
   document.getElementById('inputDuracao').value='';
   calcSlotDuration();
@@ -4460,6 +4470,8 @@ async function importarEventosG(){
   let ok=0, conflito=0, erro=0;
   for(const e of lista){
     try{
+      // mesmo começo de um horário que já está na agenda: provavelmente o mesmo atendimento, não duplica
+      if(ALL_APPTS.some(a=>ATIVOS(a)&&Math.abs(a.ini-e.ini)<6e4)){conflito++;continue}
       let cliId=e.cli?.id;
       if(!cliId){
         const r=await sb.from('clientes').insert({nome:e.nomeCli.slice(0,80),tipo:e.svc?.tipo||'esmalteria',origem:'Google',cor:CORES_CLIENTE[(CLIENTS.length+ok)%CORES_CLIENTE.length]}).select('id').single();
