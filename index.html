@@ -1577,7 +1577,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.52'; const VERSAO_DATA='27/10/2026 02:18';
+const VERSAO_APP='3.53'; const VERSAO_DATA='27/10/2026 12:00';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2225,7 +2225,8 @@ function openDetail(a) {
       <button class="btn btn-danger btn-sm" onclick="if(confirm('Cancelar o horário de ${esc(a.name.split(' ')[0].replace(/'/g,''))} às ${a.time}?'))mudarStatus('${a.id}','cancelado')">Cancelar horário</button>
       <button class="btn btn-ghost btn-sm" onclick="if(confirm('Marcar falta para ${esc(a.name.split(' ')[0].replace(/'/g,''))}?'))mudarStatus('${a.id}','faltou')">Faltou</button>
       ${lembrete?`<a class="btn btn-ghost btn-sm" style="text-decoration:none" href="${lembrete}" target="_blank" rel="noopener">Lembrete</a>`:'<button class="btn btn-ghost btn-sm" disabled title="Cliente sem WhatsApp">Lembrete</button>'}
-      <button class="btn btn-ghost btn-sm" style="grid-column:1/-1" onclick="enviarMensagem(null,'${a.id}')" ${a.phone?'':'disabled'}>Enviar mensagem pronta</button>
+      <button class="btn btn-ghost btn-sm" onclick="editarAgendamento('${a.id}')">✏️ Editar</button>
+      <button class="btn btn-ghost btn-sm" onclick="enviarMensagem(null,'${a.id}')" ${a.phone?'':'disabled'}>Mensagem pronta</button>
     </div>
     <div style="font-size:13px;color:var(--fg-muted);font-weight:500;margin-bottom:6px">Histórico</div>
     <div class="card" style="font-size:13px;color:var(--fg-muted)">${cli?`${cli.visits} visita${cli.visits===1?'':'s'} · última: ${esc(cli.last)} · ${fmtR(gasto)} gasto este ano${cli.faltou?` · ${cli.faltou} falta${cli.faltou>1?'s':''}`:''}`:'—'}</div>
@@ -2329,6 +2330,74 @@ function remarcar(id){
   closeDrawer('detailDrawer');
   remarcandoId=id;
   novoAgendamentoPara(a.name,(a.servicosIds||[]).join(',')||a.servico_id,a.type);
+}
+// Editar um agendamento sem apagar: troca a cliente (outra pessoa ou nova), o serviço, o valor e a observação.
+// O horário de início fica; se o serviço mudar, o fim acompanha a duração nova.
+let EDIT_CLI=null, EDIT_ID=null;
+function editarAgendamento(id){
+  const a=ALL_APPTS.find(x=>x.id===id);if(!a)return;
+  EDIT_CLI=a.cliente_id; EDIT_ID=id;
+  const svcs=Object.values(SVCS_TIPO).flat().slice().sort((x,y)=>(x.tipo+x.name).localeCompare(y.tipo+y.name,'pt-BR'));
+  const atual=(a.servicosIds&&a.servicosIds.length>1)?'':a.servico_id;
+  document.getElementById('detailTitle').textContent='Editar agendamento';
+  document.getElementById('detailBody').innerHTML=`
+    <div class="card" style="margin-bottom:12px;font-size:13px;color:var(--fg-muted)">${esc(labelDia(new Date(a.ini.getFullYear(),a.ini.getMonth(),a.ini.getDate())))} · ${a.time} — para mudar o dia ou a hora, use <b>Remarcar</b>.</div>
+    <div class="form-group"><label class="form-label">Cliente</label>
+      <input class="form-input" id="edCliente" autocomplete="off" value="${esc(a.name)}" oninput="EDIT_CLI=null;sugerirEdCliente()" placeholder="Buscar ou digitar o nome">
+      <div id="edSugestoes"></div></div>
+    <div class="form-group"><label class="form-label">Serviço</label>
+      <select class="form-input" id="edServico" onchange="edServicoMudou()">
+        ${atual?'':`<option value="" selected>${esc(a.service)} (atual)</option>`}
+        ${svcs.map(s=>`<option value="${s.id}" ${s.id===atual?'selected':''}>${esc(nomeTipo(s.tipo))} · ${esc(s.name)} — ${fmtRReal(s.promo??s.price)}</option>`).join('')}
+      </select></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Valor</label><input class="form-input" id="edValor" inputmode="decimal" value="${String(a.price).replace('.',',')}"></div>
+      <div class="form-group"><label class="form-label">Termina às</label><input class="form-input" id="edFim" value="${a.end}" disabled></div>
+    </div>
+    <div class="form-group"><label class="form-label">Observação</label><input class="form-input" id="edObs" value="${esc(a.obs||'')}"></div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:13.5px;margin:4px 0 14px"><input type="checkbox" id="edAvisar" ${a.phone?'':'disabled'}> Mandar a mensagem de confirmação para a cliente</label>
+    <button class="btn btn-primary" onclick="salvarEdicao('${a.id}')">Salvar alterações</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="openDetail(ALL_APPTS.find(x=>x.id==='${a.id}'))">Voltar</button>`;
+}
+function sugerirEdCliente(){
+  const box=document.getElementById('edSugestoes'), termo=document.getElementById('edCliente').value.trim(), t=semAcento(termo), dig=termo.replace(/\D/g,'');
+  if(t.length<2){box.innerHTML='';return}
+  const achadas=CLIENTS.filter(c=>semAcento(c.name).includes(t)||(dig.length>=3&&c.phone.includes(dig))).slice(0,6);
+  box.innerHTML=achadas.map(c=>`<button type="button" class="pick-item" onclick="EDIT_CLI='${c.id}';document.getElementById('edCliente').value=this.dataset.n;document.getElementById('edSugestoes').innerHTML=''" data-n="${esc(c.name)}">
+      <span class="pick-av" style="background:${c.color||'var(--accent)'}">${esc(c.name.charAt(0).toUpperCase())}</span>
+      <span class="pick-txt"><div class="pick-nome">${esc(c.name)}</div><div class="pick-sub">${c.phone?esc(c.phone.replace(/^55/,'')):'sem telefone'}</div></span></button>`).join('')
+    +(CLIENTS.some(c=>semAcento(c.name)===t)?'':`<div style="font-size:12px;color:var(--fg-muted);padding:6px 2px">Se não escolher da lista, <b>${esc(termo)}</b> vira uma nova cliente.</div>`);
+}
+function edServicoMudou(){
+  const s=Object.values(SVCS_TIPO).flat().find(x=>x.id===document.getElementById('edServico').value); if(!s) return;
+  document.getElementById('edValor').value=String(s.promo??s.price).replace('.',',');
+  const a=ALL_APPTS.find(x=>x.id===EDIT_ID);
+  if(a) document.getElementById('edFim').value=hhmm(new Date(a.ini.getTime()+s.dur*6e4));
+}
+async function salvarEdicao(id){
+  const a=ALL_APPTS.find(x=>x.id===id);if(!a)return;
+  const nome=document.getElementById('edCliente').value.trim();
+  if(nome.length<2){toast('Digite o nome da cliente');return}
+  const valor=parseValor(document.getElementById('edValor').value);
+  if(valor==null||valor<0){toast('Confira o valor');return}
+  const mud={valor,observacoes:document.getElementById('edObs').value.trim()||null};
+  const s=Object.values(SVCS_TIPO).flat().find(x=>x.id===document.getElementById('edServico').value);
+  if(s&&s.id!==a.servico_id||s&&a.servicosIds&&a.servicosIds.length>1)
+    Object.assign(mud,{servico_id:s.id,servico_nome:s.name.slice(0,200),tipo:s.tipo,servicos:null,fim:new Date(a.ini.getTime()+(s.dur+(s.int||0))*6e4).toISOString()});
+  try{
+    let cid=EDIT_CLI||(CLIENTS.find(c=>c.name.toLowerCase()===nome.toLowerCase())||{}).id;
+    if(!cid){ // nova cliente
+      cid=crypto.randomUUID();
+      await q(sb.from('clientes').insert({id:cid,nome,tipo:mud.tipo||a.type,cor:CORES_CLIENTE[CLIENTS.length%CORES_CLIENTE.length]}));
+    }
+    if(cid!==a.cliente_id) mud.cliente_id=cid;
+    await q(sb.from('agendamentos').update(mud).eq('id',id));
+  }catch(e){return}
+  const avisar=document.getElementById('edAvisar').checked;
+  syncEmSegundoPlano(id);
+  toast(mud.cliente_id?'Agendamento passado para '+nome.split(' ')[0]:'Agendamento atualizado');
+  await reabrirDetalhe(id);
+  if(avisar) setTimeout(()=>avisarCliente('confirmacao',id),350);
 }
 function novoAgendamentoPara(nome,servicoId,tipo){
   document.getElementById('inputCliente').value=nome||'';
