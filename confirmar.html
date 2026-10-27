@@ -69,6 +69,7 @@ function detalhes(){
     <div class="item">${IC.lista}<div><b>${esc(D.servico)}</b><span>${reais(D.valor)}</span></div></div>
     ${D.endereco?`<div class="item">${IC.pin}<div><b>${esc(D.studio)}</b><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(D.endereco)}" target="_blank" rel="noopener">${esc(D.endereco)}</a></div></div>`:''}
     ${wa?`<div class="item">${IC.zap}<div><b>Dúvidas?</b><a href="${wa}" target="_blank" rel="noopener">Falar no WhatsApp</a></div></div>`:''}
+    ${D.instagram?`<div class="item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></svg><div><b>@${esc(D.instagram)}</b><a href="https://instagram.com/${encodeURIComponent(D.instagram)}" target="_blank" rel="noopener">Ver no Instagram</a></div></div>`:''}
   </div>`;
 }
 function tela(){

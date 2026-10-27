@@ -303,6 +303,8 @@ function nomeComDestaque(n){
   const p=esc(n).split(' ');
   return p.length>1?`${p.slice(0,-1).join(' ')} <em>${p[p.length-1]}</em>`:`<em>${p[0]}</em>`;
 }
+const igLink=()=>A.instagram?`https://instagram.com/${encodeURIComponent(A.instagram)}`:'';
+const IC_IG='<svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></svg>';
 function renderPagina(){
   const wa=telLink(A.whatsapp,'Oi! Vim pelo link de agendamento 😊');
   const notas=A.avaliacoes.map(a=>a.nota), media=notas.length?(notas.reduce((s,n)=>s+n,0)/notas.length):0;
@@ -319,6 +321,7 @@ function renderPagina(){
     <div class="acoes reveal d3">
       <a class="btn btn-rosa" href="#agendar">${IC.cal}Agendar horário</a>
       ${wa?`<a class="btn btn-zap" href="${wa}" target="_blank" rel="noopener" aria-label="Conversar no WhatsApp">${IC.zap}WhatsApp</a>`:''}
+      ${igLink()?`<a class="btn btn-linha" href="${igLink()}" target="_blank" rel="noopener" aria-label="Instagram">${IC_IG}Instagram</a>`:''}
     </div>
 
     ${A.fotos.length?`<section id="trabalhos">
@@ -610,6 +613,7 @@ function sucesso(nome){
     <div class="col surge" style="animation-delay:.45s">
       <a class="btn btn-rosa" href="${cal}" target="_blank" rel="noopener">${IC.cal}Salvar na minha agenda</a>
       ${wa?`<a class="btn btn-zap" href="${wa}" target="_blank" rel="noopener">${IC.zap}Avisar no WhatsApp</a>`:''}
+      ${igLink()?`<a class="btn btn-linha" href="${igLink()}" target="_blank" rel="noopener">${IC_IG}Ver nossos trabalhos no Instagram</a>`:''}
       <button class="btn btn-linha" onclick="location.href=location.pathname+location.search">Agendar outro horário</button>
     </div>`;
   scrollTo({top:0,behavior:'smooth'});

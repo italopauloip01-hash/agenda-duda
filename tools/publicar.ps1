@@ -18,10 +18,12 @@ $idx = $idx -replace "const VERSAO_APP='[^']*'; const VERSAO_DATA='[^']*';", "co
 
 # 2. confere se o JavaScript das páginas está sem erro de sintaxe
 $tmp = Join-Path ([IO.Path]::GetTempPath()) 'bellisa-check.js'
-foreach ($f in 'index.html', 'agendar.html') {
+foreach ($f in 'index.html', 'agendar.html', 'confirmar.html', 'avaliar.html') {
   $t = [IO.File]::ReadAllText("$raiz\$f", $utf8)
-  [IO.File]::WriteAllText($tmp, [regex]::Matches($t, '(?s)<script>(.*?)</script>')[0].Groups[1].Value, $utf8)
-  node --check $tmp; if ($LASTEXITCODE) { throw "Erro de sintaxe em $f — nada foi publicado" }
+  foreach ($b in [regex]::Matches($t, '(?s)<script>(.*?)</script>')) {
+    [IO.File]::WriteAllText($tmp, $b.Groups[1].Value, $utf8)
+    node --check $tmp; if ($LASTEXITCODE) { throw "Erro de sintaxe em $f — nada foi publicado" }
+  }
 }
 node --check "$raiz\sw.js"; if ($LASTEXITCODE) { throw 'Erro de sintaxe em sw.js — nada foi publicado' }
 
