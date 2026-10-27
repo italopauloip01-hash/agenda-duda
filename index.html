@@ -1486,7 +1486,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.48'; const VERSAO_DATA='20/10/2026 19:27';
+const VERSAO_APP='3.49'; const VERSAO_DATA='26/10/2026 21:44';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -3624,6 +3624,31 @@ function calIrHoje() {
   const h=new Date(); calYear=h.getFullYear(); calMonth=h.getMonth(); calSel=null;
   buildCalendar();
 }
+// arrastar o calendário para o lado troca o mês (dedo para a esquerda = próximo mês)
+(function ligarArrasteCalendario(){
+  const g=document.getElementById('calGrid'); if(!g) return;
+  let x0=null, y0=0, dx=0, lado=null;
+  const voltar=()=>{g.style.transition='transform .2s ease, opacity .2s ease';g.style.transform='';g.style.opacity=''};
+  g.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;x0=e.touches[0].clientX;y0=e.touches[0].clientY;dx=0;lado=null;g.style.transition='none'},{passive:true});
+  g.addEventListener('touchmove',e=>{
+    if(x0===null)return;
+    const mx=e.touches[0].clientX-x0, my=e.touches[0].clientY-y0;
+    if(lado===null&&(Math.abs(mx)>8||Math.abs(my)>8)) lado=Math.abs(mx)>Math.abs(my)*1.2;
+    if(!lado)return;
+    if(e.cancelable)e.preventDefault(); // não rola a página enquanto arrasta para o lado
+    dx=mx; g.style.transform=`translateX(${dx*.6}px)`; g.style.opacity=String(1-Math.min(.5,Math.abs(dx)/600));
+  },{passive:false});
+  const fim=()=>{
+    if(x0===null)return; x0=null;
+    if(!lado||Math.abs(dx)<60){voltar();return}
+    const prox=dx<0; g.style.transition='transform .15s ease, opacity .15s ease';
+    g.style.transform=`translateX(${prox?-60:60}px)`; g.style.opacity='0';
+    setTimeout(()=>{ prox?calNextMonth():calPrevMonth();
+      g.style.transition='none'; g.style.transform=`translateX(${prox?60:-60}px)`;
+      requestAnimationFrame(()=>requestAnimationFrame(voltar)); },150);
+  };
+  g.addEventListener('touchend',fim); g.addEventListener('touchcancel',fim);
+})();
 
 // ── CONTACTS IMPORT ───────────────────────────────────────────────
 async function importContacts() {
