@@ -1577,7 +1577,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.53'; const VERSAO_DATA='27/10/2026 12:00';
+const VERSAO_APP='3.54'; const VERSAO_DATA='28/10/2026 14:26';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -3696,12 +3696,10 @@ function loadSlots() {
   const hor=HORARIOS[new Date(dataStr+'T12:00').getDay()];
   const busyG=BUSY_GOOGLE[dataStr]||[];
   if(GOOGLE.conectado&&!BUSY_GOOGLE[dataStr]) ocupadoGoogle(dataStr).then(()=>{if(document.getElementById('inputData').value===dataStr)loadSlots()});
-  // atendimentos: a dona pode encaixar por cima (fica vermelho); bloqueios, Google e almoço continuam fechados
+  // atendimentos e compromissos pessoais/folgas: a dona pode marcar por cima, com aviso
+  // (para as clientes, no link e no robô, continuam fechados); Google e almoço continuam fechados
   const atendDia=ALL_APPTS.filter(a=>ATIVOS(a)&&a.id!==remarcandoId);
-  const ocupados=[
-    ...BLOQUEIOS.map(b=>[b.ini,b.fim]),
-    ...busyG,
-  ];
+  const ocupados=[...busyG];
   // expediente do dia (ou 7h–21h quando a Duda pede para marcar fora do horário)
   const abre=foraDoExpediente||!hor.aberto?'07:00':hor.abre, fecha=foraDoExpediente||!hor.aberto?'21:00':hor.fecha;
   if(!foraDoExpediente&&hor.aberto&&hor.almIni) ocupados.push([new Date(dataStr+'T'+hor.almIni),new Date(dataStr+'T'+hor.almFim)]);
@@ -3718,16 +3716,21 @@ function loadSlots() {
     const ini=new Date(dataStr+'T'+t), fim=new Date(ini.getTime()+durMin*6e4);
     const taken = ini<agora || fim>fimDia || ocupados.some(([oi,of])=>ini<of&&fim>oi);
     const choques = taken?[]:atendDia.filter(a=>ini<a.fim&&fim>a.ini);
-    if(!taken&&!choques.length)livres++;
+    const meus = taken?[]:BLOQUEIOS.filter(b=>ini<b.fim&&fim>b.ini);
+    if(!taken&&!choques.length&&!meus.length)livres++;
     const d = document.createElement('div');
-    d.className='slot'+(taken?' slot-taken':choques.length?' slot-encaixe':'');
+    d.className='slot'+(taken?' slot-taken':choques.length||meus.length?' slot-encaixe':'');
     d.textContent=t;
-    if(choques.length) d.title='Já tem '+choques.map(a=>a.name.split(' ')[0]+' '+a.time+'–'+a.end).join(', ');
+    const nomeBloq=b=>b.motivo||(b.tipo==='folga'?'folga':'compromisso pessoal');
+    if(choques.length||meus.length) d.title=[...choques.map(a=>'Já tem '+a.name.split(' ')[0]+' '+a.time+'–'+a.end),...meus.map(b=>'Seu compromisso: '+nomeBloq(b))].join(', ');
     if(!taken) d.onclick=()=>{
       document.querySelectorAll('#slotGrid .slot').forEach(s=>s.classList.remove('selected'));
       d.classList.add('selected');
       grid.querySelector('.aviso-encaixe')?.remove();
-      if(choques.length) d.insertAdjacentHTML('afterend',`<div class="aviso-encaixe">⚠️ Encaixe: nesse horário já tem ${choques.map(a=>`<b>${esc(a.name.split(' ')[0])}</b> (${a.time}–${a.end})`).join(' e ')}. Dá para marcar mesmo assim.</div>`);
+      const avisos=[];
+      if(choques.length) avisos.push(`Encaixe: nesse horário já tem ${choques.map(a=>`<b>${esc(a.name.split(' ')[0])}</b> (${a.time}–${a.end})`).join(' e ')}.`);
+      if(meus.length) avisos.push(`Nesse horário você tem <b>${meus.map(b=>esc(nomeBloq(b))).join('</b> e <b>')}</b> (fechado para as clientes no link).`);
+      if(avisos.length) d.insertAdjacentHTML('afterend',`<div class="aviso-encaixe">⚠️ ${avisos.join(' ')} Dá para marcar mesmo assim.</div>`);
       calcSlotDuration(t);
     };
     grid.appendChild(d);
