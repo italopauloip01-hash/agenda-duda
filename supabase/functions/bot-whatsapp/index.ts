@@ -35,8 +35,10 @@ Deno.serve(async (req) => {
   const { data: perfil } = await admin.from("perfil").select("nome, slug, agendamento_online, whatsapp_auto, modelos, lembrete1_h, lembrete2_h").eq("owner_id", owner).maybeSingle();
   const textos = (perfil?.modelos?.textos || {}) as Record<string, string>;
   const link = perfil?.agendamento_online && perfil?.slug ? SITE + perfil.slug : "";
+  // "Duda Macena" → "Studio Duda Macena" (se o nome do perfil já diz Studio/Salão/Espaço…, fica como está)
+  const nomeDoStudio = (n: string) => !n ? "studio" : /^(studio|est[uú]dio|sal[aã]o|espa[cç]o|ateli[eê]|cl[ií]nica|barbearia)\b/i.test(n) ? n : `Studio ${n}`;
   const preencher = (t: string, v: Record<string, string>) =>
-    t.replace(/\{(\w+)\}/g, (m, k) => v[k] ?? ({ studio: perfil?.nome || "studio", link, saudacao: saudacao() } as Record<string, string>)[k] ?? m)
+    t.replace(/\{(\w+)\}/g, (m, k) => v[k] ?? ({ studio: nomeDoStudio(perfil?.nome || ""), link, saudacao: saudacao() } as Record<string, string>)[k] ?? m)
       .replace(/\s+([.!?,])/g, "$1").replace(/ {2,}/g, " ").trim();
 
   if (corpo.acao === "status") {
@@ -119,7 +121,7 @@ Deno.serve(async (req) => {
     const R: string[] = [];
     const st = estado && Date.now() - (estado.em || 0) < 40 * 60e3 ? estado : { etapa: "inicio" };
     const fim = (e: unknown) => ({ respostas: R, estado: e ? { ...(e as object), em: Date.now() } : null });
-    const nomeStudio = perfil?.nome || "studio";
+    const nomeStudio = nomeDoStudio(perfil?.nome || "");
     const { data: svcs } = await admin.from("servicos").select("id, nome, tipo, duracao_min, intervalo_min, preco, preco_promo")
       .eq("owner_id", owner).eq("ativo", true).order("tipo").order("nome");
     const servicos = (svcs || []).filter((s) => Number(s.preco) > 0);
@@ -127,7 +129,7 @@ Deno.serve(async (req) => {
     const nomeTipo = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
     const reais = (v: number) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     const dur = (m: number) => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, "0") : ""}` : `${m}min`;
-    const MENU = `Como posso te ajudar? Responda com o número:\n\n1️⃣ Agendar horário\n2️⃣ Serviços e preços\n3️⃣ Meus horários\n4️⃣ Endereço e horário de atendimento\n5️⃣ Falar com a ${nomeStudio.replace(/^Studio d[aeo] /i, "")}`;
+    const MENU = `Como posso te ajudar? Responda com o número:\n\n1️⃣ Agendar horário\n2️⃣ Serviços e preços\n3️⃣ Meus horários\n4️⃣ Endereço e horário de atendimento\n5️⃣ Falar com a ${nomeStudio.replace(/^Studio (d[aeo] )?/i, "")}`;
     const quer = (re: RegExp) => re.test(t);
     // atalhos que valem em qualquer etapa
     if (quer(/\b(menu|inicio|voltar|opcoes)\b/) || (st.etapa === "inicio" && !num && !quer(/agend|marc|horario|preco|valor|quanto|servic|endereco|onde|local|cancel|desmarc|atendente|humana|falar/))) {
