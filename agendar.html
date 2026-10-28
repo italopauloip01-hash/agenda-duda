@@ -156,6 +156,15 @@ section{margin-top:46px}
 .mes{font-family:'Fraunces',serif;font-size:17px;margin-bottom:10px;text-transform:capitalize;color:var(--muted)}
 .dias{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -18px;padding:4px 18px 8px;scroll-padding:0 18px}
 .dias::-webkit-scrollbar{display:none}
+/* computador: setas para passar os dias (no celular é só arrastar com o dedo) */
+.dias-box{position:relative}
+.seta{display:none}
+@media (hover:hover) and (pointer:fine){
+  .dias,.carrossel,.pills{cursor:grab}
+  .seta{display:grid;place-items:center;position:absolute;top:calc(50% - 4px);transform:translateY(-50%);z-index:2;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);box-shadow:var(--sombra-sm);font-size:22px;line-height:1;cursor:pointer;transition:opacity .2s}
+  .seta.esq{left:-12px}.seta.dir{right:-12px}
+  .seta.some{opacity:0;pointer-events:none}
+}
 .dia{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px;padding:11px 0 10px;border-radius:18px;border:1.5px solid var(--line);background:var(--card);transition:all .2s}
 .dia small{font-size:12px;color:var(--muted);font-weight:500}
 .dia b{font-size:21px;font-weight:600}
@@ -500,10 +509,37 @@ function renderDias(){
   document.getElementById('etapa').innerHTML=`
     <div class="etapa-tit"><h3>Qual dia?</h3><small style="color:var(--muted)">próximos ${A.dias_frente} dias</small></div>
     <div class="mes" id="mesTxt">${MESES[(abertos[0]||dias[0]).getMonth()]}</div>
-    <div class="dias" id="dias">${dias.map(d=>{const fechado=!horarioDia(d)?.abre;return `<button class="dia" data-mes="${d.getMonth()}" ${fechado?'disabled':''} onclick="escolherDia('${ymd(d)}')"><small>${rotuloDia(d)}</small><b>${d.getDate()}</b><em>${fechado?'fechado':''}</em></button>`}).join('')}</div>`;
+    <div class="dias-box"><button class="seta esq some" id="setaEsq" onclick="rolarDias(-1)" aria-label="Dias anteriores">‹</button>
+    <div class="dias" id="dias">${dias.map(d=>{const fechado=!horarioDia(d)?.abre;return `<button class="dia" data-mes="${d.getMonth()}" ${fechado?'disabled':''} onclick="escolherDia('${ymd(d)}')"><small>${rotuloDia(d)}</small><b>${d.getDate()}</b><em>${fechado?'fechado':''}</em></button>`}).join('')}</div>
+    <button class="seta dir" id="setaDir" onclick="rolarDias(1)" aria-label="Próximos dias">›</button></div>`;
   const box=document.getElementById('dias');
-  box.addEventListener('scroll',()=>{const b=[...box.children].find(x=>x.offsetLeft+x.offsetWidth>box.scrollLeft+30);if(b)document.getElementById('mesTxt').textContent=MESES[+b.dataset.mes]},{passive:true});
+  const setas=()=>{document.getElementById('setaEsq').classList.toggle('some',box.scrollLeft<=4);document.getElementById('setaDir').classList.toggle('some',box.scrollLeft>=box.scrollWidth-box.clientWidth-4)};
+  box.addEventListener('scroll',()=>{const b=[...box.children].find(x=>x.offsetLeft+x.offsetWidth>box.scrollLeft+30);if(b)document.getElementById('mesTxt').textContent=MESES[+b.dataset.mes];setas()},{passive:true});
+  setas();
 }
+function rolarDias(lado){const box=document.getElementById('dias');box.scrollBy({left:lado*box.clientWidth*.8,behavior:'smooth'})}
+// computador: as faixas que rolam para o lado (dias, fotos, categorias) também andam com a roda do mouse e arrastando
+(()=>{
+  const FAIXAS='.dias,.carrossel,.pills,.abas';
+  document.addEventListener('wheel',(e)=>{
+    const el=e.target.closest(FAIXAS); if(!el||Math.abs(e.deltaX)>Math.abs(e.deltaY)) return;
+    const max=el.scrollWidth-el.clientWidth; if(max<=0) return;
+    if((e.deltaY<0&&el.scrollLeft<=0)||(e.deltaY>0&&el.scrollLeft>=max-1)) return; // chegou na ponta: deixa a página rolar
+    el.scrollLeft+=e.deltaY; e.preventDefault();
+  },{passive:false});
+  let arr=null;
+  document.addEventListener('mousedown',(e)=>{const el=e.button===0&&e.target.closest(FAIXAS);if(el&&el.scrollWidth>el.clientWidth)arr={el,x:e.clientX,ini:el.scrollLeft,moveu:false}});
+  document.addEventListener('mousemove',(e)=>{
+    if(!arr) return; const dx=e.clientX-arr.x;
+    if(!arr.moveu&&Math.abs(dx)>6){arr.moveu=true;arr.el.style.scrollSnapType='none';arr.el.style.cursor='grabbing'}
+    if(arr.moveu){arr.el.scrollLeft=arr.ini-dx;e.preventDefault()}
+  });
+  document.addEventListener('mouseup',()=>{
+    if(!arr) return; const a=arr; arr=null; a.el.style.cursor=''; a.el.style.scrollSnapType='';
+    if(a.moveu){const bloq=(ev)=>{ev.stopPropagation();ev.preventDefault()};document.addEventListener('click',bloq,true);setTimeout(()=>document.removeEventListener('click',bloq,true),0)} // arrastar não conta como clique
+  });
+  document.addEventListener('dragstart',(e)=>{if(e.target.closest?.(FAIXAS))e.preventDefault()});
+})();
 function escolherDia(k){escolha.dia=new Date(k+'T12:00:00');escolha.hora=null;renderAgendamento();rolarPara()}
 
 async function renderHoras(){
