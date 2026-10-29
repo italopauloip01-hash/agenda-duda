@@ -1234,7 +1234,9 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
 <div class="modal-overlay" id="avisoDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
   <div class="drawer-title" id="avisoTitulo">Avisar a cliente?</div>
-  <div class="form-group"><label class="form-label">Mensagem (pode editar antes de enviar)</label>
+  <div class="form-group" id="avisoTelBox" hidden><div class="alert alert-warn" style="margin-bottom:8px">Esta cliente está <b>sem WhatsApp cadastrado</b> — sem o número a mensagem não sai. Coloque o número com DDD que ele já fica salvo no cadastro dela.</div>
+    <input class="form-input" type="tel" id="avisoTel" placeholder="(00) 00000-0000"></div>
+  <div class="form-group" id="avisoTextoBox"><label class="form-label">Mensagem (pode editar antes de enviar)</label>
     <textarea class="form-input big" id="avisoTexto" rows="3" style="resize:none;overflow:hidden;font-family:inherit;line-height:1.4" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea></div>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="closeDrawer('avisoDrawer')">Agora não</button>
@@ -1563,7 +1565,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.64'; const VERSAO_DATA='29/10/2026 13:54';
+const VERSAO_APP='3.65'; const VERSAO_DATA='29/10/2026 15:13';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2685,7 +2687,10 @@ async function salvarCliente(){
   if(!nome){document.getElementById('cliNome').focus();return}
   const cpf=v('cliCpf').replace(/\D/g,'')||null;
   if(cpf&&!cpfValido(cpf)){toast('CPF inválido — confira os números');document.getElementById('cliCpf').focus();return}
-  const dados={nome,telefone:normTel(v('cliTel')),nascimento:v('cliNasc')||null,cpf,tipo:v('cliTipo'),origem:v('cliOrigem'),
+  const tel=normTel(v('cliTel'));
+  if(tel&&(tel.length<12||tel.length>13)){toast('WhatsApp incompleto — coloque com DDD, ex.: (33) 99999-9999');document.getElementById('cliTel').focus();return}
+  if(!tel&&!confirm('Salvar sem WhatsApp? Sem o número o robô não consegue mandar confirmação nem lembrete para ela.')){document.getElementById('cliTel').focus();return}
+  const dados={nome,telefone:tel,nascimento:v('cliNasc')||null,cpf,tipo:v('cliTipo'),origem:v('cliOrigem'),
     preferencias:v('cliPref')||null,observacoes:v('cliObs')||null,vip:document.getElementById('cliVip').checked};
   const editando=CLI_EDIT;
   const {error}=editando
@@ -3614,7 +3619,27 @@ function textoAviso(tipo,a){
 }
 async function avisarCliente(tipo,apptId){
   const a=ALL_APPTS.find(x=>x.id===apptId); if(!a) return;
-  if(!a.phone){toast(`${AVISO_TITULO[tipo]} — ${a.name.split(' ')[0]} não tem WhatsApp cadastrado`);return}
+  document.getElementById('avisoTelBox').hidden=true;
+  // sem número a mensagem nunca sai: em vez de um aviso que passa rápido, pede o número aqui mesmo
+  if(!a.phone){
+    document.getElementById('avisoTitulo').textContent=`${AVISO_TITULO[tipo]} · ${a.name.split(' ')[0]} está sem WhatsApp`;
+    document.getElementById('avisoTelBox').hidden=false;
+    const tel=document.getElementById('avisoTel'); tel.value='';
+    document.getElementById('avisoTexto').value=textoAviso(tipo,a);
+    const btn=document.getElementById('avisoBtn'); btn.textContent='Salvar número e avisar';
+    btn.onclick=async()=>{
+      const n=normTel(tel.value);
+      if(!n||n.length<12||n.length>13){toast('Coloque o número com DDD, ex.: (33) 99999-9999');tel.focus();return}
+      const {error}=await sb.from('clientes').update({telefone:n}).eq('id',a.cliente_id);
+      if(error){toast(error.code==='23505'?'Já existe outra cliente com esse WhatsApp':'Erro: '+error.message);return}
+      ALL_APPTS.filter(x=>x.cliente_id===a.cliente_id).forEach(x=>x.phone=n);
+      const c=CLIENTS.find(x=>x.id===a.cliente_id); if(c) c.phone=n;
+      closeDrawer('avisoDrawer'); toast('Número salvo no cadastro');
+      avisarCliente(tipo,apptId); recarregar();
+    };
+    openDrawer('avisoDrawer'); setTimeout(()=>tel.focus(),300);
+    return;
+  }
   // robô ligado: vai direto para a fila, sem precisar tocar em nada
   await carregarBot().catch(()=>{});
   if(botAtivo()){
@@ -3625,6 +3650,7 @@ async function avisarCliente(tipo,apptId){
   document.getElementById('avisoTitulo').textContent=`${AVISO_TITULO[tipo]} · avisar ${a.name.split(' ')[0]}?`;
   const txt=document.getElementById('avisoTexto');
   txt.value=textoAviso(tipo,a);
+  document.getElementById('avisoBtn').textContent='Enviar no WhatsApp';
   document.getElementById('avisoBtn').onclick=()=>{
     const l=waLink(a.phone,txt.value); if(l) window.open(l,'_blank','noopener');
     closeDrawer('avisoDrawer');
