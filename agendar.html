@@ -6,7 +6,7 @@
 <title>Agende seu horário</title>
 <meta name="description" content="Escolha o serviço, o dia e o horário e agende online em menos de um minuto.">
 <meta property="og:title" content="Agende seu horário">
-<meta property="og:description" content="Esmalteria e podologia — agende online em menos de um minuto.">
+<meta property="og:description" content="Escolha o serviço, o dia e o horário — agende online em menos de um minuto.">
 <meta name="theme-color" content="#FFF8F6" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1A1216" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icons/bellisa.svg" type="image/svg+xml"><link rel="icon" href="icons/favicon-32.png" sizes="32x32"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -261,12 +261,15 @@ const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agos
 // categorias de serviço: nome na aba e ícone
 const fmtDur=m=>{m=Math.round(Number(m)||0);const h=Math.floor(m/60),r=m%60;return h?(r?h+'h'+String(r).padStart(2,'0'):h+'h'):r+' min'};
 const TIPO_NOME={esmalteria:'Unhas',podologia:'Podologia',sobrancelha:'Sobrancelha',maquiagem:'Maquiagem'};
-const icTipo=t=>({podologia:IC.pe,sobrancelha:IC.sob,maquiagem:IC.maq}[t]||IC.unha);
+// ícone pela palavra do nome da categoria; as que não combinam com nenhum ganham um brilho
+const icTipo=t=>{const n=String(t).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  return /unha|esmalt|manicure|nail/.test(n)?IC.unha:/podolog|\bpes?\b/.test(n)?IC.pe:/sobrancel|cilio/.test(n)?IC.sob:/maqui/.test(n)?IC.maq:IC.brilho};
 const IC={
   unha:'<svg class="i" viewBox="0 0 24 24"><path d="M10 2.5h4v4.5h-4z"/><path d="M8.5 7h7l1.5 3.5V19a2.5 2.5 0 0 1-2.5 2.5h-5A2.5 2.5 0 0 1 7 19v-8.5z"/><path d="M7 13h10"/></svg>',
   pe:'<svg class="i" viewBox="0 0 24 24"><path d="M8 3c2 0 3 2 3 5s-1 5-1 8 1 5-2 5-3-3-3-6 1-12 3-12z"/><circle cx="15" cy="5" r="1.4"/><circle cx="17.6" cy="8" r="1.2"/><circle cx="18.8" cy="11.2" r="1"/></svg>',
   sob:'<svg class="i" viewBox="0 0 24 24"><path d="M3 11c3-3 7-4 11-3s5 2 7 3"/><path d="M5 15c2-1 4-1.5 6-1"/></svg>',
   maq:'<svg class="i" viewBox="0 0 24 24"><path d="M9 3h6l-1 6h-4z"/><rect x="8" y="9" width="8" height="12" rx="2"/></svg>',
+  brilho:'<svg class="i" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>',
   cal:'<svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
   rel:'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   zap:'<svg class="i" viewBox="0 0 24 24" style="stroke:none;fill:currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-3.3-.8-2.8-1.1-4.5-4-4.6-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.6 2.1 1.1 1 2 1.3 2.3 1.4.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.3z"/></svg>',
@@ -300,7 +303,7 @@ async function iniciar(){
   // as 4 padrão primeiro, depois as categorias criadas pela profissional
   const tipos=Object.keys(TIPO_NOME).filter(t=>A.servicos.some(s=>s.tipo===t))
     .concat([...new Set(A.servicos.map(s=>s.tipo))].filter(t=>!TIPO_NOME[t]).sort((a,b)=>a.localeCompare(b,'pt-BR')));
-  escolha.tipo=tipos.includes('esmalteria')?'esmalteria':tipos[0];
+  escolha.tipo=tipos[0];
   renderPagina();
 }
 function indisponivel(){

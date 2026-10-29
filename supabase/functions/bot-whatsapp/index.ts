@@ -13,10 +13,10 @@ const sha256 = async (s: string) =>
     .map((b) => b.toString(16).padStart(2, "0")).join("");
 const SITE = "https://bellisa.vercel.app/";
 const PADRAO: Record<string, string> = {
-  lembrete24: "{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora} 💅\n\nSe não puder vir, cancele aqui ainda dentro do prazo de 24h, para evitar a cobrança de 1/3 do valor ({taxa}): {link_cancelar}",
+  lembrete24: "{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora} ✨\n\nSe não puder vir, cancele aqui ainda dentro do prazo de 24h, para evitar a cobrança de 1/3 do valor ({taxa}): {link_cancelar}",
   lembrete5: "{saudacao}, {nome}! Seu horário de {servico} é {dia} às {hora} 💖 Te espero!",
   avaliacao: "{saudacao}, {nome}! Obrigada pela visita 💖 Pode me contar como foi seu {servico}? Leva só 10 segundinhos: {link_avaliacao}",
-  auto_resposta: "{saudacao}! Aqui é do {studio} 💅 Já vi sua mensagem e logo te respondo. Se quiser agendar agora, escolha o dia e o horário por aqui: {link}",
+  auto_resposta: "{saudacao}! Aqui é do {studio} ✨ Já vi sua mensagem e logo te respondo. Se quiser agendar agora, escolha o dia e o horário por aqui: {link}",
 };
 // Bom dia (5h–12h) · Boa tarde (12h–18h) · Boa noite (18h–5h), horário de Brasília
 const saudacao = () => { const h = Number(new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }).format(new Date())) % 24; return h >= 5 && h < 12 ? "Bom dia" : h >= 12 && h < 18 ? "Boa tarde" : "Boa noite"; };
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
   // (categoria → serviço → dia → horário → confirmar), usando a mesma função do link (mesmas regras).
   // deno-lint-ignore no-explicit-any
   async function conversar(texto: string, estado: any, telefone: string, nomeWa: string) {
-    const t = texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+    const t = texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
     const num = (t.match(/^\s*(\d{1,2})\b/) || [])[1];
     const R: string[] = [];
     const st = estado && Date.now() - (estado.em || 0) < 40 * 60e3 ? estado : { etapa: "inicio" };
@@ -126,14 +126,15 @@ Deno.serve(async (req) => {
       .eq("owner_id", owner).eq("ativo", true).order("tipo").order("nome");
     const servicos = (svcs || []).filter((s) => Number(s.preco) > 0);
     const tipos = [...new Set(servicos.map((s) => s.tipo))];
-    const nomeTipo = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+    // as 4 categorias antigas têm id curto; as demais já são o nome que a profissional deu
+    const nomeTipo = (x: string) => ({ esmalteria: "Unhas" } as Record<string, string>)[x] || x.charAt(0).toUpperCase() + x.slice(1);
     const reais = (v: number) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     const dur = (m: number) => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, "0") : ""}` : `${m}min`;
     const MENU = `Como posso te ajudar? Responda com o número:\n\n1️⃣ Agendar horário\n2️⃣ Serviços e preços\n3️⃣ Meus horários\n4️⃣ Endereço e horário de atendimento\n5️⃣ Falar com a ${nomeStudio.replace(/^Studio (d[aeo] )?/i, "")}`;
     const quer = (re: RegExp) => re.test(t);
     // atalhos que valem em qualquer etapa
     if (quer(/\b(menu|inicio|voltar|opcoes)\b/) || (st.etapa === "inicio" && !num && !quer(/agend|marc|horario|preco|valor|quanto|servic|endereco|onde|local|cancel|desmarc|atendente|humana|falar/))) {
-      R.push(`${saudacao()}! Aqui é do ${nomeStudio} 💅 Sou a assistente virtual.`, MENU);
+      R.push(`${saudacao()}! Aqui é do ${nomeStudio} ✨ Sou a assistente virtual.`, MENU);
       return fim({ etapa: "menu" });
     }
     if (quer(/atendente|humana|pessoa|falar com|5️⃣/) || (["menu", "inicio"].includes(st.etapa) && num === "5")) {
@@ -146,7 +147,7 @@ Deno.serve(async (req) => {
       const op = num || (quer(/preco|valor|quanto|servic|catalog/) ? "2" : quer(/meus|cancel|desmarc|remarc/) ? "3" : quer(/endereco|onde|local|funciona/) ? "4" : quer(/agend|marc|horario|vaga/) ? "1" : "");
       if (op === "2") {
         const blocos = tipos.map((tp) => `*${nomeTipo(tp)}*\n` + servicos.filter((s) => s.tipo === tp).map((s) => `• ${s.nome} — ${reais(Number(s.preco_promo ?? s.preco))} (${dur(s.duracao_min)})`).join("\n"));
-        R.push(`Nossos serviços 💅\n\n${blocos.join("\n\n")}`);
+        R.push(`Nossos serviços ✨\n\n${blocos.join("\n\n")}`);
         R.push(link ? `Para agendar, o jeito mais fácil é pelo link (tem fotos dos trabalhos e os horários livres):\n${link}\n\nOu responda *1* que eu marco por aqui.` : "Quer agendar? Responda *1*.");
         return fim({ etapa: "menu" });
       }
@@ -195,7 +196,7 @@ Deno.serve(async (req) => {
       const s = servicos.filter((x) => x.tipo === st.tipo)[n - 1]; if (!s) { R.push("Responda com o número do serviço 😉"); return fim(st); }
       const dias = await diasLivres(s.duracao_min + (s.intervalo_min || 0));
       if (!dias.length) { R.push(`Poxa, não achei horário livre nos próximos dias para ${s.nome} 😔 Responda *5* que eu te ajudo a encaixar.`); return fim({ etapa: "menu" }); }
-      R.push(`${s.nome} 💅 Qual dia fica melhor?\n\n` + dias.map((d, i) => `${i + 1}. ${d.rotulo} (${d.horas.length} horário${d.horas.length > 1 ? "s" : ""})`).join("\n"));
+      R.push(`${s.nome} ✨ Qual dia fica melhor?\n\n` + dias.map((d, i) => `${i + 1}. ${d.rotulo} (${d.horas.length} horário${d.horas.length > 1 ? "s" : ""})`).join("\n"));
       return fim({ etapa: "dia", svc: s.id, dias: dias.map((d) => ({ data: d.data, rotulo: d.rotulo })) });
     }
     if (st.etapa === "dia") {
@@ -211,7 +212,7 @@ Deno.serve(async (req) => {
       const h = st.horas?.[n - 1]; if (!h) { R.push("Responda com o número do horário 😉"); return fim(st); }
       const s = servicos.find((x) => x.id === st.svc);
       if (!telefone) { R.push("Para reservar, me manda seu WhatsApp com DDD (só números) 😉"); return fim({ ...st, etapa: "telefone", hora: h }); }
-      R.push(`Confere?\n\n💅 ${s?.nome}\n📅 ${st.rotulo} às ${h}\n💰 ${reais(Number(s?.preco_promo ?? s?.preco ?? 0))}\n\n1. Confirmar\n2. Escolher outro horário`);
+      R.push(`Confere?\n\n✨ ${s?.nome}\n📅 ${st.rotulo} às ${h}\n💰 ${reais(Number(s?.preco_promo ?? s?.preco ?? 0))}\n\n1. Confirmar\n2. Escolher outro horário`);
       return fim({ ...st, etapa: "confirmar", hora: h, tel: telefone });
     }
     if (st.etapa === "telefone") {

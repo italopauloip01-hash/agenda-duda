@@ -739,8 +739,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
   </div>
   <div class="pill-tabs">
     <div class="pill active" onclick="setClientFilter('todos',this)">Todas</div>
-    <div class="pill" onclick="setClientFilter('esmalteria',this)">Esmalteria</div>
-    <div class="pill" onclick="setClientFilter('podologia',this)">Podologia</div>
+    <span id="cliPillsTipos" style="display:contents"></span>
     <div class="pill" onclick="setClientFilter('ranking',this)">🏆 Ranking</div>
     <div class="pill" onclick="setClientFilter('vip',this)">VIP</div>
     <div class="pill" onclick="setClientFilter('faltou',this)">Com faltas</div>
@@ -762,7 +761,9 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
   <div id="servPageNail" class="serv-tab active">
     <div class="search-bar" style="margin-bottom:10px"><span class="search-icon"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><input type="search" id="svcPageBusca" placeholder="Buscar serviço" oninput="renderServiceLists()"></div>
     <div id="serviceListAll"></div>
-    <button class="btn btn-primary" style="margin-top:12px" onclick="novoServico('esmalteria')">Novo serviço</button>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="novoServico()">Novo serviço</button>
+    <button class="btn btn-ghost" style="margin-top:8px" id="svcAreasBtn" onclick="abrirAreas()">Adicionar lista pronta de uma área</button>
+    <div id="svcAreasBox" hidden></div>
   </div>
   <div id="servPageEstoque" class="serv-tab" hidden>
     <div id="estoqueAlert"></div>
@@ -833,38 +834,15 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
     <div class="section-label">Por dia da semana</div>
     <div class="card" id="chartDias"></div>
     <div class="section-label">Por categoria</div>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
-        <span style="font-weight:500"><span class="service-dot" style="display:inline-block;background:var(--nail);margin-right:7px"></span>Esmalteria</span>
-        <span style="font-variant-numeric:tabular-nums;font-weight:500" id="finNailVal">R$0</span>
-      </div>
-      <div class="rev-bar"><div class="rev-fill" style="background:var(--nail);width:67%" id="finNailBar"></div></div>
-      <div class="rev-row"><span id="finNailAtend">16 atendimentos</span><span id="finNailPct">67%</span></div>
-      <div style="height:12px"></div>
-      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
-        <span style="font-weight:500"><span class="service-dot" style="display:inline-block;background:var(--pod);margin-right:7px"></span>Podologia</span>
-        <span style="font-variant-numeric:tabular-nums;font-weight:500" id="finPodVal">R$0</span>
-      </div>
-      <div class="rev-bar"><div class="rev-fill" style="background:var(--pod);width:33%" id="finPodBar"></div></div>
-      <div class="rev-row"><span id="finPodAtend">8 atendimentos</span><span id="finPodPct">33%</span></div>
-    </div>
-    <div class="section-label">Distribuição por área</div>
+    <div class="card" id="finCats"></div>
+    <div class="section-label">Distribuição por categoria</div>
     <div class="card" style="display:flex;align-items:center;gap:16px">
       <div class="donut-wrap">
         <svg width="130" height="130" viewBox="0 0 130 130" id="donutSvg"></svg>
         <div class="donut-center" id="donutCenter"></div>
       </div>
       <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
-          <div style="width:10px;height:10px;border-radius:50%;background:var(--nail);flex-shrink:0"></div>
-          <div style="flex:1;font-size:13px;color:var(--fg-muted)">Esmalteria</div>
-          <div style="font-size:13px;font-weight:700" id="donutNailPct">67%</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:7px">
-          <div style="width:10px;height:10px;border-radius:50%;background:var(--pod);flex-shrink:0"></div>
-          <div style="flex:1;font-size:13px;color:var(--fg-muted)">Podologia</div>
-          <div style="font-size:13px;font-weight:700" id="donutPodPct">33%</div>
-        </div>
+        <div id="donutLegenda"></div>
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
           <div style="font-size:12px;color:var(--fg-muted);margin-bottom:2px">Receita total</div>
           <div style="font-size:18px;font-weight:600" id="donutTotal">R$0</div>
@@ -1184,11 +1162,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
   <div class="form-group"><label class="form-label">CPF <span style="font-weight:400;color:var(--fg-muted)">(opcional, para nota fiscal)</span></label><input class="form-input" type="text" inputmode="numeric" id="cliCpf" placeholder="000.000.000-00" oninput="mascaraCpf(this)"></div>
   <div class="form-group">
     <label class="form-label">Tipo de atendimento</label>
-    <select class="form-input" id="cliTipo">
-      <option value="esmalteria">Esmalteria</option>
-      <option value="podologia">Podologia</option>
-      <option value="ambos">Ambos</option>
-    </select>
+    <select class="form-input" id="cliTipo"></select>
   </div>
   <div class="form-group"><label class="form-label">Como conheceu</label>
     <select class="form-input" id="cliOrigem"><option>WhatsApp</option><option>Indicação</option><option>Instagram</option><option>Google</option><option>Outro</option></select>
@@ -1265,7 +1239,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
   <div class="drawer-handle"></div>
   <div class="drawer-title" id="svcTitulo">Novo serviço</div>
   <div class="form-group"><label class="form-label big">Nome do serviço</label>
-    <textarea class="form-input big" id="svcNome" rows="2" placeholder="Ex: Alongamento acrílico" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea></div>
+    <textarea class="form-input big" id="svcNome" rows="2" placeholder="Ex: Corte e escova" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea></div>
   <div class="form-group"><label class="form-label big">Preço</label>
     <div class="campo-preco"><span>R$</span><input class="form-input big preco" type="text" inputmode="decimal" id="svcPreco" placeholder="0,00"></div></div>
   <div class="form-group"><label class="form-label big">Tempo do atendimento</label>
@@ -1275,7 +1249,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
       <label><input class="form-input big" type="number" inputmode="numeric" min="0" max="59" step="5" id="svcM" placeholder="0" oninput="syncDurSvc()"><span>min</span></label>
     </div></div>
   <div class="form-group"><label class="form-label big">Categoria</label>
-    <select class="form-input big" id="svcTipo" onchange="if(this.value==='__nova')abrirNovaCategoria()"><option value="esmalteria">Esmalteria</option><option value="podologia">Podologia</option><option value="sobrancelha">Sobrancelha</option><option value="maquiagem">Maquiagem</option><option value="__nova">＋ Criar nova categoria…</option></select>
+    <select class="form-input big" id="svcTipo" onchange="if(this.value==='__nova')abrirNovaCategoria()"><option value="__nova">＋ Criar nova categoria…</option></select>
     <div id="novaCatBox" hidden style="margin-top:8px">
       <div style="display:flex;gap:8px"><input class="form-input big" style="flex:1" type="text" id="novaCatNome" maxlength="30" placeholder="Ex: Cílios, Depilação…">
       <button type="button" class="btn btn-primary btn-sm" style="width:auto;padding:0 16px" onclick="criarCategoria()">Criar</button></div>
@@ -1291,7 +1265,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
       </div>
     </div></div>
   <div class="form-group"><label class="form-label big">Como é o serviço <span style="font-weight:400;color:var(--fg-muted)">(opcional)</span></label>
-    <textarea class="form-input" id="svcDesc" rows="2" maxlength="300" style="resize:none;font-family:inherit;line-height:1.4" placeholder="Ex: Inclui cutilagem, esmaltação em gel e hidratação. Dura até 21 dias."></textarea></div>
+    <textarea class="form-input" id="svcDesc" rows="2" maxlength="300" style="resize:none;font-family:inherit;line-height:1.4" placeholder="Ex: O que está incluso, quanto tempo dura, o que a cliente precisa trazer."></textarea></div>
   <details class="mais-opcoes"><summary>Mais opções (promoção e intervalo)</summary>
     <div class="form-row" style="margin-top:12px">
       <div class="form-group"><label class="form-label">Preço promocional</label><input class="form-input big" type="text" inputmode="decimal" id="svcPromo" placeholder="R$ 0,00"></div>
@@ -1308,7 +1282,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
 <div class="modal-overlay" id="novoProdutoDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
   <div class="drawer-title">Novo produto / material</div>
-  <div class="form-group"><label class="form-label">Nome</label><input class="form-input" type="text" id="prodNome" placeholder="Ex: Esmalte Robin Egg Blue"></div>
+  <div class="form-group"><label class="form-label">Nome</label><input class="form-input" type="text" id="prodNome" placeholder="Ex: Luvas descartáveis"></div>
   <div class="form-row">
     <div class="form-group"><label class="form-label">Qtd em estoque</label><input class="form-input" type="number" id="prodQtd" placeholder="0"></div>
     <div class="form-group"><label class="form-label">Qtd mínima</label><input class="form-input" type="number" id="prodMin" placeholder="2"></div>
@@ -1316,7 +1290,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
   <div class="form-row">
     <div class="form-group"><label class="form-label">Custo unit.</label><input class="form-input" type="text" inputmode="decimal" id="prodCusto" placeholder="R$ 0,00"></div>
     <div class="form-group"><label class="form-label">Categoria</label>
-      <input class="form-input" id="prodCat" list="prodCats" placeholder="Ex: Esmalte, Sobrancelha…" maxlength="40"><datalist id="prodCats"><option>Esmalte</option><option>Acrílico</option><option>Material de podologia</option><option>Sobrancelha</option><option>Maquiagem</option><option>Descartáveis</option><option>Outros</option></datalist>
+      <input class="form-input" id="prodCat" list="prodCats" placeholder="Ex: Descartáveis, Cosméticos…" maxlength="40"><datalist id="prodCats"><option>Material de trabalho</option><option>Cosméticos</option><option>Descartáveis</option><option>Higiene e limpeza</option><option>Para revenda</option><option>Outros</option></datalist>
     </div>
   </div>
   <div class="btn-row">
@@ -1329,7 +1303,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
 <div class="modal-overlay" id="novaDespesaDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
   <div class="drawer-title">Nova despesa</div>
-  <div class="form-group"><label class="form-label">Descrição</label><input class="form-input" type="text" id="despDesc" placeholder="Ex: Esmaltes, Aluguel..."></div>
+  <div class="form-group"><label class="form-label">Descrição</label><input class="form-input" type="text" id="despDesc" placeholder="Ex: Material, Aluguel..."></div>
   <div class="form-row">
     <div class="form-group"><label class="form-label">Valor</label><input class="form-input" type="text" inputmode="decimal" id="despValor" placeholder="R$ 0,00"></div>
     <div class="form-group"><label class="form-label">Data</label><input class="form-input" type="date" id="despData"></div>
@@ -1555,29 +1529,32 @@ let GOOGLE = {conectado:false,email:null,calendarioId:null,contatosSyncEm:null,t
 let ALL_APPTS = [];   // agendamentos deste ano e do próximo
 let APPTS = [];       // agendamentos do dia selecionado
 let CLIENTS = [];
-// categorias de serviço (a ordem é a das abas)
-// as 4 padrão sempre aparecem; categorias criadas pela profissional usam o próprio nome como tipo
-const TIPOS_PADRAO=[{id:'esmalteria',nome:'Esmalteria',cor:'#C2637A'},{id:'podologia',nome:'Podologia',cor:'#7A63C2'},{id:'sobrancelha',nome:'Sobrancelha',cor:'#B8865A'},{id:'maquiagem',nome:'Maquiagem',cor:'#5A8AB8'}];
-const CORES_EXTRA=['#5AA88A','#C2925A','#8A5AB8','#B85A8A','#5A9AB8','#A8A85A'];
-let TIPOS_SVC=TIPOS_PADRAO.slice();
+// categorias de serviço (a ordem é a das abas): só as que a profissional usa nos serviços dela.
+// o nome da categoria é o próprio tipo; as 4 antigas guardam um id curto e têm nome/cor aqui
+const TIPOS_ANTIGOS={esmalteria:{nome:'Esmalteria',cor:'#C2637A'},podologia:{nome:'Podologia',cor:'#7A63C2'},sobrancelha:{nome:'Sobrancelha',cor:'#B8865A'},maquiagem:{nome:'Maquiagem',cor:'#5A8AB8'}};
+const CORES_EXTRA=['#5AA88A','#C2925A','#8A5AB8','#B85A8A','#5A9AB8','#A8A85A','#C2637A','#7A63C2'];
+let TIPOS_SVC=[];
 function montarTipos(tiposUsados){
-  const extras=[...new Set(tiposUsados)].filter(t=>t&&!TIPOS_PADRAO.some(p=>p.id===t)).sort((a,b)=>a.localeCompare(b,'pt-BR'));
-  TIPOS_SVC=TIPOS_PADRAO.concat(extras.map((t,i)=>({id:t,nome:t,cor:CORES_EXTRA[i%CORES_EXTRA.length]})));
+  const usados=[...new Set(tiposUsados)].filter(Boolean);
+  const antigos=Object.keys(TIPOS_ANTIGOS).filter(t=>usados.includes(t));
+  const novos=usados.filter(t=>!TIPOS_ANTIGOS[t]).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  TIPOS_SVC=antigos.map(t=>({id:t,...TIPOS_ANTIGOS[t]})).concat(novos.map((t,i)=>({id:t,nome:t,cor:CORES_EXTRA[i%CORES_EXTRA.length]})));
   const sel=document.getElementById('svcTipo');
   if(sel){const v=sel.value;
     sel.innerHTML=TIPOS_SVC.map(t=>`<option value="${esc(t.id)}">${esc(t.nome)}</option>`).join('')+'<option value="__nova">＋ Criar nova categoria…</option>';
     if(TIPOS_SVC.some(t=>t.id===v)) sel.value=v;}
 }
-const corTipo=t=>(TIPOS_SVC.find(x=>x.id===t)||TIPOS_SVC[0]).cor;
-const nomeTipo=t=>(TIPOS_SVC.find(x=>x.id===t)||{nome:t}).nome;
+// categoria que não existe mais nos serviços (agendamentos antigos): cor fixa pelo nome
+const corTipo=t=>(TIPOS_SVC.find(x=>x.id===t)||TIPOS_ANTIGOS[t]||{cor:CORES_EXTRA[[...String(t||'')].reduce((s,c)=>s+c.charCodeAt(0),0)%CORES_EXTRA.length]}).cor;
+const nomeTipo=t=>t==='ambos'?'Várias':(TIPOS_SVC.find(x=>x.id===t)||TIPOS_ANTIGOS[t]||{nome:t}).nome;
+// categoria usada quando não dá para saber (contato importado, cliente nova)
+const tipoPadrao=()=>TIPOS_SVC[0]?.id||'Geral';
 let SVCS_TIPO = {};
-let SVCS_NAIL = [];
-let SVCS_POD = [];
 let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.55'; const VERSAO_DATA='28/10/2026 14:28';
+const VERSAO_APP='3.56'; const VERSAO_DATA='28/10/2026 22:16';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -1608,23 +1585,20 @@ function pagBadge(a){
 }
 const HORA_ABRE = 8, HORA_FECHA = 18;
 
-// categorias do portfólio = categorias de serviço (Esmalteria, Podologia, Sobrancelha, Maquiagem e as criadas)
+// categorias do portfólio = categorias de serviço
 const PORTFOLIO_CATS_ = () => TIPOS_SVC.map(t=>({id:t.id,name:t.nome,color:t.cor}));
 
-// Lista inicial oferecida quando ainda não há serviços cadastrados
-const SERVICOS_PADRAO = [
-  {nome:'Unhas em Gel',tipo:'esmalteria',duracao_min:90,preco:120,cor:'#C2637A'},
-  {nome:'Unhas em Acrílico',tipo:'esmalteria',duracao_min:120,preco:150,preco_promo:130,cor:'#C26398'},
-  {nome:'Manutenção Acrílico',tipo:'esmalteria',duracao_min:60,preco:80,cor:'#D4856E'},
-  {nome:'Esmaltação Simples',tipo:'esmalteria',duracao_min:45,preco:45,cor:'#C29A63'},
-  {nome:'Esmaltação em Gel',tipo:'esmalteria',duracao_min:50,preco:55,cor:'#E07A5F'},
-  {nome:'Nail Design (por unha)',tipo:'esmalteria',duracao_min:30,preco:30,cor:'#C2637A'},
-  {nome:'Remoção de Acrílico',tipo:'esmalteria',duracao_min:45,preco:40,cor:'#B5916B'},
-  {nome:'Podologia Básica',tipo:'podologia',duracao_min:60,preco:90,cor:'#7A63C2'},
-  {nome:'Tratamento de Micose',tipo:'podologia',duracao_min:60,preco:110,cor:'#9A63C2'},
-  {nome:'Calosidades',tipo:'podologia',duracao_min:45,preco:80,cor:'#6B63C2'},
-  {nome:'Palmilha Personalizada',tipo:'podologia',duracao_min:30,preco:70,cor:'#8B63C2'},
-];
+// Listas prontas por área, oferecidas para começar (nome, duração em min, preço) — tudo editável depois
+const SERVICOS_AREA = {
+  'Unhas':[['Esmaltação simples',45,45],['Esmaltação em gel',50,55],['Unhas em gel',90,120],['Unhas em acrílico',120,150],['Manutenção',60,80],['Nail art (por unha)',30,30],['Remoção',45,40]],
+  'Podologia':[['Podologia básica',60,90],['Unha encravada',45,100],['Tratamento de micose',60,110],['Calosidades',45,80]],
+  'Cabelo':[['Corte feminino',60,80],['Escova',45,50],['Hidratação',60,90],['Coloração',120,180],['Mechas / luzes',240,350],['Progressiva',180,250]],
+  'Tranças':[['Box braids',300,350],['Nagô',120,150],['Twist',240,300],['Tranças soltas',180,250],['Manutenção de tranças',120,150],['Retirada de tranças',90,80]],
+  'Barbearia':[['Corte masculino',40,45],['Barba',30,35],['Corte + barba',60,70],['Pigmentação',30,40]],
+  'Sobrancelha e cílios':[['Design de sobrancelha',30,40],['Design com henna',45,55],['Brow lamination',60,120],['Lash lifting',60,120],['Extensão de cílios',120,180]],
+  'Maquiagem':[['Maquiagem social',60,150],['Maquiagem para noivas',120,450]],
+  'Estética':[['Limpeza de pele',90,150],['Drenagem linfática',60,120],['Massagem relaxante',60,110],['Depilação',45,70]],
+};
 const CORES_CLIENTE = ['#B5637A','#7366B0','#5E8C7A','#A07F5C','#6F7F99','#9A6B8F','#7C8B5E','#8A6E6E'];
 
 // ── HELPERS ───────────────────────────────────────────────────────
@@ -2023,8 +1997,6 @@ function aplicarDados({cli,svc,prod,desp,aval,notif,bloq,appts,fotos,hors,perf,g
       promo:s.preco_promo!=null?Number(s.preco_promo):null,color:s.cor,foto:s.foto||null,desc:s.descricao||''});
     montarTipos(svc.map(s=>s.tipo));
     SVCS_TIPO=Object.fromEntries(TIPOS_SVC.map(t=>[t.id,svc.filter(s=>s.tipo===t.id).map(mapSvc)]));
-    SVCS_NAIL=SVCS_TIPO.esmalteria;
-    SVCS_POD=SVCS_TIPO.podologia;
     INVENTORY=prod.map(p=>({id:p.id,name:p.nome,cat:p.categoria,qtd:Number(p.quantidade),min:Number(p.minimo),custo:Number(p.custo)}));
     EXPENSES=desp.map(e=>({id:e.id,desc:e.descricao,cat:e.categoria,valor:Number(e.valor),dataD:new Date(e.data+'T12:00:00'),data:relDia(e.data+'T12:00:00')}));
     AVALIACOES=aval.map(a=>({id:a.id,name:a.nome,nota:a.nota,comentario:a.comentario||'',pendente:!a.publicada,data:relDia(a.criado_em)}));
@@ -2123,7 +2095,7 @@ function renderAppointments() {
   if(!APPTS.length) list.innerHTML+=`<div class="empty-state">Nada marcado ${label==='Hoje'?'para hoje':'neste dia'}.<br><br><button class="btn btn-ghost btn-sm" style="width:auto" onclick="openDrawer('novoAgendDrawer')">Agendar horário</button></div>`;
   APPTS.forEach(a => {
     if(ATIVOS(a)) total+=a.falta;
-    const dot = a.type==='esmalteria'?'var(--nail)':'var(--pod)';
+    const dot = corTipo(a.type);
     const typeB = '';
     const stB = statusBadge(a);
     const [h,m] = a.time.split(':');
@@ -2425,6 +2397,13 @@ function renderClients() {
   const search = semAcento((document.getElementById('clientSearch')||{value:''}).value.trim());
   const dig = search.replace(/\D/g,'');
   if(search!==ultimaBuscaCli){ ultimaBuscaCli=search; LIMITE_CLI=100; }
+  // um filtro por categoria, só quando há mais de uma
+  const pillsT=document.getElementById('cliPillsTipos');
+  if(pillsT){
+    if(currentClientFilter.startsWith('tipo:')&&!TIPOS_SVC.some(t=>'tipo:'+t.id===currentClientFilter)) currentClientFilter='todos';
+    pillsT.innerHTML=TIPOS_SVC.length>1?TIPOS_SVC.map((t,i)=>`<div class="pill${currentClientFilter==='tipo:'+t.id?' active':''}" onclick="setClientFilter(TIPOS_SVC[${i}]?'tipo:'+TIPOS_SVC[${i}].id:'todos',this)">${esc(t.nome)}</div>`).join(''):'';
+    if(currentClientFilter==='todos') document.querySelector('#page-clientes .pill')?.classList.add('active');
+  }
   const filter = currentClientFilter;
   const list = document.getElementById('clientList');
   list.innerHTML = '';
@@ -2432,8 +2411,7 @@ function renderClients() {
   const todas=CLIENTS
     .filter(c => {
       if (search && !semAcento(c.name).includes(search) && !(dig.length>=3&&c.phone.includes(dig))) return false;
-      if (filter==='esmalteria') return c.type==='esmalteria'||c.type==='ambos';
-      if (filter==='podologia')  return c.type==='podologia'||c.type==='ambos';
+      if (filter.startsWith('tipo:')) return c.type===filter.slice(5)||c.type==='ambos';
       if (filter==='vip')        return c.vip;
       if (filter==='faltou')     return c.faltou>0;
       return true;
@@ -2441,7 +2419,7 @@ function renderClients() {
   const rows=todas.slice(0,LIMITE_CLI);
   if(!rows.length) list.innerHTML=`<div class="empty-state">${CLIENTS.length?'Nenhuma cliente encontrada.':'Nenhuma cliente cadastrada ainda.'}</div>`;
   rows.forEach(c => {
-      const typeL = c.type==='ambos'?'Ambos':nomeTipo(c.type);
+      const typeL = esc(nomeTipo(c.type));
       const row = document.createElement('div');
       row.className = 'client-row';
       row.innerHTML = `
@@ -2457,7 +2435,7 @@ function renderClients() {
   if(todas.length>rows.length) list.insertAdjacentHTML('beforeend',`<button class="btn btn-ghost btn-sm" style="margin:10px 0" onclick="LIMITE_CLI+=100;renderClients()">Mostrar mais (${todas.length-rows.length} restantes)</button>`);
 }
 function openFicha(c) {
-  const typeL = c.type==='ambos'?'Esmalteria e podologia':nomeTipo(c.type);
+  const typeL = esc(nomeTipo(c.type));
   const wa=waLink(c.phone,`Olá ${c.name.split(' ')[0]}! `);
   window._fichaNome=c.name;
   const abertos=ALL_APPTS.filter(a=>a.cliente_id===c.id&&EM_ABERTO(a));
@@ -2592,7 +2570,13 @@ function preencherFormCliente(c){
   const set=(id,val)=>document.getElementById(id).value=val||'';
   set('cliNome',c&&c.name); set('cliTel',c&&c.phone?fmtTel(c.phone):''); set('cliNasc',c&&c.bday);
   set('cliCpf',c&&fmtCpf(c.cpf)); set('cliPref',c&&c.pref); set('cliObs',c&&c.obs);
-  document.getElementById('cliTipo').value=(c&&c.type)||'esmalteria';
+  // opções = categorias dos serviços (+ a da cliente, se for uma que não existe mais) + Várias
+  const tipoC=(c&&c.type)||tipoPadrao();
+  const ops=TIPOS_SVC.map(t=>t.id); if(!ops.includes(tipoC)&&tipoC!=='ambos') ops.push(tipoC);
+  const selT=document.getElementById('cliTipo');
+  selT.innerHTML=ops.map(t=>`<option value="${esc(t)}">${esc(nomeTipo(t))}</option>`).join('')+(TIPOS_SVC.length>1||tipoC==='ambos'?'<option value="ambos">Várias</option>':'');
+  selT.value=tipoC;
+  selT.closest('.form-group').hidden=TIPOS_SVC.length<2&&tipoC!=='ambos';
   const orig=document.getElementById('cliOrigem');
   orig.value=(c&&c.origem)||'WhatsApp'; if(!orig.value) orig.value='Outro';
   document.getElementById('cliVip').checked=!!(c&&c.vip);
@@ -2638,12 +2622,20 @@ function renderServiceLists() {
   const todos=Object.values(SVCS_TIPO).flat();
   const termo=semAcento(document.getElementById('svcPageBusca').value.trim());
   box.innerHTML='';
-  if(!todos.length){box.innerHTML='<div class="list-card"><div class="empty-state">Nenhum serviço cadastrado.<br><br><button class="btn btn-primary btn-sm" style="width:auto;margin:0 auto" onclick="usarServicosPadrao()">Usar lista padrão (11 serviços)</button></div></div>';return}
-  TIPOS_SVC.forEach(tp=>{
+  document.getElementById('svcAreasBtn').hidden=!todos.length;
+  if(!todos.length){
+    box.innerHTML=`<div class="card"><div style="font-weight:600;margin-bottom:4px">Qual é a sua área?</div>
+      <div class="client-sub" style="white-space:normal;margin-bottom:12px">Escolha uma ou mais para começar com uma lista pronta. Depois dá para mudar nomes, preços e categorias — ou toque em Novo serviço para cadastrar do zero.</div>
+      ${htmlAreas()}</div>`;
+    return}
+  TIPOS_SVC.forEach((tp,i)=>{
     const items=(SVCS_TIPO[tp.id]||[]).filter(s=>!termo||semAcento(s.name).includes(termo)).slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
     if(!items.length) return;
-    box.insertAdjacentHTML('beforeend',`<div class="section-label" style="margin-top:14px">${tp.nome} · ${items.length}</div><div class="list-card" id="svcGrupo-${tp.id}"></div>`);
-    mk(items,'svcGrupo-'+tp.id);
+    box.insertAdjacentHTML('beforeend',`<div class="section-label" style="margin-top:14px;display:flex;align-items:center;gap:6px" id="svcCat-${i}">
+      <span>${esc(tp.nome)} · ${items.length}</span>
+      <button class="icon-btn" style="width:26px;height:26px" title="Renomear categoria" onclick="editarNomeCategoria(${i})"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button></div>
+      <div class="list-card" id="svcGrupo-${i}"></div>`);
+    mk(items,'svcGrupo-'+i);
   });
   if(!box.children.length) box.innerHTML='<div class="empty-state">Nenhum serviço encontrado.</div>';
   function mk(items, id){
@@ -2714,8 +2706,10 @@ function tirarFotoSvc(){
 function novoServico(tipo){
   SVC_EDIT=null;
   ['svcNome','svcDur','svcH','svcM','svcInt','svcPreco','svcPromo'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('svcTipo').value=tipo;
+  tipo=tipo||TIPOS_SVC[0]?.id;
+  document.getElementById('svcTipo').value=tipo||'__nova';
   document.getElementById('novaCatBox').hidden=true;
+  if(!tipo) abrirNovaCategoria(); // primeira categoria: já pede o nome
   document.getElementById('svcDesc').value=''; mostrarFotoSvc(null);
   document.getElementById('svcTitulo').textContent='Novo serviço';
   openDrawer('novoServicoDrawer');
@@ -2737,9 +2731,61 @@ function editarServico(id){
   openDrawer('novoServicoDrawer');
   requestAnimationFrame(ajustarNomeSvc);
 }
-async function usarServicosPadrao(){
-  try{await q(sb.from('servicos').insert(SERVICOS_PADRAO))}catch(e){return}
-  toast('Serviços cadastrados — ajuste os preços se precisar');
+// listas prontas: a profissional marca as áreas dela e os serviços entram já na categoria da área
+function htmlAreas(){
+  return `<div class="pills" style="flex-wrap:wrap;overflow:visible;margin-bottom:12px">${Object.keys(SERVICOS_AREA).map(a=>
+    `<div class="pill" data-area="${esc(a)}" onclick="this.classList.toggle('active')">${esc(a)}</div>`).join('')}</div>
+    <button class="btn btn-primary btn-sm" onclick="usarServicosArea(this)">Cadastrar serviços das áreas marcadas</button>`;
+}
+function abrirAreas(){
+  const b=document.getElementById('svcAreasBox');
+  b.hidden=!b.hidden;
+  if(!b.hidden){b.innerHTML=`<div class="card" style="margin-top:10px"><div class="client-sub" style="white-space:normal;margin-bottom:10px">Marque a área e os serviços dela entram numa categoria nova (os que você já tem ficam como estão).</div>${htmlAreas()}</div>`;
+    b.scrollIntoView({behavior:'smooth',block:'nearest'})}
+}
+async function usarServicosArea(btn){
+  const areas=[...btn.parentElement.querySelectorAll('.pill.active')].map(p=>p.dataset.area);
+  if(!areas.length){toast('Toque em uma ou mais áreas primeiro');return}
+  const existentes=new Set(Object.values(SVCS_TIPO).flat().map(s=>semAcento(s.name)));
+  const linhas=areas.flatMap((a,i)=>{
+    // se já existe uma categoria com esse nome (ex.: Podologia antiga), usa ela
+    const tipo=(TIPOS_SVC.find(t=>semAcento(t.nome)===semAcento(a))||{id:a}).id;
+    const cor=TIPOS_SVC.find(t=>t.id===tipo)?.cor||CORES_EXTRA[(TIPOS_SVC.length+i)%CORES_EXTRA.length];
+    return SERVICOS_AREA[a].filter(([n])=>!existentes.has(semAcento(n))).map(([nome,duracao_min,preco])=>({nome,tipo,duracao_min,preco,cor}));
+  });
+  if(!linhas.length){toast('Esses serviços já estão cadastrados');return}
+  btn.disabled=true;
+  try{await q(sb.from('servicos').insert(linhas))}catch(e){btn.disabled=false;return}
+  document.getElementById('svcAreasBox').hidden=true;
+  toast(`${linhas.length} serviço${linhas.length>1?'s':''} cadastrado${linhas.length>1?'s':''} — ajuste nomes e preços tocando em cada um`);
+  await recarregar();
+}
+// renomear categoria: muda o nome em serviços, agendamentos, clientes e fotos de uma vez
+function editarNomeCategoria(i){
+  const tp=TIPOS_SVC[i], el=document.getElementById('svcCat-'+i); if(!tp||!el) return;
+  el.innerHTML=`<input class="form-input" id="svcCatNome" maxlength="30" value="${esc(tp.nome)}" style="flex:1;padding:8px 10px;font-size:14px;text-transform:none;letter-spacing:0" onkeydown="if(event.key==='Enter')salvarNomeCategoria(${i})">
+    <button class="btn btn-primary btn-sm" style="width:auto" onclick="salvarNomeCategoria(${i})">Salvar</button>
+    <button class="btn btn-ghost btn-sm" style="width:auto" onclick="renderServiceLists()">Cancelar</button>`;
+  const inp=document.getElementById('svcCatNome'); inp.focus(); inp.select();
+}
+async function salvarNomeCategoria(i){
+  const tp=TIPOS_SVC[i]; if(!tp) return;
+  let nome=document.getElementById('svcCatNome').value.trim().replace(/\s+/g,' ');
+  if(nome.length<2){toast('Digite o nome da categoria');return}
+  nome=nome[0].toUpperCase()+nome.slice(1);
+  if(nome===tp.nome){renderServiceLists();return}
+  // mesmo nome de outra categoria = junta as duas
+  const outra=TIPOS_SVC.find(t=>t.id!==tp.id&&semAcento(t.nome)===semAcento(nome));
+  const novo=outra?outra.id:nome, de=tp.id;
+  try{
+    await q(sb.from('servicos').update({tipo:novo}).eq('tipo',de));
+    await Promise.all([
+      q(sb.from('agendamentos').update({tipo:novo}).eq('tipo',de)),
+      q(sb.from('clientes').update({tipo:novo}).eq('tipo',de)),
+      q(sb.from('portfolio_fotos').update({categoria:novo}).eq('categoria',de)),
+    ]);
+  }catch(e){return}
+  toast(outra?`Categoria juntada com ${outra.nome}`:`Categoria renomeada para ${nome}`);
   await recarregar();
 }
 async function salvarServico(){
@@ -2826,15 +2872,16 @@ function calcFinanceiro(){
     const [i,f]=periodo(p);
     const at=ALL_APPTS.filter(a=>a.status==='concluido'&&a.ini>=i&&a.ini<f);
     const receita=at.reduce((s,a)=>s+a.price,0);
-    const nailL=at.filter(a=>a.type==='esmalteria'), podL=at.filter(a=>a.type==='podologia');
-    const nail=nailL.reduce((s,a)=>s+a.price,0), pod=podL.reduce((s,a)=>s+a.price,0);
+    // receita por categoria, da maior para a menor
+    const porCat={};at.forEach(a=>{const c=porCat[a.type]||(porCat[a.type]={id:a.type,valor:0,n:0});c.valor+=a.price;c.n++});
+    const cats=Object.values(porCat).sort((a,b)=>b.valor-a.valor||b.n-a.n)
+      .map(c=>({...c,nome:nomeTipo(c.id),cor:corTipo(c.id),pct:receita?Math.round(c.valor/receita*100):0}));
     const desp=EXPENSES.filter(e=>e.dataD>=i&&e.dataD<f).reduce((s,e)=>s+e.valor,0);
-    const nailP=receita?Math.round(nail/receita*100):0;
     // caixa: o que de fato entrou no período, pela data do pagamento
     const pags=ALL_APPTS.flatMap(a=>a.pagos).filter(x=>x.em>=i&&x.em<f);
     const formas={};pags.forEach(x=>formas[x.forma]=(formas[x.forma]||0)+x.valor);
     FIN_DATA[p]={receita,lucro:receita-desp,atend:at.length,ticket:at.length?Math.round(receita/at.length):0,desp,
-      nail,pod,nailA:nailL.length,podA:podL.length,nailP,podP:receita?100-nailP:0,atendList:at,
+      cats,atendList:at,
       recebido:pags.reduce((s,x)=>s+x.valor,0),formas};
   });
   const ano=new Date().getFullYear();
@@ -2867,14 +2914,14 @@ function renderFinanceiro(){
   document.getElementById('finTicket').textContent=fmt(d.ticket);
   document.getElementById('finDesp').textContent=fmt(d.desp);
   document.getElementById('finPeriodo').textContent=FIN_PERIOD_LABELS[finPeriod];
-  document.getElementById('finNailVal').textContent=fmt(d.nail);
-  document.getElementById('finPodVal').textContent=fmt(d.pod);
-  document.getElementById('finNailAtend').textContent=d.nailA+' atendimento'+(d.nailA===1?'':'s');
-  document.getElementById('finPodAtend').textContent=d.podA+' atendimento'+(d.podA===1?'':'s');
-  document.getElementById('finNailPct').textContent=d.nailP+'%';
-  document.getElementById('finPodPct').textContent=d.podP+'%';
-  document.getElementById('finNailBar').style.width=d.nailP+'%';
-  document.getElementById('finPodBar').style.width=d.podP+'%';
+  document.getElementById('finCats').innerHTML=d.cats.length?d.cats.map((c,i)=>`${i?'<div style="height:12px"></div>':''}
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
+        <span style="font-weight:500"><span class="service-dot" style="display:inline-block;background:${esc(c.cor)};margin-right:7px"></span>${esc(c.nome)}</span>
+        <span style="font-variant-numeric:tabular-nums;font-weight:500">${fmt(c.valor)}</span>
+      </div>
+      <div class="rev-bar"><div class="rev-fill" style="background:${esc(c.cor)};width:${c.pct}%"></div></div>
+      <div class="rev-row"><span>${c.n} atendimento${c.n===1?'':'s'}</span><span>${c.pct}%</span></div>`).join('')
+    :'<div class="empty-state" style="padding:8px">Nenhum atendimento concluído neste período.</div>';
   document.getElementById('finRecebido').textContent=fmt(d.recebido);
   renderAReceber();
   renderChartFormas();
@@ -2943,7 +2990,7 @@ function renderTopServices() {
   if(!data.length){el.innerHTML='<div class="card"><div class="empty-state" style="padding:10px">Sem dados '+FIN_PERIOD_LABELS[finPeriod]+'.</div></div>';return}
   const max = data[0].qtd;
   el.innerHTML = '<div class="card">'+data.map(d=>{
-    const color=d.type==='esmalteria'?'var(--nail)':d.type==='podologia'?'var(--pod)':corTipo(d.type);
+    const color=corTipo(d.type);
     return `
     <div class="chart-row">
       <div class="chart-label" style="width:80px;font-size:11px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.name)}</div>
@@ -3262,21 +3309,21 @@ async function copiarLink(){
 // As de "uso" são chamadas pelos botões do app (lembrete, cobrança…).
 const MSGS_PADRAO=[
   {id:'lembrete',titulo:'Lembrete do horário',uso:'Botão Lembrete e Lembretes de amanhã',
-    texto:'{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora}. Posso confirmar? 💅'},
+    texto:'{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora}. Posso confirmar? ✨'},
   {id:'confirmacao',titulo:'Confirmação de agendamento',uso:'Aviso ao marcar um horário',
     texto:'{saudacao}, {nome}! Seu horário de {servico} está confirmado para {dia} às {hora}. Te espero! 💖\n\nSe precisar desmarcar, cancele com pelo menos 24h de antecedência por aqui: {link_cancelar}\nCancelamentos com menos de 24h ou faltas são cobrados em 1/3 do valor do serviço ({taxa}).'},
   {id:'pedir_confirmacao',titulo:'Horário marcado — pedir confirmação',uso:'Ao marcar pelo app: a cliente confirma ou cancela pelo link',
-    texto:'{saudacao}, {nome}! Marquei seu horário de {servico} para {dia} às {hora} 💅 Confirme por aqui, é rapidinho: {link_confirmar}'},
+    texto:'{saudacao}, {nome}! Marquei seu horário de {servico} para {dia} às {hora} ✨ Confirme por aqui, é rapidinho: {link_confirmar}'},
   {id:'remarcado',titulo:'Horário remarcado',uso:'Aviso ao remarcar',
     texto:'{saudacao}, {nome}! Seu horário de {servico} foi remarcado para {dia} às {hora} 💖 Confirme por aqui: {link_confirmar}'},
   {id:'lembrete24',titulo:'Lembrete 1 — com antecedência (robô)',uso:'Robô: no tempo do Lembrete 1 (Ajustes → Robô)',
-    texto:'{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora} 💅\n\nSe não puder vir, cancele aqui ainda dentro do prazo de 24h, para evitar a cobrança de 1/3 do valor ({taxa}): {link_cancelar}'},
+    texto:'{saudacao}, {nome}! Passando para lembrar do seu horário de {servico} {dia} às {hora} ✨\n\nSe não puder vir, cancele aqui ainda dentro do prazo de 24h, para evitar a cobrança de 1/3 do valor ({taxa}): {link_cancelar}'},
   {id:'lembrete5',titulo:'Lembrete 2 — perto do horário (robô)',uso:'Robô: no tempo do Lembrete 2 (Ajustes → Robô)',
     texto:'{saudacao}, {nome}! Seu horário de {servico} é {dia} às {hora} 💖 Te espero!'},
   {id:'pedido_recebido',titulo:'Pedido recebido pelo link (robô)',uso:'Robô: quando a cliente agenda pelo link',
     texto:'{saudacao}, {nome}! Recebemos seu pedido de {servico} para {dia} às {hora} 💖 Assim que for confirmado eu te aviso por aqui.'},
   {id:'auto_resposta',titulo:'Resposta automática (robô)',uso:'Robô: quando alguém chama no WhatsApp (1x por conversa)',
-    texto:'{saudacao}! Aqui é do {studio} 💅 Já vi sua mensagem e logo te respondo. Se quiser agendar agora, escolha o dia e o horário por aqui: {link}'},
+    texto:'{saudacao}! Aqui é do {studio} ✨ Já vi sua mensagem e logo te respondo. Se quiser agendar agora, escolha o dia e o horário por aqui: {link}'},
   {id:'recusado',titulo:'Pedido recusado',uso:'Aviso ao recusar um pedido do link',
     texto:'{saudacao}, {nome}! Infelizmente não consigo te atender {dia} às {hora} 😔 Pode escolher outro horário por aqui: {link}'},
   {id:'cancelamento',titulo:'Horário cancelado',uso:'Aviso ao cancelar',
@@ -3289,9 +3336,12 @@ const MSGS_PADRAO=[
     texto:'{saudacao}, {nome}! Estou com um pequeno atraso, em uns 10 minutinhos te atendo. Obrigada pela paciência 💕'},
   {id:'falta',titulo:'Faltou ao horário',
     texto:'{saudacao}, {nome}, sentimos sua falta hoje no horário de {servico}. Aconteceu alguma coisa? Quer remarcar? {link}'},
-  {id:'cuidados_unhas',titulo:'Cuidados pós-unhas',
+  {id:'cuidados',titulo:'Cuidados depois do atendimento',
+    texto:'{saudacao}, {nome}! Obrigada pela visita 💖 Para o seu {servico} ficar lindo por mais tempo, siga os cuidados que combinamos. Qualquer dúvida é só me chamar por aqui!'},
+  // as duas abaixo só aparecem para quem tem serviços de unhas / podologia
+  {id:'cuidados_unhas',titulo:'Cuidados pós-unhas',so:['esmalteria','Unhas'],
     texto:'{saudacao}, {nome}! Para seu {servico} durar mais: evite água quente nas primeiras horas, use luvas para limpeza e passe óleo de cutícula todo dia 💅'},
-  {id:'cuidados_pes',titulo:'Cuidados pós-podologia',
+  {id:'cuidados_pes',titulo:'Cuidados pós-podologia',so:['podologia','Podologia'],
     texto:'{saudacao}, {nome}! Depois da podologia: mantenha os pés secos, hidrate todos os dias (menos entre os dedos) e evite sapatos apertados nas próximas 48h 🦶'},
   {id:'avaliacao',titulo:'Pedido de avaliação',uso:'Robô: 1h depois de concluir · botão Pedir avaliação',
     texto:'{saudacao}, {nome}! Obrigada pela visita 💖 Pode me contar como foi seu {servico}? Leva só 10 segundinhos: {link_avaliacao}'},
@@ -3304,7 +3354,7 @@ const MSGS_PADRAO=[
   {id:'promocao',titulo:'Promoção',
     texto:'{saudacao}, {nome}! Essa semana tem condição especial em {servico}. Garanta seu horário: {link} ✨'},
   {id:'link',titulo:'Link para agendar',
-    texto:'{saudacao}, {nome}! Para agendar é só escolher o dia e o horário por aqui: {link} 💅'},
+    texto:'{saudacao}, {nome}! Para agendar é só escolher o dia e o horário por aqui: {link} ✨'},
 ];
 const VARIAVEIS=[['{saudacao}','bom dia / boa tarde / boa noite'],['{nome}','nome da cliente'],['{servico}','serviço'],['{dia}','dia'],['{hora}','hora'],['{data}','data'],['{valor}','valor'],['{link}','link de agendamento'],['{link_avaliacao}','link para a cliente avaliar'],['{link_confirmar}','link para a cliente confirmar ou cancelar'],['{link_cancelar}','link para a cliente cancelar (mesma página)'],['{taxa}','1/3 do valor (taxa de cancelamento)'],['{studio}','nome do studio']];
 function modelosCfg(){
@@ -3316,7 +3366,7 @@ function modelosCfg(){
 function todasMensagens(){
   const c=modelosCfg();
   return [
-    ...MSGS_PADRAO.filter(p=>!c.ocultas.includes(p.id)).map(p=>({...p,texto:c.textos[p.id]||p.texto,editada:!!c.textos[p.id],padrao:true})),
+    ...MSGS_PADRAO.filter(p=>!c.ocultas.includes(p.id)&&(!p.so||c.textos[p.id]||p.so.some(t=>TIPOS_SVC.some(x=>x.id===t)))).map(p=>({...p,texto:c.textos[p.id]||p.texto,editada:!!c.textos[p.id],padrao:true})),
     ...c.extras.map(e=>({...e,padrao:false})),
   ];
 }
@@ -3363,7 +3413,7 @@ function renderMensagens(){
         ${m.padrao?'':`<div class="form-group"><label class="form-label">Nome da mensagem</label><input class="form-input" id="msgTitulo" value="${esc(m.titulo)}"></div>`}
         <div class="form-group" style="margin-bottom:8px"><label class="form-label">Texto</label><textarea class="form-input" id="msgTexto" rows="4" style="resize:vertical">${esc(m.texto)}</textarea></div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">${VARIAVEIS.map(([v,d])=>`<button type="button" class="pill" style="padding:4px 10px;font-size:12px" title="${d}" onclick="inserirVariavel('${v}')">${v}</button>`).join('')}</div>
-        <div class="client-sub" style="white-space:normal;margin-bottom:12px">Exemplo: ${esc(preencher(m.texto,{nome:'Ana',servico:'Unhas em Gel',dia:'amanhã',hora:'14:00',data:new Date().toLocaleDateString('pt-BR'),valor:'R$ 60'}))}</div>
+        <div class="client-sub" style="white-space:normal;margin-bottom:12px">Exemplo: ${esc(preencher(m.texto,{nome:'Ana',servico:Object.values(SVCS_TIPO).flat()[0]?.name||'Corte e escova',dia:'amanhã',hora:'14:00',data:new Date().toLocaleDateString('pt-BR'),valor:'R$ 60'}))}</div>
         ${m.uso?`<div class="client-sub" style="white-space:normal;margin-bottom:12px">Usada em: ${esc(m.uso)}</div>`:''}
         <div class="btn-row" style="flex-wrap:wrap">
           ${m.padrao?(m.editada?`<button class="btn btn-ghost btn-sm" onclick="restaurarMensagem('${m.id}')">Texto original</button>`:'')+(m.uso?'':`<button class="btn btn-danger btn-sm" onclick="ocultarMensagem('${m.id}')">Remover</button>`)
@@ -3623,7 +3673,7 @@ function loadServicesForm() {
   const sel=svcIdsSel().filter(id=>todos.some(s=>s.id===id)); hid.value=sel.join(',');
   const tabs=document.getElementById('tipoTabs');
   tabs.hidden=!!termo||tipos.length<2;
-  tabs.innerHTML=tipos.map(t=>`<button type="button" class="tab-item${t.id===tipo?' active':''}" onclick="setTipoServico('${t.id}')">${t.nome}</button>`).join('');
+  tabs.innerHTML=tipos.map(t=>`<button type="button" class="tab-item${t.id===tipo?' active':''}" onclick="setTipoServico(this.dataset.t)" data-t="${esc(t.id)}">${esc(t.nome)}</button>`).join('');
   // escolhidos aparecem em cima, com o total; dá para tirar tocando no ✕
   const tot=svcSelecionado();
   document.getElementById('svcEscolhidos').innerHTML=tot?`
@@ -3959,7 +4009,7 @@ async function importContacts() {
   try {
     const contacts = await navigator.contacts.select(['name','tel'], {multiple: true});
     if(!contacts.length) return;
-    const rows=contacts.map((c,i)=>({nome:(c.name||[])[0]||'Sem nome',telefone:normTel((c.tel||[])[0]),tipo:'esmalteria',
+    const rows=contacts.map((c,i)=>({nome:(c.name||[])[0]||'Sem nome',telefone:normTel((c.tel||[])[0]),tipo:tipoPadrao(),
       origem:'WhatsApp',cor:CORES_CLIENTE[(CLIENTS.length+i)%CORES_CLIENTE.length]}))
       .filter(r=>!CLIENTS.some(c=>(r.telefone&&c.phone===r.telefone)||c.name===r.nome));
     if(!rows.length){toast('Esses contatos já estão cadastrados');return}
@@ -3978,19 +4028,21 @@ function renderDonutChart() {
   const total = d.receita;
   const r = 50, cx = 65, cy = 65, stroke = 16;
   const circ = 2 * Math.PI * r;
-  const nailLen = d.nailP / 100 * circ;
-  const podLen  = d.podP  / 100 * circ;
   const svg = document.getElementById('donutSvg');
   svg.setAttribute('viewBox','0 0 130 130');
-  svg.innerHTML = `
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="${stroke}"/>
-    ${nailLen?`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--nail)" stroke-width="${stroke}"
-      stroke-dasharray="${nailLen} ${circ}" stroke-dashoffset="0" stroke-linecap="round"/>`:''}
-    ${podLen?`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--pod)" stroke-width="${stroke}"
-      stroke-dasharray="${podLen} ${circ}" stroke-dashoffset="${-nailLen}" stroke-linecap="round"/>`:''}`;
+  // uma fatia por categoria, uma depois da outra
+  let ini=0;
+  const fatias=d.cats.filter(c=>c.valor>0).map(c=>{
+    const len=total?c.valor/total*circ:0, s=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${esc(c.cor)}" stroke-width="${stroke}"
+      stroke-dasharray="${len} ${circ}" stroke-dashoffset="${-ini}"/>`;
+    ini+=len; return s;
+  }).join('');
+  svg.innerHTML = `<g transform="rotate(-90 ${cx} ${cy})"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="${stroke}"/>${fatias}</g>`;
   document.getElementById('donutCenter').innerHTML = `<span style="font-size:13px;font-weight:700;color:var(--fg)">${fmtR(total)}</span><span style="font-size:9px;color:var(--fg-muted)">total</span>`;
-  document.getElementById('donutNailPct').textContent = d.nailP + '%';
-  document.getElementById('donutPodPct').textContent  = d.podP  + '%';
+  document.getElementById('donutLegenda').innerHTML = d.cats.map((c,i)=>`<div style="display:flex;align-items:center;gap:7px;${i?'margin-top:10px':''}">
+      <div style="width:10px;height:10px;border-radius:50%;background:${esc(c.cor)};flex-shrink:0"></div>
+      <div style="flex:1;font-size:13px;color:var(--fg-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.nome)}</div>
+      <div style="font-size:13px;font-weight:700">${c.pct}%</div></div>`).join('')||'<div class="client-sub">Sem atendimentos no período</div>';
   document.getElementById('donutTotal').textContent   = fmtR(total);
 }
 
@@ -4216,8 +4268,7 @@ function renderPnLTable() {
     {label:'Margem líquida', value: margem+'%',      cls:margem<0?'pnl-down':'pnl-up',   bold:false},
     {label:'Ticket médio',   value: fmt(d.ticket),   cls:'',         bold:false},
     {label:'Atendimentos',   value: d.atend+'',      cls:'',         bold:false},
-    {label:'Esmalteria',  value: fmt(d.nail),    cls:'',         bold:false},
-    {label:'Podologia',   value: fmt(d.pod),     cls:'',         bold:false},
+    ...d.cats.map(c=>({label:esc(c.nome), value: fmt(c.valor), cls:'', bold:false})),
   ];
   const table = document.getElementById('pnlTable');
   table.innerHTML = `<thead><tr><th>Item</th><th style="text-align:right">Valor</th></tr></thead><tbody>` +
@@ -4554,7 +4605,7 @@ async function gerarCartaz(formato){
   ctx.fillText('Agendamento por Bellisa',W/2-88,H-(story?86:58));
   return new Promise(ok=>c.toBlob(b=>ok(b),'image/png'));
 }
-function textoDivulgar(){return `✨ Novidade! Agora você pode agendar seu horário comigo online, a qualquer hora 💅\nÉ só escolher o serviço, o dia e o horário: ${linkAgendamento()}`}
+function textoDivulgar(){return `✨ Novidade! Agora você pode agendar seu horário comigo online, a qualquer hora ✨\nÉ só escolher o serviço, o dia e o horário: ${linkAgendamento()}`}
 async function abrirDivulgar(){
   if(!PERFIL.agendamento_online||!PERFIL.slug){toast('Ative o agendamento online primeiro');abrirPerfil(true);return}
   closeDrawer('perfilDrawer'); document.getElementById('divTexto').value=textoDivulgar();
@@ -4802,7 +4853,8 @@ async function syncEvento(id){
     summary:`${marca}${a.clientes?.nome||'Cliente'} — ${a.servico_nome}`,
     description:[a.clientes?.telefone?'WhatsApp: '+fmtTel(a.clientes.telefone):'',`Valor: R$ ${Number(a.valor).toFixed(2).replace('.',',')}`,a.observacoes||'','Criado pelo app Bellisa'].filter(Boolean).join('\n'),
     start:{dateTime:a.inicio,timeZone:'America/Sao_Paulo'},end:{dateTime:a.fim,timeZone:'America/Sao_Paulo'},
-    colorId:a.tipo==='podologia'?'3':'4',
+    // uma cor do Google por categoria (lavanda, sálvia, uva, flamingo, banana, tangerina, pavão, grafite, mirtilo, manjericão)
+    colorId:['4','3','6','9','2','5','7','10','11','1'][Math.max(0,TIPOS_SVC.findIndex(t=>t.id===a.tipo))%10],
     reminders:{useDefault:false,overrides:[{method:'popup',minutes:30}]},
   };
   if(a.google_event_id){
@@ -4916,11 +4968,11 @@ async function importarEventosG(){
       if(ALL_APPTS.some(a=>ATIVOS(a)&&Math.abs(a.ini-e.ini)<6e4)){conflito++;continue}
       let cliId=e.cli?.id;
       if(!cliId){
-        const r=await sb.from('clientes').insert({nome:e.nomeCli.slice(0,80),tipo:e.svc?.tipo||'esmalteria',origem:'Google',cor:CORES_CLIENTE[(CLIENTS.length+ok)%CORES_CLIENTE.length]}).select('id').single();
+        const r=await sb.from('clientes').insert({nome:e.nomeCli.slice(0,80),tipo:e.svc?.tipo||tipoPadrao(),origem:'Google',cor:CORES_CLIENTE[(CLIENTS.length+ok)%CORES_CLIENTE.length]}).select('id').single();
         if(r.error) throw r.error; cliId=r.data.id;
       }
       const {error}=await sb.from('agendamentos').insert({cliente_id:cliId,servico_id:e.svc?.id||null,servico_nome:e.svc?.name||e.titulo.slice(0,80),
-        tipo:e.svc?.tipo||'esmalteria',inicio:e.ini.toISOString(),fim:e.fim.toISOString(),valor:e.svc?(e.svc.promo??e.svc.price):0,
+        tipo:e.svc?.tipo||tipoPadrao(),inicio:e.ini.toISOString(),fim:e.fim.toISOString(),valor:e.svc?(e.svc.promo??e.svc.price):0,
         origem:'google',observacoes:'Importado do Google Agenda'});
       if(error){ if(error.code==='23P01') conflito++; else throw error; } else ok++;
     }catch(x){console.error(x);erro++}
@@ -4995,7 +5047,7 @@ function marcarTodosContatos(v){
 }
 async function importarContatosGoogle(){
   const rows=CONTATOS_G.filter(c=>SEL_G.has(c.resource)&&!jaTemContato(c)).map((c,i)=>({nome:c.nome,telefone:c.tel,nascimento:c.nasc,
-    tipo:'esmalteria',origem:'Outro',google_resource:c.resource,cor:CORES_CLIENTE[(CLIENTS.length+i)%CORES_CLIENTE.length]}));
+    tipo:tipoPadrao(),origem:'Outro',google_resource:c.resource,cor:CORES_CLIENTE[(CLIENTS.length+i)%CORES_CLIENTE.length]}));
   if(!rows.length){toast('Marque os contatos que são clientes');return}
   toast(`Importando ${rows.length} contato${rows.length>1?'s':''}…`);
   for(let i=0;i<rows.length;i+=500){
@@ -5054,7 +5106,7 @@ async function sincronizarContatos(forcar){
           nascimento:b?.month?`${b.year||2000}-${String(b.month).padStart(2,'0')}-${String(b.day||1).padStart(2,'0')}`:null}})
         .filter(r=>r.nome.length>=2&&r.telefone&&!tels.has(r.telefone));
       for(const r of rows){
-        const {error}=await sb.from('clientes').insert({...r,tipo:'esmalteria',origem:'Outro',cor:CORES_CLIENTE[(CLIENTS.length+trazidos)%CORES_CLIENTE.length]});
+        const {error}=await sb.from('clientes').insert({...r,tipo:tipoPadrao(),origem:'Outro',cor:CORES_CLIENTE[(CLIENTS.length+trazidos)%CORES_CLIENTE.length]});
         if(!error){trazidos++;tels.add(r.telefone)}
       }
     }
