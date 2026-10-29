@@ -1554,7 +1554,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.59'; const VERSAO_DATA='28/10/2026 22:42';
+const VERSAO_APP='3.60'; const VERSAO_DATA='28/10/2026 22:48';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2197,7 +2197,7 @@ function openDetail(a) {
   openDrawer('detailDrawer');
 }
 // só os botões que fazem sentido no status atual: depois de confirmar some o Confirmar (não manda a
-// confirmação duas vezes); concluído e pago fica só a mensagem; cancelado/faltou dá para marcar de novo
+// confirmação duas vezes); concluído fica editar e mensagem; cancelado/faltou dá para marcar de novo
 function acoesDetalhe(a,lembrete){
   const nome=esc(a.name.split(' ')[0].replace(/'/g,'')), st=a.status;
   const b={
@@ -2214,7 +2214,7 @@ function acoesDetalhe(a,lembrete){
       :['confirmar','remarcar','concluir','cancelar','faltou','lembrete','editar','mensagem'])
     :st==='confirmado'?['remarcar','concluir','cancelar','faltou','lembrete','editar','mensagem']
     :st==='em_atendimento'?['concluir','editar','cancelar','mensagem']
-    :st==='concluido'?(a.falta>0?['editar','mensagem']:['mensagem'])
+    :st==='concluido'?['editar','mensagem']
     :['remarcar','mensagem']; // cancelado / faltou
   return quais.map(k=>b[k]).join('');
 }
