@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Bellisa</title>
 <meta name="description" content="Agenda, clientes e financeiro do studio.">
 <meta name="theme-color" content="#FAFAF9" media="(prefers-color-scheme: light)">
@@ -507,6 +507,10 @@ html,body{font-family:'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI'
 .drawer{overscroll-behavior:contain}
 /* puxar para atualizar */
 html,body{overscroll-behavior-y:contain}
+/* app travado na tela: sem zoom de toque duplo, sem arrastar para o lado; no celular os campos com 16px
+   (com menos que isso o iPhone dá zoom sozinho ao tocar no campo) */
+html,body{touch-action:manipulation;overflow-x:hidden;max-width:100vw}
+@media (pointer:coarse){.form-input,.search-bar input,select,textarea,input{font-size:16px!important}}
 #ptr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translate(-50%,-70px);opacity:0;z-index:40;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--bg-card);color:var(--fg);box-shadow:var(--shadow-md);font-size:13px;font-weight:600;pointer-events:none}
 /* faixa "Sem internet · N horários para enviar" */
 #faixaRede{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 66px);z-index:30;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:6px 14px;border-radius:999px;background:var(--bg-card);color:var(--fg);border:1px solid var(--border);box-shadow:var(--shadow-md);font-size:12.5px;font-weight:600;cursor:pointer}
@@ -532,6 +536,11 @@ html,body{overscroll-behavior-y:contain}
 /* Abas e pílulas */
 .tab-bar{background:var(--bg-subtle);border-radius:999px;padding:4px}
 .tab-item{border-radius:999px}
+/* abas com muitos itens (Financeiro tem 5): cabem na largura do celular sem passar da borda arredondada;
+   se ainda assim não couber (tela bem estreita), a barra rola para o lado em vez de vazar */
+.tab-bar{overflow-x:auto;scrollbar-width:none}.tab-bar::-webkit-scrollbar{display:none}
+.tab-bar .tab-item{min-width:0;padding-left:4px;padding-right:4px}
+@media (max-width:400px){.tab-bar .tab-item{font-size:12.5px}}
 .tab-item.active{color:var(--accent-2);box-shadow:var(--shadow)}
 /* Escolha de cliente e serviço no agendamento */
 .pick-list{display:flex;flex-direction:column;gap:6px;margin-top:6px}
@@ -711,7 +720,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
       <div class="stat-sub">agendamentos</div>
     </div>
     <div class="stat-tile">
-      <div class="stat-label">A receber</div>
+      <div class="stat-label">Recebido</div>
       <div class="stat-value stat-ok" id="stat-receita">R$0</div>
       <div class="stat-sub" id="stat-receita-sub">no dia</div>
     </div>
@@ -1554,7 +1563,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.60'; const VERSAO_DATA='28/10/2026 22:48';
+const VERSAO_APP='3.61'; const VERSAO_DATA='28/10/2026 23:07';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2028,6 +2037,8 @@ function renderTudo(){
 }
 
 // ── INIT ──────────────────────────────────────────────────────────
+// iPhone ignora o user-scalable=no do viewport: barra o gesto de pinça aqui
+['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('DOMContentLoaded', () => {
   setGreeting(); desenharOlho(); desenharTema();
   const hoje=ymd(new Date());
@@ -2134,9 +2145,10 @@ function renderAppointments() {
     [...list.querySelectorAll('[data-ini]')].sort((x,y)=>x.dataset.ini-y.dataset.ini).forEach(c=>list.appendChild(c));
   }
   document.getElementById('stat-hoje').textContent = APPTS.filter(ATIVOS).length;
-  document.getElementById('stat-receita').textContent = fmtR(total);
-  const totalDia=APPTS.filter(ATIVOS).reduce((s,a)=>s+a.price,0);
-  document.getElementById('stat-receita-sub').textContent = totalDia&&total<totalDia?`de ${fmtR(totalDia)} no dia`:'no dia';
+  // em destaque: o que entrou no caixa no dia (pela data do pagamento); o que falta receber fica embaixo, menor
+  const recebidoDia=pagsValidos().filter(p=>p.em>=d0&&p.em<d1).reduce((s,p)=>s+p.valor,0);
+  document.getElementById('stat-receita').textContent = fmtR(recebidoDia);
+  document.getElementById('stat-receita-sub').textContent = total?`a receber: ${fmtR(total)}`:'no dia';
 }
 function renderAlerts() {
   const c = document.getElementById('alertsContainer');
@@ -2914,6 +2926,8 @@ function periodo(p){
   if(p==='mes')return [new Date(n.getFullYear(),n.getMonth(),1),new Date(n.getFullYear(),n.getMonth()+1,1)];
   return [new Date(n.getFullYear(),0,1),new Date(n.getFullYear()+1,0,1)];
 }
+// pagamentos que contam como dinheiro recebido: os de horário cancelado ficam de fora de todas as somas
+const pagsValidos=()=>ALL_APPTS.filter(a=>a.status!=='cancelado').flatMap(a=>a.pagos.map(p=>({...p,a})));
 function calcFinanceiro(){
   ['semana','mes','ano'].forEach(p=>{
     const [i,f]=periodo(p);
@@ -2925,7 +2939,7 @@ function calcFinanceiro(){
       .map(c=>({...c,nome:nomeTipo(c.id),cor:corTipo(c.id),pct:receita?Math.round(c.valor/receita*100):0}));
     const desp=EXPENSES.filter(e=>e.dataD>=i&&e.dataD<f).reduce((s,e)=>s+e.valor,0);
     // caixa: o que de fato entrou no período, pela data do pagamento
-    const pags=ALL_APPTS.flatMap(a=>a.pagos).filter(x=>x.em>=i&&x.em<f);
+    const pags=pagsValidos().filter(x=>x.em>=i&&x.em<f);
     const formas={};pags.forEach(x=>formas[x.forma]=(formas[x.forma]||0)+x.valor);
     FIN_DATA[p]={receita,lucro:receita-desp,atend:at.length,ticket:at.length?Math.round(receita/at.length):0,desp,
       cats,atendList:at,
@@ -2945,10 +2959,11 @@ function setFinTab(tab,el) {
   const target = document.getElementById('finTab'+tab.charAt(0).toUpperCase()+tab.slice(1));
   if(target) target.hidden=false;
 }
+// o período do Resumo e o dos Relatórios andam juntos (escolher em um muda o outro)
 function setFinPeriod(p,el) {
   finPeriod = p;
-  document.querySelectorAll('#finTabResumo .pill').forEach(x=>x.classList.remove('active'));
-  el.classList.add('active');
+  document.querySelectorAll('#finTabResumo .pill-tabs .pill').forEach(x=>x.classList.toggle('active',x.getAttribute('onclick').includes(`'${p}'`)));
+  if(REL.periodo!==p){REL.periodo=p;REL.agrupar=p==='ano'?'mes':'dia'}
   renderFinanceiro();
 }
 function renderFinanceiro(){
@@ -3682,7 +3697,7 @@ function exportarAtendimentos(){
 }
 function exportarPagamentos(){
   const [i,f,rot]=periodoExport();
-  const l=ALL_APPTS.flatMap(a=>a.pagos.map(p=>({...p,a}))).filter(p=>p.em>=i&&p.em<f).sort((x,y)=>x.em-y.em);
+  const l=pagsValidos().filter(p=>p.em>=i&&p.em<f).sort((x,y)=>x.em-y.em);
   baixarCSV(`pagamentos-${rot}.csv`,[['Data do pagamento','Cliente','Serviço','Data do atendimento','Forma','Valor'],
     ...l.map(p=>[p.em.toLocaleDateString('pt-BR'),p.a.name,p.a.service,p.a.ini.toLocaleDateString('pt-BR'),FORMAS[p.forma],num(p.valor)])]);
 }
@@ -4153,7 +4168,7 @@ function renderTrendChart() {
 // ── RELATÓRIOS ────────────────────────────────────────────────────
 // Período livre + agrupamento (dia/semana/mês). Gráficos com Chart.js (carregado só aqui),
 // média móvel e linha de tendência (regressão linear); exportação com SheetJS.
-const REL={periodo:'mes',agrupar:'dia',graf:{}};
+const REL={periodo:'semana',agrupar:'dia',graf:{}}; // começa igual ao Resumo (Semana)
 const REL_PERIODOS=[['hoje','Hoje'],['semana','Semana'],['mes','Mês'],['mes_passado','Mês passado'],['trimestre','3 meses'],['ano','Ano'],['custom','Escolher datas']];
 const REL_AGRUP=[['dia','Diário'],['semana','Semanal'],['mes','Mensal']];
 const FORMA_NOME={pix:'Pix',dinheiro:'Dinheiro',credito:'Crédito',debito:'Débito',outro:'Outro'};
@@ -4192,13 +4207,14 @@ function abrirRelatorios(){
 }
 function relSet(campo,v){
   REL[campo]=v;
-  if(campo==='periodo'){REL.agrupar=v==='ano'||v==='trimestre'?(v==='ano'?'mes':'semana'):'dia'}
+  if(campo==='periodo'){REL.agrupar=v==='ano'||v==='trimestre'?(v==='ano'?'mes':'semana'):'dia';
+    if(['semana','mes','ano'].includes(v)&&finPeriod!==v){setFinPeriod(v);return}} // setFinPeriod já redesenha os relatórios
   renderRelatorios();
 }
 function dadosRelatorio(i,f){
   const at=ALL_APPTS.filter(a=>a.ini>=i&&a.ini<f);
   const concl=at.filter(a=>a.status==='concluido');
-  const pags=ALL_APPTS.flatMap(a=>a.pagos.map(p=>({...p,a}))).filter(p=>p.em>=i&&p.em<f);
+  const pags=pagsValidos().filter(p=>p.em>=i&&p.em<f);
   const receita=concl.reduce((s,a)=>s+a.price,0);
   return {at,concl,pags,receita,recebido:pags.reduce((s,p)=>s+p.valor,0),aberto:concl.reduce((s,a)=>s+a.falta,0),
     faltas:at.filter(a=>a.status==='faltou').length,cancel:at.filter(a=>a.status==='cancelado').length,
@@ -4271,7 +4287,7 @@ function linhasExport(i,f){
       'Formas':[...new Set(a.pagos.map(p=>FORMA_NOME[p.forma]||p.forma))].join(', '),'Quando pagou':[...new Set(quando)].join(', '),
       'Datas dos pagamentos':a.pagos.map(p=>fmtD(p.em)).join(', '),'Combinado para':a.pagarAte?fmtD(a.pagarAte):'','Observações':a.obs||''};
   });
-  const pags=ALL_APPTS.flatMap(a=>a.pagos.map(p=>({p,a}))).filter(({p})=>p.em>=i&&p.em<f).sort((x,y)=>x.p.em-y.p.em).map(({p,a})=>({
+  const pags=pagsValidos().map(p=>({p,a:p.a})).filter(({p})=>p.em>=i&&p.em<f).sort((x,y)=>x.p.em-y.p.em).map(({p,a})=>({
     'Data do pagamento':fmtD(p.em),'Hora':hhmm(p.em),'Cliente':a.name,'Serviço':a.service,'Data do atendimento':fmtD(a.ini),'Forma':FORMA_NOME[p.forma]||p.forma,'Valor':p.valor,
     'Quando':diaDe(p.em)===diaDe(a.ini)?'No dia':p.em<a.ini?'Antecipado':'Depois do atendimento'}));
   const resumo=g=>{const m={};at.filter(a=>a.status==='concluido').forEach(a=>{const k=chaveGrupo(a.ini,g);(m[k]||=({n:0,v:0,p:0}));m[k].n++;m[k].v+=a.price;m[k].p+=a.pago});
