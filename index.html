@@ -1554,7 +1554,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.58'; const VERSAO_DATA='28/10/2026 22:36';
+const VERSAO_APP='3.59'; const VERSAO_DATA='28/10/2026 22:42';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2190,26 +2190,44 @@ function openDetail(a) {
     </div>
     ${pagamentoHTML(a)}
     <div style="font-size:13px;color:var(--fg-muted);font-weight:500;margin-bottom:8px">Ações rápidas</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px">
-      <button class="btn btn-ok btn-sm" onclick="mudarStatus('${a.id}','confirmado')">Confirmar</button>
-      <button class="btn btn-ghost btn-sm" onclick="remarcar('${a.id}')">Remarcar</button>
-      <button class="btn btn-ghost btn-sm" onclick="mudarStatus('${a.id}','concluido')">Concluir</button>
-      <button class="btn btn-danger btn-sm" onclick="if(confirm('Cancelar o horário de ${esc(a.name.split(' ')[0].replace(/'/g,''))} às ${a.time}?'))mudarStatus('${a.id}','cancelado')">Cancelar horário</button>
-      <button class="btn btn-ghost btn-sm" onclick="if(confirm('Marcar falta para ${esc(a.name.split(' ')[0].replace(/'/g,''))}?'))mudarStatus('${a.id}','faltou')">Faltou</button>
-      ${lembrete?`<a class="btn btn-ghost btn-sm" style="text-decoration:none" href="${lembrete}" target="_blank" rel="noopener">Lembrete</a>`:'<button class="btn btn-ghost btn-sm" disabled title="Cliente sem WhatsApp">Lembrete</button>'}
-      <button class="btn btn-ghost btn-sm" onclick="editarAgendamento('${a.id}')">✏️ Editar</button>
-      <button class="btn btn-ghost btn-sm" onclick="enviarMensagem(null,'${a.id}')" ${a.phone?'':'disabled'}>Mensagem pronta</button>
-    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px">${acoesDetalhe(a,lembrete)}</div>
     <div style="font-size:13px;color:var(--fg-muted);font-weight:500;margin-bottom:6px">Histórico</div>
     <div class="card" style="font-size:13px;color:var(--fg-muted)">${cli?`${cli.visits} visita${cli.visits===1?'':'s'} · última: ${esc(cli.last)} · ${fmtR(gasto)} gasto este ano${cli.faltou?` · ${cli.faltou} falta${cli.faltou>1?'s':''}`:''}`:'—'}</div>
     <button class="btn btn-ghost" style="margin-top:14px" onclick="closeDrawer('detailDrawer')">Fechar</button>`;
   openDrawer('detailDrawer');
 }
+// só os botões que fazem sentido no status atual: depois de confirmar some o Confirmar (não manda a
+// confirmação duas vezes); concluído e pago fica só a mensagem; cancelado/faltou dá para marcar de novo
+function acoesDetalhe(a,lembrete){
+  const nome=esc(a.name.split(' ')[0].replace(/'/g,'')), st=a.status;
+  const b={
+    confirmar:`<button class="btn btn-ok btn-sm" onclick="mudarStatus('${a.id}','confirmado')">Confirmar</button>`,
+    remarcar:`<button class="btn btn-ghost btn-sm" onclick="remarcar('${a.id}')">${st==='cancelado'||st==='faltou'?'Marcar de novo':'Remarcar'}</button>`,
+    concluir:`<button class="btn btn-ghost btn-sm" onclick="mudarStatus('${a.id}','concluido')">Concluir</button>`,
+    cancelar:`<button class="btn btn-danger btn-sm" onclick="if(confirm('Cancelar o horário de ${nome} às ${a.time}?'))mudarStatus('${a.id}','cancelado')">Cancelar horário</button>`,
+    faltou:`<button class="btn btn-ghost btn-sm" onclick="if(confirm('Marcar falta para ${nome}?'))mudarStatus('${a.id}','faltou')">Faltou</button>`,
+    lembrete:lembrete?`<a class="btn btn-ghost btn-sm" style="text-decoration:none" href="${lembrete}" target="_blank" rel="noopener">Lembrete</a>`:'<button class="btn btn-ghost btn-sm" disabled title="Cliente sem WhatsApp">Lembrete</button>',
+    editar:`<button class="btn btn-ghost btn-sm" onclick="editarAgendamento('${a.id}')">✏️ Editar</button>`,
+    mensagem:`<button class="btn btn-ghost btn-sm" onclick="enviarMensagem(null,'${a.id}')" ${a.phone?'':'disabled'}>Mensagem pronta</button>`,
+  };
+  const quais=st==='agendado'?(PEND(a)?['remarcar','concluir','cancelar','faltou','editar','mensagem'] // pedido do link: confirma/recusa no aviso de cima
+      :['confirmar','remarcar','concluir','cancelar','faltou','lembrete','editar','mensagem'])
+    :st==='confirmado'?['remarcar','concluir','cancelar','faltou','lembrete','editar','mensagem']
+    :st==='em_atendimento'?['concluir','editar','cancelar','mensagem']
+    :st==='concluido'?(a.falta>0?['editar','mensagem']:['mensagem'])
+    :['remarcar','mensagem']; // cancelado / faltou
+  return quais.map(k=>b[k]).join('');
+}
 // pedido feito pela cliente no link e ainda não confirmado pela profissional
 const PEND=a=>a.origem==='online'&&a.status==='agendado'&&a.fim>new Date();
 const statusBadge=a=>PEND(a)?'<span class="badge badge-warn">Aguardando confirmação</span>':`<span class="badge ${STATUS_MAP[a.status].cls}">${STATUS_MAP[a.status].label}</span>`;
+let MUDANDO_STATUS=null;
 async function mudarStatus(id,status,motivo){
-  try{await q(sb.from('agendamentos').update({status}).eq('id',id))}catch(e){return}
+  // toque duplo ou status que já está valendo: não grava nem manda a mensagem de novo
+  if(MUDANDO_STATUS===id||ALL_APPTS.find(x=>x.id===id)?.status===status){closeDrawer('detailDrawer');return}
+  MUDANDO_STATUS=id;
+  try{await q(sb.from('agendamentos').update({status}).eq('id',id))}catch(e){MUDANDO_STATUS=null;return}
+  MUDANDO_STATUS=null;
   syncEmSegundoPlano(id);
   await recarregar();
   const a=ALL_APPTS.find(x=>x.id===id);
@@ -2230,6 +2248,7 @@ async function mudarStatus(id,status,motivo){
 // ── PAGAMENTOS ────────────────────────────────────────────────────
 function pagamentoHTML(a){
   if(!a.price&&!a.pagos.length) return '';
+  if(!ATIVOS(a)&&!a.pagos.length) return ''; // cancelado/faltou sem nada pago: não há o que cobrar
   const pct=a.price?Math.min(100,Math.round(a.pago/a.price*100)):100;
   const linha=(rot,val,cor)=>`<div style="display:flex;justify-content:space-between;font-size:14px;padding:3px 0"><span style="color:var(--fg-muted)">${rot}</span><span style="font-weight:500;font-variant-numeric:tabular-nums${cor?';color:'+cor:''}">${val}</span></div>`;
   const cobrar=a.falta>0&&EM_ABERTO(a)?waLink(a.phone,modelo('cobranca',varsAgendamento(a))):null;
@@ -2246,9 +2265,9 @@ function pagamentoHTML(a){
       ${a.pagos.length?`<div style="margin-top:10px">${a.pagos.map(p=>`
         <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--border);font-size:13.5px">
           <span style="flex:1"><span style="font-weight:500">${fmtR(p.valor)}</span> <span style="color:var(--fg-muted)">· ${FORMAS[p.forma]||p.forma} · ${p.em.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span></span>
-          <button class="icon-btn" style="width:28px;height:28px" title="Apagar pagamento" onclick="apagarPagamento('${p.id}','${a.id}')"><svg class="i" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
+          ${a.status==='concluido'&&a.falta<=0?'':`<button class="icon-btn" style="width:28px;height:28px" title="Apagar pagamento" onclick="apagarPagamento('${p.id}','${a.id}')"><svg class="i" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>`}
         </div>`).join('')}</div>`:''}
-      ${a.falta>0?`
+      ${a.falta>0&&ATIVOS(a)?`
         <div class="form-row" style="margin-top:12px">
           <div class="form-group" style="margin-bottom:8px"><label class="form-label">Valor recebido</label><input class="form-input" type="text" inputmode="decimal" id="detPagValor" value="${String(a.falta).replace('.',',')}"></div>
           <div class="form-group" style="margin-bottom:8px"><label class="form-label">Forma</label><select class="form-input" id="detPagForma">${formaOptions('pix')}</select></div>
