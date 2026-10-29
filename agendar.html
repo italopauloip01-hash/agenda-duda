@@ -317,7 +317,18 @@ function nomeComDestaque(n){
   const p=esc(n).split(' ');
   return p.length>1?`${p.slice(0,-1).join(' ')} <em>${p[p.length-1]}</em>`:`<em>${p[0]}</em>`;
 }
-const igLink=()=>A.instagram?`https://instagram.com/${encodeURIComponent(A.instagram)}`:'';
+// aceita "@duda", "duda" ou o link do perfil
+const igUser=()=>String(A.instagram||'').trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i,'').replace(/^@/,'').split(/[/?#\s]/)[0];
+// Android: o link https comum às vezes cai na Play Store em vez de abrir o app já instalado.
+// O link "intent" abre direto o app do Instagram; sem o app, abre o perfil no navegador (nunca a loja).
+const igLink=()=>{
+  const u=igUser(); if(!u)return '';
+  const web=`https://www.instagram.com/${encodeURIComponent(u)}/`;
+  if(/android/i.test(navigator.userAgent))
+    return `intent://www.instagram.com/_u/${encodeURIComponent(u)}/#Intent;package=com.instagram.android;scheme=https;S.browser_fallback_url=${encodeURIComponent(web)};end`;
+  return web;
+};
+const igAlvo=()=>/android|iphone|ipad/i.test(navigator.userAgent)?'':' target="_blank" rel="noopener"';
 const IC_IG='<svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></svg>';
 function renderPagina(){
   const wa=telLink(A.whatsapp,'Oi! Vim pelo link de agendamento 😊');
@@ -335,7 +346,7 @@ function renderPagina(){
     <div class="acoes reveal d3">
       <a class="btn btn-rosa" href="#agendar">${IC.cal}Agendar horário</a>
       ${wa?`<a class="btn btn-zap" href="${wa}" target="_blank" rel="noopener" aria-label="Conversar no WhatsApp">${IC.zap}WhatsApp</a>`:''}
-      ${igLink()?`<a class="btn btn-linha" href="${igLink()}" target="_blank" rel="noopener" aria-label="Instagram">${IC_IG}Instagram</a>`:''}
+      ${igLink()?`<a class="btn btn-linha" href="${igLink()}"${igAlvo()} aria-label="Instagram">${IC_IG}Instagram</a>`:''}
     </div>
 
     ${A.fotos.length?`<section id="trabalhos">
@@ -654,7 +665,7 @@ function sucesso(nome){
     <div class="col surge" style="animation-delay:.45s">
       <a class="btn btn-rosa" href="${cal}" target="_blank" rel="noopener">${IC.cal}Salvar na minha agenda</a>
       ${wa?`<a class="btn btn-zap" href="${wa}" target="_blank" rel="noopener">${IC.zap}Avisar no WhatsApp</a>`:''}
-      ${igLink()?`<a class="btn btn-linha" href="${igLink()}" target="_blank" rel="noopener">${IC_IG}Ver nossos trabalhos no Instagram</a>`:''}
+      ${igLink()?`<a class="btn btn-linha" href="${igLink()}"${igAlvo()}>${IC_IG}Ver nossos trabalhos no Instagram</a>`:''}
       <button class="btn btn-linha" onclick="location.href=location.pathname+location.search">Agendar outro horário</button>
     </div>`;
   scrollTo({top:0,behavior:'smooth'});
