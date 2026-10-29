@@ -83,6 +83,8 @@ svg.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stro
 .btn-zap{background:var(--card);border-color:var(--line);color:var(--ink)}
 .btn-zap svg{color:#25D366}
 .acoes .btn{flex:1}
+/* celular: os 3 botões não cabem numa linha (o Instagram sumia pela direita) — Agendar em cima, WhatsApp e Instagram embaixo */
+@media (max-width:560px){.acoes{flex-wrap:wrap}.acoes .btn{flex:1 1 0;min-width:0}.acoes .btn-rosa{flex-basis:100%}}
 
 /* ── Seções ──────────────────────────────────────────────────── */
 section{margin-top:46px}
