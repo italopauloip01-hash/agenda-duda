@@ -1563,7 +1563,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.63'; const VERSAO_DATA='29/10/2026 09:10';
+const VERSAO_APP='3.64'; const VERSAO_DATA='29/10/2026 13:54';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2207,9 +2207,37 @@ function openDetail(a) {
     <div style="font-size:13px;color:var(--fg-muted);font-weight:500;margin-bottom:8px">Ações rápidas</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px">${acoesDetalhe(a,lembrete)}</div>
     <div style="font-size:13px;color:var(--fg-muted);font-weight:500;margin-bottom:6px">Histórico</div>
-    <div class="card" style="font-size:13px;color:var(--fg-muted)">${cli?`${cli.visits} visita${cli.visits===1?'':'s'} · última: ${esc(cli.last)} · ${fmtR(gasto)} gasto este ano${cli.faltou?` · ${cli.faltou} falta${cli.faltou>1?'s':''}`:''}`:'—'}</div>
+    <div class="card" style="font-size:13px;color:var(--fg-muted);${cli?'cursor:pointer':''}" ${cli?`onclick="abrirHistorico('${a.id}')"`:''}>${cli?`${cli.visits} visita${cli.visits===1?'':'s'} · última: ${esc(cli.last)} · ${fmtR(gasto)} gasto este ano${cli.faltou?` · ${cli.faltou} falta${cli.faltou>1?'s':''}`:''}<div id="histLista" style="margin-top:6px;color:var(--accent);font-weight:500">Ver todos os horários ›</div>`:'—'}</div>
+    <div id="detWhats" style="font-size:12px;color:var(--fg-muted);margin-top:10px"></div>
     <button class="btn btn-ghost" style="margin-top:14px" onclick="closeDrawer('detailDrawer')">Fechar</button>`;
   openDrawer('detailDrawer');
+  mostrarMensagensWhats(a.id);
+}
+// toque no Histórico: todos os horários da cliente — os próximos em cima, depois os que já passaram
+function abrirHistorico(apptId){
+  const a=ALL_APPTS.find(x=>x.id===apptId), el=document.getElementById('histLista'); if(!a||!el) return;
+  if(el.dataset.aberto){delete el.dataset.aberto;el.innerHTML='Ver todos os horários ›';return}
+  const doCli=ALL_APPTS.filter(x=>x.cliente_id===a.cliente_id), agora=Date.now();
+  const prox=doCli.filter(x=>x.ini>=agora&&ATIVOS(x)).sort((x,y)=>x.ini-y.ini);
+  const pass=doCli.filter(x=>!prox.includes(x)).sort((x,y)=>y.ini-x.ini);
+  const linha=x=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--border);font-weight:400;color:var(--fg)">
+      <span><b>${x.ini.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',year:x.ini.getFullYear()===new Date().getFullYear()?undefined:'2-digit'})}</b> ${x.time} · ${esc(x.service)}${x.id===a.id?' <span style="color:var(--fg-muted)">(este)</span>':''}</span>
+      <span style="white-space:nowrap">${statusBadge(x)}</span></div>`;
+  const tit=t=>`<div style="font-size:12px;color:var(--fg-muted);margin:8px 0 2px">${t}</div>`;
+  el.dataset.aberto='1';
+  el.innerHTML=(prox.length?tit(prox.length>1?'Próximos horários':'Próximo horário')+prox.map(linha).join(''):tit('Nenhum horário marcado daqui para frente'))
+    +(pass.length?tit('Já feitos / anteriores')+pass.map(linha).join(''):'')
+    +`<div style="margin-top:6px">Fechar lista ‹</div>`;
+}
+// no detalhe: o que o robô fez com as mensagens deste horário (saiu, deu erro ou nem entrou na fila)
+async function mostrarMensagensWhats(apptId){
+  const el=document.getElementById('detWhats'); if(!el||!USER) return;
+  const {data}=await sb.from('fila_whatsapp').select('tipo,status,erro,criado_em,enviado_em').eq('agendamento_id',apptId).order('criado_em');
+  if(document.getElementById('detWhats')!==el) return;
+  const nomes={confirmacao:'confirmação',pedir_confirmacao:'pedido de confirmação',lembrete:'lembrete',remarcado:'remarcação',cancelado:'cancelamento',avaliacao:'pedido de avaliação'};
+  const h=d=>new Date(d).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  el.innerHTML=!data?.length?'WhatsApp do robô: nenhuma mensagem foi para a fila deste horário.'
+    :'WhatsApp do robô:<br>'+data.map(m=>`• ${esc(nomes[m.tipo]||m.tipo||'mensagem')}: ${m.status==='enviado'?`✓ enviada ${h(m.enviado_em||m.criado_em)}`:m.status==='erro'?`✖ não saiu (${esc(m.erro||'erro')})`:`⏳ esperando o robô (desde ${h(m.criado_em)})`}`).join('<br>');
 }
 // só os botões que fazem sentido no status atual: depois de confirmar some o Confirmar (não manda a
 // confirmação duas vezes); concluído fica editar e mensagem; cancelado/faltou dá para marcar de novo
