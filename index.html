@@ -1554,7 +1554,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.57'; const VERSAO_DATA='28/10/2026 22:25';
+const VERSAO_APP='3.58'; const VERSAO_DATA='28/10/2026 22:36';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -1826,7 +1826,7 @@ function mapAgend(r){
     const i=new Date(r.inicio), f=new Date(r.fim);
     const pagos=(r.pagamentos||[]).map(p=>({id:p.id,valor:Number(p.valor),forma:p.forma,em:new Date(p.pago_em)})).sort((a,b)=>a.em-b.em);
     const pago=pagos.reduce((s,p)=>s+p.valor,0), price=Number(r.valor);
-    return {id:r.id,cliente_id:r.cliente_id,servico_id:r.servico_id,avaliacaoToken:r.avaliacao_token,servicosIds:Array.isArray(r.servicos)?r.servicos.map(x=>x.id):(r.servico_id?[r.servico_id]:[]),ini:i,fim:f,time:hhmm(i),end:hhmm(f),
+    return {id:r.id,cliente_id:r.cliente_id,servico_id:r.servico_id,avaliacaoToken:r.avaliacao_token,servicosIds:Array.isArray(r.servicos)?r.servicos.map(x=>x.id):(r.servico_id?[r.servico_id]:[]),servicosLista:Array.isArray(r.servicos)?r.servicos:null,ini:i,fim:f,time:hhmm(i),end:hhmm(f),
       name:r.clientes?.nome||'—',phone:r.clientes?.telefone||'',color:r.clientes?.cor||'#C2637A',
       service:r.servico_nome,type:r.tipo,status:r.status,price,
       dur:Math.round((f-i)/6e4),obs:r.observacoes,local:r.local,
@@ -2308,19 +2308,24 @@ function remarcar(id){
 let EDIT_CLI=null, EDIT_ID=null;
 function editarAgendamento(id){
   const a=ALL_APPTS.find(x=>x.id===id);if(!a)return;
-  EDIT_CLI=a.cliente_id; EDIT_ID=id;
-  const svcs=Object.values(SVCS_TIPO).flat().slice().sort((x,y)=>(x.tipo+x.name).localeCompare(y.tipo+y.name,'pt-BR'));
-  const atual=(a.servicosIds&&a.servicosIds.length>1)?'':a.servico_id;
+  EDIT_CLI=a.cliente_id; EDIT_ID=id; ED_MUDOU=false;
+  const todos=Object.values(SVCS_TIPO).flat();
+  const svcs=todos.slice().sort((x,y)=>(x.tipo+x.name).localeCompare(y.tipo+y.name,'pt-BR'));
+  // serviços do agendamento (pode ser mais de um); os que saíram do catálogo ficam com o nome/valor que já tinham
+  if(a.servicosLista&&a.servicosLista.length>1) ED_SVCS=a.servicosLista.map(x=>({id:x.id,nome:x.nome,dur:Number(x.dur)||0,preco:Number(x.preco)||0}));
+  else{const s=todos.find(x=>x.id===a.servico_id);
+    ED_SVCS=[s?{id:s.id,nome:s.name,dur:s.dur,preco:s.promo??s.price}:{id:a.servico_id||null,nome:a.service,dur:a.dur,preco:a.price}];}
   document.getElementById('detailTitle').textContent='Editar agendamento';
   document.getElementById('detailBody').innerHTML=`
     <div class="card" style="margin-bottom:12px;font-size:13px;color:var(--fg-muted)">${esc(labelDia(new Date(a.ini.getFullYear(),a.ini.getMonth(),a.ini.getDate())))} · ${a.time} — para mudar o dia ou a hora, use <b>Remarcar</b>.</div>
     <div class="form-group"><label class="form-label">Cliente</label>
       <input class="form-input" id="edCliente" autocomplete="off" value="${esc(a.name)}" oninput="EDIT_CLI=null;sugerirEdCliente()" placeholder="Buscar ou digitar o nome">
       <div id="edSugestoes"></div></div>
-    <div class="form-group"><label class="form-label">Serviço</label>
-      <select class="form-input" id="edServico" onchange="edServicoMudou()">
-        ${atual?'':`<option value="" selected>${esc(a.service)} (atual)</option>`}
-        ${svcs.map(s=>`<option value="${s.id}" ${s.id===atual?'selected':''}>${esc(nomeTipo(s.tipo))} · ${esc(s.name)} — ${fmtRReal(s.promo??s.price)}</option>`).join('')}
+    <div class="form-group"><label class="form-label">Serviços</label>
+      <div id="edSvcLista"></div>
+      <select class="form-input" id="edServico" onchange="edAdicionarServico(this)">
+        <option value="" selected>＋ Adicionar outro serviço…</option>
+        ${svcs.map(s=>`<option value="${s.id}">${esc(nomeTipo(s.tipo))} · ${esc(s.name)} — ${fmtRReal(s.promo??s.price)}</option>`).join('')}
       </select></div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Valor</label><input class="form-input" id="edValor" inputmode="decimal" value="${String(a.price).replace('.',',')}"></div>
@@ -2330,6 +2335,30 @@ function editarAgendamento(id){
     <label style="display:flex;gap:8px;align-items:center;font-size:13.5px;margin:4px 0 14px"><input type="checkbox" id="edAvisar" ${a.phone?'':'disabled'}> Mandar a mensagem de confirmação para a cliente</label>
     <button class="btn btn-primary" onclick="salvarEdicao('${a.id}')">Salvar alterações</button>
     <button class="btn btn-ghost" style="margin-top:8px" onclick="openDetail(ALL_APPTS.find(x=>x.id==='${a.id}'))">Voltar</button>`;
+  renderEdServicos();
+}
+let ED_SVCS=[], ED_MUDOU=false;
+function renderEdServicos(){
+  const box=document.getElementById('edSvcLista'); if(!box) return;
+  box.innerHTML=`<div class="svc-escolhidos" style="margin-bottom:8px">${ED_SVCS.map((s,i)=>`<span class="chip-svc">${esc(s.nome)}${ED_SVCS.length>1?`<button type="button" onclick="edTirarServico(${i})" aria-label="Tirar">✕</button>`:''}</span>`).join('')}</div>`;
+}
+function edAdicionarServico(sel){
+  const s=Object.values(SVCS_TIPO).flat().find(x=>x.id===sel.value); sel.value=''; if(!s) return;
+  ED_SVCS.push({id:s.id,nome:s.name,dur:s.dur,preco:s.promo??s.price}); edServicosMudaram();
+}
+function edTirarServico(i){ ED_SVCS.splice(i,1); edServicosMudaram(); }
+// valor e fim acompanham a soma dos serviços (o valor ainda pode ser ajustado à mão)
+function edTotais(){
+  const a=ALL_APPTS.find(x=>x.id===EDIT_ID), todos=Object.values(SVCS_TIPO).flat();
+  const int=Math.max(0,...ED_SVCS.map(s=>(todos.find(x=>x.id===s.id)||{}).int||0));
+  const dur=ED_SVCS.reduce((t,s)=>t+s.dur,0);
+  return {preco:ED_SVCS.reduce((t,s)=>t+s.preco,0),fim:a?new Date(a.ini.getTime()+(dur+int)*6e4):null};
+}
+function edServicosMudaram(){
+  ED_MUDOU=true; renderEdServicos();
+  const t=edTotais();
+  document.getElementById('edValor').value=String(t.preco).replace('.',',');
+  if(t.fim) document.getElementById('edFim').value=hhmm(t.fim);
 }
 function sugerirEdCliente(){
   const box=document.getElementById('edSugestoes'), termo=document.getElementById('edCliente').value.trim(), t=semAcento(termo), dig=termo.replace(/\D/g,'');
@@ -2340,12 +2369,6 @@ function sugerirEdCliente(){
       <span class="pick-txt"><div class="pick-nome">${esc(c.name)}</div><div class="pick-sub">${c.phone?esc(c.phone.replace(/^55/,'')):'sem telefone'}</div></span></button>`).join('')
     +(CLIENTS.some(c=>semAcento(c.name)===t)?'':`<div style="font-size:12px;color:var(--fg-muted);padding:6px 2px">Se não escolher da lista, <b>${esc(termo)}</b> vira uma nova cliente.</div>`);
 }
-function edServicoMudou(){
-  const s=Object.values(SVCS_TIPO).flat().find(x=>x.id===document.getElementById('edServico').value); if(!s) return;
-  document.getElementById('edValor').value=String(s.promo??s.price).replace('.',',');
-  const a=ALL_APPTS.find(x=>x.id===EDIT_ID);
-  if(a) document.getElementById('edFim').value=hhmm(new Date(a.ini.getTime()+s.dur*6e4));
-}
 async function salvarEdicao(id){
   const a=ALL_APPTS.find(x=>x.id===id);if(!a)return;
   const nome=document.getElementById('edCliente').value.trim();
@@ -2353,9 +2376,13 @@ async function salvarEdicao(id){
   const valor=parseValor(document.getElementById('edValor').value);
   if(valor==null||valor<0){toast('Confira o valor');return}
   const mud={valor,observacoes:document.getElementById('edObs').value.trim()||null};
-  const s=Object.values(SVCS_TIPO).flat().find(x=>x.id===document.getElementById('edServico').value);
-  if(s&&s.id!==a.servico_id||s&&a.servicosIds&&a.servicosIds.length>1)
-    Object.assign(mud,{servico_id:s.id,servico_nome:s.name.slice(0,200),tipo:s.tipo,servicos:null,fim:new Date(a.ini.getTime()+(s.dur+(s.int||0))*6e4).toISOString()});
+  if(ED_MUDOU){
+    const todos=Object.values(SVCS_TIPO).flat(), prim=ED_SVCS.find(s=>s.id)||ED_SVCS[0];
+    Object.assign(mud,{servico_id:prim.id,servico_nome:ED_SVCS.map(s=>s.nome).join(' + ').slice(0,200),
+      tipo:(todos.find(x=>x.id===prim.id)||{}).tipo||a.type,
+      servicos:ED_SVCS.length>1?ED_SVCS.map(s=>({id:s.id,nome:s.nome,dur:s.dur,preco:s.preco})):null,
+      fim:edTotais().fim.toISOString()});
+  }
   try{
     let cid=EDIT_CLI||(CLIENTS.find(c=>c.name.toLowerCase()===nome.toLowerCase())||{}).id;
     if(!cid){ // nova cliente
@@ -2363,7 +2390,8 @@ async function salvarEdicao(id){
       await q(sb.from('clientes').insert({id:cid,nome,tipo:mud.tipo||a.type,cor:CORES_CLIENTE[CLIENTS.length%CORES_CLIENTE.length]}));
     }
     if(cid!==a.cliente_id) mud.cliente_id=cid;
-    await q(sb.from('agendamentos').update(mud).eq('id',id));
+    const {error}=await sb.from('agendamentos').update(mud).eq('id',id);
+    if(error){toast(error.code==='23P01'?'Com o serviço a mais, o horário passa por cima de outro agendamento. Remarque ou ajuste o outro horário.':semRede(error)?'Sem internet agora — tente de novo quando voltar':'Erro: '+error.message);return}
   }catch(e){return}
   const avisar=document.getElementById('edAvisar').checked;
   syncEmSegundoPlano(id);
