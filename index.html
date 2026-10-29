@@ -1563,7 +1563,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.61'; const VERSAO_DATA='28/10/2026 23:07';
+const VERSAO_APP='3.62'; const VERSAO_DATA='29/10/2026 06:53';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2162,6 +2162,9 @@ function renderAlerts() {
   if('Notification' in window&&Notification.permission==='default')
     h+=`<div class="alert alert-info"><span style="flex:1">🔔 Ative as notificações para saber na hora quando chegar um agendamento.</span><button class="btn btn-primary btn-sm" style="width:auto;padding:6px 12px" onclick="ativarNotificacoes()">Ativar</button></div>`;
   const pedidos=ALL_APPTS.filter(PEND).sort((x,y)=>x.ini-y.ini);
+  // robô do WhatsApp parou de dar sinal (o computador desligou, caiu a internet ou deu erro)
+  if(PERFIL.whatsapp_auto&&BOT.visto&&!(BOT.conectado&&Date.now()-BOT.visto<3*60e3))
+    h+=`<div class="alert alert-danger" style="cursor:pointer" onclick="carregarBot();openDrawer('botDrawer')"><span style="flex:1"><b>Robô do WhatsApp desligado</b> desde ${new Date(BOT.visto).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} — lembretes e respostas automáticas não estão saindo. Confira se o computador está ligado e com internet.</span></div>`;
   if(pedidos.length) h+=`<div class="alert alert-warn" style="cursor:pointer" onclick="openDetail(ALL_APPTS.find(x=>x.id==='${pedidos[0].id}'))"><span style="flex:1"><b>${pedidos.length} pedido${pedidos.length>1?'s':''} pelo link</b> aguardando sua confirmação — toque para ver</span></div>`;
   if(pend) h+=`<div class="alert alert-warn"><span>${pend} cliente${pend>1?'s':''} ainda não confirm${pend>1?'aram':'ou'} para amanhã.</span></div>`;
   if(anivHoje.length) h+=`<div class="alert alert-info"><span>Aniversário hoje: ${anivHoje.map(x=>esc(x.name)).join(', ')}</span></div>`;
@@ -3540,8 +3543,10 @@ const botAtivo=()=>!!PERFIL.whatsapp_auto&&BOT.conectado&&BOT.visto&&(Date.now()
 async function carregarBot(){
   const {data}=await sb.from('whatsapp_bot').select('conectado,numero,visto_em').maybeSingle();
   BOT={conectado:!!data?.conectado,numero:data?.numero||null,visto:data?.visto_em?new Date(data.visto_em).getTime():null};
-  renderBotCard(); renderConfig(); // a linha "Robô do WhatsApp" em Ajustes mostra a situação
+  renderBotCard(); renderConfig(); renderAlerts(); // a linha "Robô do WhatsApp" em Ajustes e o aviso no início mostram a situação
 }
+// confere o robô a cada 2 min com o app aberto (o robô dá sinal a cada minuto)
+setInterval(()=>{if(USER&&navigator.onLine&&document.visibilityState==='visible')carregarBot().catch(()=>{})},120e3);
 function renderBotCard(){
   const el=document.getElementById('botCard'); if(!el) return;
   const online=BOT.conectado&&BOT.visto&&(Date.now()-BOT.visto<3*60e3);
