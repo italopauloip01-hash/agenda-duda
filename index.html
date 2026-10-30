@@ -753,6 +753,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
     <div class="pill" onclick="setClientFilter('vip',this)">VIP</div>
     <div class="pill" onclick="setClientFilter('faltou',this)">Com faltas</div>
     <div class="pill" onclick="openDrawer('aniversariantesDrawer')">Aniversários</div>
+    <div class="pill" id="pillRevisar" onclick="abrirRevisar()" hidden></div>
   </div>
   <div id="clientList" class="list-card"></div>
   <div class="btn-row" style="margin-top:14px">
@@ -1231,6 +1232,13 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
 </div></div>
 
 <!-- Aviso para a cliente (marcação / remarcação / cancelamento) -->
+<div class="modal-overlay" id="revisarDrawer"><div class="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">Revisar cadastros</div>
+  <div id="revisarBody"></div>
+  <button class="btn btn-ghost" style="margin-top:14px" onclick="closeDrawer('revisarDrawer')">Fechar</button>
+</div></div>
+
 <div class="modal-overlay" id="avisoDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
   <div class="drawer-title" id="avisoTitulo">Avisar a cliente?</div>
@@ -1565,7 +1573,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.65'; const VERSAO_DATA='29/10/2026 15:13';
+const VERSAO_APP='3.66'; const VERSAO_DATA='29/10/2026 23:18';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2477,6 +2485,93 @@ function novoAgendamentoPara(nome,servicoId,tipo){
 }
 
 // ── CLIENTS ───────────────────────────────────────────────────────
+// ── REVISAR CADASTROS: nomes repetidos (ex.: importados pela foto sem o número) e clientes sem WhatsApp ──
+const chaveNome=n=>semAcento(String(n||'')).toLowerCase().replace(/[^a-z ]/g,' ').replace(/\s+/g,' ').trim();
+function problemasCadastro(){
+  const grupos={};
+  for(const c of CLIENTS){const k=chaveNome(c.name); if(k) (grupos[k]=grupos[k]||[]).push(c)}
+  const agora=Date.now();
+  const futuro=id=>ALL_APPTS.filter(a=>a.cliente_id===id&&a.ini>=agora&&ATIVOS(a)).sort((x,y)=>x.ini-y.ini)[0];
+  const repetidas=Object.values(grupos).filter(g=>g.length>1)
+    // fica a que tem WhatsApp; empate: a com mais visitas
+    .map(g=>g.sort((x,y)=>(!!y.phone-!!x.phone)||(y.visits-x.visits)));
+  const nasRepetidas=new Set(repetidas.flat().map(c=>c.id));
+  const semNumero=CLIENTS.filter(c=>!c.phone&&!nasRepetidas.has(c.id)).map(c=>({c,prox:futuro(c.id)}))
+    .sort((x,y)=>(!!y.prox-!!x.prox)||((x.prox?.ini||0)-(y.prox?.ini||0))||(y.c.visits-x.c.visits));
+  return {repetidas,semNumero,futuro};
+}
+function atualizarPillRevisar(){
+  const p=document.getElementById('pillRevisar'); if(!p) return;
+  const {repetidas,semNumero}=problemasCadastro(), n=repetidas.length+semNumero.length;
+  p.hidden=!n; p.textContent=`⚠️ Revisar (${n})`;
+}
+function abrirRevisar(){ renderRevisar(); openDrawer('revisarDrawer'); }
+function renderRevisar(){
+  const {repetidas,semNumero,futuro}=problemasCadastro();
+  const quando=a=>a?` · <b style="color:var(--warn,#d9a441)">horário ${a.ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${a.time}</b>`:'';
+  const info=c=>`${c.visits} visita${c.visits===1?'':'s'}${quando(futuro(c.id))}`;
+  const tit=(t,s)=>`<div style="font-size:14px;font-weight:600;margin:14px 0 4px">${t}</div><div style="font-size:12px;color:var(--fg-muted);margin-bottom:8px">${s}</div>`;
+  let h='';
+  if(!repetidas.length&&!semNumero.length) h='<div class="card" style="text-align:center;color:var(--fg-muted)">Tudo certo: nenhuma cliente repetida e todas têm WhatsApp ✓</div>';
+  if(repetidas.length){
+    h+=tit(`Repetidas (${repetidas.length})`,'Mesmo nome cadastrado mais de uma vez. "Juntar" deixa uma só: os horários, pagamentos e avaliações das outras passam para ela, e o que faltar (WhatsApp, aniversário, CPF, observações) é aproveitado.');
+    h+=repetidas.map((g,gi)=>`<div class="card" style="margin-bottom:8px">
+      ${g.map((c,i)=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:13px">
+        <input type="radio" name="fica${gi}" value="${c.id}" ${i===0?'checked':''} style="margin-top:3px">
+        <span><b>${esc(c.name)}</b> — ${c.phone?esc(fmtTel(c.phone)):'<span style="color:var(--danger)">sem WhatsApp</span>'}<br><span style="color:var(--fg-muted);font-size:12px">${info(c)}</span></span></label>`).join('')}
+      <div style="font-size:11px;color:var(--fg-muted);margin:2px 0 8px">Marque a que fica.</div>
+      <button class="btn btn-primary btn-sm" onclick="juntarClientes(${gi})">Juntar em uma só</button></div>`).join('');
+  }
+  if(semNumero.length){
+    h+=tit(`Sem WhatsApp (${semNumero.length})`,'Sem o número o robô não manda confirmação nem lembrete. As que têm horário marcado aparecem primeiro.');
+    h+=semNumero.map(({c,prox})=>`<div class="card" style="margin-bottom:8px">
+      <div style="font-size:13px;margin-bottom:6px"><b>${esc(c.name)}</b><br><span style="color:var(--fg-muted);font-size:12px">${info(c)}</span></div>
+      <div style="display:flex;gap:6px"><input class="form-input" type="tel" id="revTel_${c.id}" placeholder="(00) 00000-0000" style="flex:1;min-width:0">
+      <button class="btn btn-primary btn-sm" style="width:auto" onclick="salvarTelRevisar('${c.id}')">Salvar</button></div>
+      ${!c.visits&&!prox&&!ALL_APPTS.some(a=>a.cliente_id===c.id)?`<button class="btn btn-ghost btn-sm" style="margin-top:6px;color:var(--danger)" onclick="excluirClienteRevisar('${c.id}')">Excluir cadastro (nunca veio)</button>`:''}</div>`).join('');
+  }
+  document.getElementById('revisarBody').innerHTML=h;
+}
+async function salvarTelRevisar(id){
+  const el=document.getElementById('revTel_'+id), n=normTel(el.value);
+  if(!n||n.length<12||n.length>13){toast('Coloque o número com DDD, ex.: (33) 99999-9999');el.focus();return}
+  const {error}=await sb.from('clientes').update({telefone:n}).eq('id',id);
+  if(error){toast(error.code==='23505'?'Esse WhatsApp já está em outra cliente — talvez seja a mesma pessoa com outro nome':'Erro: '+error.message);return}
+  const c=CLIENTS.find(x=>x.id===id); if(c) c.phone=n;
+  ALL_APPTS.filter(a=>a.cliente_id===id).forEach(a=>a.phone=n);
+  toast('WhatsApp salvo'); renderRevisar(); atualizarPillRevisar(); recarregar();
+}
+async function excluirClienteRevisar(id){
+  const c=CLIENTS.find(x=>x.id===id); if(!c||!confirm(`Excluir o cadastro de ${c.name}?`)) return;
+  const {error}=await sb.from('clientes').delete().eq('id',id);
+  if(error){toast('Não deu para excluir: '+error.message);return}
+  CLIENTS=CLIENTS.filter(x=>x.id!==id);
+  toast('Cadastro excluído'); renderRevisar(); atualizarPillRevisar(); recarregar();
+}
+async function juntarClientes(gi){
+  const g=problemasCadastro().repetidas[gi]; if(!g) return;
+  const ficaId=document.querySelector(`input[name="fica${gi}"]:checked`)?.value||g[0].id;
+  const fica=g.find(c=>c.id===ficaId), saem=g.filter(c=>c.id!==ficaId);
+  if(!confirm(`Juntar ${g.length} cadastros de ${fica.name} em um só?\nOs horários e pagamentos passam todos para o que fica.`)) return;
+  try{
+    const {data:linhas,error:e0}=await sb.from('clientes').select('*').in('id',g.map(c=>c.id)); if(e0) throw e0;
+    const lFica=linhas.find(l=>l.id===ficaId), extra={};
+    for(const c of saem){
+      const l=linhas.find(x=>x.id===c.id)||{};
+      for(const r of [['agendamentos'],['avaliacoes']]){
+        const {error}=await sb.from(r[0]).update({cliente_id:ficaId}).eq('cliente_id',c.id); if(error) throw error;
+      }
+      for(const k of ['telefone','nascimento','cpf','preferencias','observacoes','google_resource'])
+        if(!lFica?.[k]&&!extra[k]&&l[k]) extra[k]=l[k];
+      if(l.vip) extra.vip=true;
+      const {error}=await sb.from('clientes').delete().eq('id',c.id); if(error) throw error;
+    }
+    // só depois de apagar as outras (WhatsApp e CPF não podem repetir)
+    if(Object.keys(extra).length){const {error}=await sb.from('clientes').update(extra).eq('id',ficaId); if(error) throw error}
+    toast(`Pronto: ${fica.name} ficou com um cadastro só`);
+  }catch(e){ toast('Não deu para juntar: '+(e.message||e)); }
+  await recarregar(); renderRevisar(); atualizarPillRevisar();
+}
 function setClientFilter(f,el) {
   currentClientFilter = f;
   document.querySelectorAll('#page-clientes .pill').forEach(p=>p.classList.remove('active'));
@@ -2489,6 +2584,7 @@ function renderClients() {
   const search = semAcento((document.getElementById('clientSearch')||{value:''}).value.trim());
   const dig = search.replace(/\D/g,'');
   if(search!==ultimaBuscaCli){ ultimaBuscaCli=search; LIMITE_CLI=100; }
+  atualizarPillRevisar();
   // um filtro por categoria, só quando há mais de uma
   const pillsT=document.getElementById('cliPillsTipos');
   if(pillsT){
