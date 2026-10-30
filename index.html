@@ -881,7 +881,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
       <div class="form-group"><label class="form-label">De</label><input class="form-input" type="date" id="relDe" onchange="renderRelatorios()"></div>
       <div class="form-group"><label class="form-label">Até</label><input class="form-input" type="date" id="relAte" onchange="renderRelatorios()"></div>
     </div>
-    <div class="tab-bar" id="relAgrupar" style="margin:4px 0 12px"></div>
+    <div style="height:8px"></div>
     <div class="stats-row" id="relTiles"></div>
     <div class="card rel-tendencia" id="relTendencia"></div>
     <div class="section-label">Receita e tendência</div>
@@ -1573,7 +1573,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.66'; const VERSAO_DATA='29/10/2026 23:18';
+const VERSAO_APP='3.67'; const VERSAO_DATA='29/10/2026 23:23';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -3095,7 +3095,7 @@ function setFinTab(tab,el) {
 function setFinPeriod(p,el) {
   finPeriod = p;
   document.querySelectorAll('#finTabResumo .pill-tabs .pill').forEach(x=>x.classList.toggle('active',x.getAttribute('onclick').includes(`'${p}'`)));
-  if(REL.periodo!==p){REL.periodo=p;REL.agrupar=p==='ano'?'mes':'dia'}
+  if(REL.periodo!==p)REL.periodo=p;
   renderFinanceiro();
 }
 function renderFinanceiro(){
@@ -4323,9 +4323,8 @@ function renderTrendChart() {
 // ── RELATÓRIOS ────────────────────────────────────────────────────
 // Período livre + agrupamento (dia/semana/mês). Gráficos com Chart.js (carregado só aqui),
 // média móvel e linha de tendência (regressão linear); exportação com SheetJS.
-const REL={periodo:'semana',agrupar:'dia',graf:{}}; // começa igual ao Resumo (Semana)
+const REL={periodo:'semana',graf:{}}; // começa igual ao Resumo (Semana)
 const REL_PERIODOS=[['hoje','Hoje'],['semana','Semana'],['mes','Mês'],['mes_passado','Mês passado'],['trimestre','3 meses'],['ano','Ano'],['custom','Escolher datas']];
-const REL_AGRUP=[['dia','Diário'],['semana','Semanal'],['mes','Mensal']];
 const FORMA_NOME={pix:'Pix',dinheiro:'Dinheiro',credito:'Crédito',debito:'Débito',outro:'Outro'};
 function relIntervalo(){
   const h=hoje0(), p=REL.periodo;
@@ -4362,7 +4361,7 @@ function abrirRelatorios(){
 }
 function relSet(campo,v){
   REL[campo]=v;
-  if(campo==='periodo'){REL.agrupar=v==='ano'||v==='trimestre'?(v==='ano'?'mes':'semana'):'dia';
+  if(campo==='periodo'){
     if(['semana','mes','ano'].includes(v)&&finPeriod!==v){setFinPeriod(v);return}} // setFinPeriod já redesenha os relatórios
   renderRelatorios();
 }
@@ -4379,7 +4378,6 @@ function renderRelatorios(){
   const box=document.getElementById('finTabRelatorios'); if(!box||box.hidden) return;
   document.getElementById('relPeriodos').innerHTML=REL_PERIODOS.map(([k,n])=>`<div class="pill${REL.periodo===k?' active':''}" onclick="relSet('periodo','${k}')">${n}</div>`).join('');
   document.getElementById('relCustom').hidden=REL.periodo!=='custom';
-  document.getElementById('relAgrupar').innerHTML=REL_AGRUP.map(([k,n])=>`<button type="button" class="tab-item${REL.agrupar===k?' active':''}" onclick="relSet('agrupar','${k}')">${n}</button>`).join('');
   const [i,f]=relIntervalo(), dur=f-i, ant=dadosRelatorio(new Date(i-dur),i), d=dadosRelatorio(i,f);
   const varPct=(x,y)=>y?Math.round((x-y)/y*100):null;
   const tile=(rot,val,sub,vp)=>`<div class="stat-tile"><div class="stat-label">${rot}</div><div class="stat-value" style="font-size:21px">${val}${vp!=null?`<span class="rel-var ${vp>=0?'sobe':'desce'}">${vp>=0?'▲':'▼'} ${Math.abs(vp)}%</span>`:''}</div><div class="stat-sub">${sub}</div></div>`;
@@ -4392,7 +4390,8 @@ function renderRelatorios(){
     tile('Despesas',fmtR(d.desp),'no período',null)+
     tile('Lucro',fmtR(d.receita-d.desp),'faturamento − despesas',varPct(d.receita-d.desp,ant.receita-ant.desp));
   // séries por grupo
-  const g=REL.agrupar, ks=gruposDoIntervalo(i,f,g), idx=Object.fromEntries(ks.map((k,n)=>[k,n]));
+  // o gráfico se divide sozinho pelo tamanho do período escolhido em cima: até ~2 meses por dia, até ~7 meses por semana, mais que isso por mês
+  const dias=dur/864e5, g=dias<=62?'dia':dias<=210?'semana':'mes', ks=gruposDoIntervalo(i,f,g), idx=Object.fromEntries(ks.map((k,n)=>[k,n]));
   const rec=new Array(ks.length).fill(0), qtd=new Array(ks.length).fill(0);
   d.concl.forEach(a=>{const n=idx[chaveGrupo(a.ini,g)]; if(n!=null){rec[n]+=a.price;qtd[n]++}});
   // a tendência ignora os grupos que ainda não aconteceram (não puxa a reta para baixo)
