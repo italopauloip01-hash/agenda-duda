@@ -773,6 +773,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
     <div class="search-bar" style="margin-bottom:10px"><span class="search-icon"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><input type="search" id="svcPageBusca" placeholder="Buscar serviço" oninput="renderServiceLists()"></div>
     <div id="serviceListAll"></div>
     <button class="btn btn-primary" style="margin-top:12px" onclick="novoServico()">Novo serviço</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="abrirAtualizarPrecos()">Atualizar valores dos próximos horários</button>
     <button class="btn btn-ghost" style="margin-top:8px" id="svcAreasBtn" onclick="abrirAreas()">Adicionar lista pronta de uma área</button>
     <div id="svcAreasBox" hidden></div>
   </div>
@@ -1233,6 +1234,12 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
 </div></div>
 
 <!-- Aviso para a cliente (marcação / remarcação / cancelamento) -->
+<div class="modal-overlay" id="precosDrawer"><div class="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">Atualizar valores dos próximos horários</div>
+  <div id="precosBody"></div>
+</div></div>
+
 <div class="modal-overlay" id="revisarDrawer"><div class="drawer">
   <div class="drawer-handle"></div>
   <div class="drawer-title">Revisar cadastros</div>
@@ -1574,7 +1581,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.68'; const VERSAO_DATA='29/10/2026 23:26';
+const VERSAO_APP='3.69'; const VERSAO_DATA='31/10/2026 20:01';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2486,6 +2493,53 @@ function novoAgendamentoPara(nome,servicoId,tipo){
 }
 
 // ── CLIENTS ───────────────────────────────────────────────────────
+// ── ATUALIZAR VALORES: horários futuros já marcados passam a ter o preço atual dos serviços ──
+function precosParaAtualizar(){
+  const todos=Object.values(SVCS_TIPO).flat(), hoje=hoje0();
+  const out=[];
+  for(const a of ALL_APPTS){
+    if(a.ini<hoje||!ATIVOS(a)||a.status==='concluido'||a.origem==='google') continue;
+    const lista=a.servicosLista&&a.servicosLista.length?a.servicosLista:(a.servico_id?[{id:a.servico_id,nome:a.service}]:[]);
+    if(!lista.length) continue;
+    const atuais=lista.map(x=>({x,s:todos.find(s=>s.id===x.id)}));
+    if(atuais.some(t=>!t.s)) continue; // serviço apagado ou digitado à mão: não mexe
+    const novos=atuais.map(t=>({...t.x,preco:Number(t.s.promo??t.s.price)||0}));
+    const novo=Math.round(novos.reduce((s,x)=>s+x.preco,0)*100)/100;
+    if(Math.abs(novo-a.price)<0.005) continue;
+    out.push({a,novo,servicos:lista.length>1?novos:null});
+  }
+  return out.sort((x,y)=>x.a.ini-y.a.ini);
+}
+function abrirAtualizarPrecos(){ renderAtualizarPrecos(); openDrawer('precosDrawer'); }
+function renderAtualizarPrecos(){
+  const l=precosParaAtualizar(), box=document.getElementById('precosBody');
+  if(!l.length){box.innerHTML=`<div class="card" style="text-align:center;color:var(--fg-muted)">Todos os horários marcados de hoje em diante já estão com o valor atual dos serviços ✓</div>
+    <button class="btn btn-ghost" style="margin-top:14px" onclick="closeDrawer('precosDrawer')">Fechar</button>`;return}
+  box.innerHTML=`<div style="font-size:12px;color:var(--fg-muted);margin-bottom:10px">Horários marcados de hoje em diante com valor diferente do preço atual do serviço. Desmarque os que tiveram preço combinado à parte.</div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:6px"><input type="checkbox" checked onchange="document.querySelectorAll('.precoChk').forEach(c=>c.checked=this.checked)"> Marcar todos (${l.length})</label>
+    ${l.map(({a,novo},i)=>`<label class="card" style="display:flex;gap:10px;align-items:flex-start;margin-bottom:6px;font-size:13px;padding:10px 12px">
+      <input type="checkbox" class="precoChk" data-i="${i}" checked style="margin-top:3px">
+      <span style="flex:1;min-width:0"><b>${a.ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} ${a.time}</b> · ${esc(a.name)}<br><span style="color:var(--fg-muted);font-size:12px">${esc(a.service)}</span></span>
+      <span style="white-space:nowrap;text-align:right"><s style="color:var(--fg-muted);font-size:12px">${fmtR(a.price)}</s><br><b>${fmtR(novo)}</b></span></label>`).join('')}
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-ghost" onclick="closeDrawer('precosDrawer')">Agora não</button>
+      <button class="btn btn-primary" id="precosBtn" onclick="aplicarPrecos()">Atualizar marcados</button></div>`;
+}
+async function aplicarPrecos(){
+  const l=precosParaAtualizar(), sel=[...document.querySelectorAll('.precoChk:checked')].map(c=>l[+c.dataset.i]).filter(Boolean);
+  if(!sel.length){toast('Nenhum horário marcado');return}
+  const btn=document.getElementById('precosBtn'); btn.disabled=true;
+  let ok=0, erro=null;
+  for(const {a,novo,servicos} of sel){
+    btn.textContent=`Atualizando… ${ok+1}/${sel.length}`;
+    const mud={valor:novo}; if(servicos) mud.servicos=servicos;
+    const {error}=await sb.from('agendamentos').update(mud).eq('id',a.id);
+    if(error){erro=error;break}
+    a.price=novo; ok++;
+  }
+  toast(erro?`Atualizei ${ok}, mas parou com erro: ${erro.message}`:`${ok} horário${ok===1?'':'s'} com o valor novo`);
+  await recarregar(); renderAtualizarPrecos();
+}
 // ── REVISAR CADASTROS: nomes repetidos (ex.: importados pela foto sem o número) e clientes sem WhatsApp ──
 const chaveNome=n=>semAcento(String(n||'')).toLowerCase().replace(/[^a-z ]/g,' ').replace(/\s+/g,' ').trim();
 function problemasCadastro(){
