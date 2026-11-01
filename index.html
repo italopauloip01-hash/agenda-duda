@@ -1583,7 +1583,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.71'; const VERSAO_DATA='01/11/2026 18:31';
+const VERSAO_APP='3.72'; const VERSAO_DATA='01/11/2026 19:01';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -4250,7 +4250,9 @@ function buildCalendar() {
   el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 0 10px"><div><div class="section-title">${titulo}</div>${resumo?`<div style="font-size:12px;color:var(--fg-muted);margin-top:2px">${resumo}</div>`:''}</div>
       <button class="btn btn-ghost btn-sm" style="width:auto;padding:6px 12px" onclick="agendarNoDiaCal()">+ Agendar</button></div>
     ${folga?`<div class="alert alert-info"><span>Folga${folga.motivo?': '+esc(folga.motivo):''}</span></div>`:''}
-    ${lista.length?'':'<div class="empty-state" style="padding:18px 0">Nenhum compromisso neste dia.</div>'}`;
+    ${lista.some(a=>a.status!=='cancelado')?'':'<div class="empty-state" style="padding:18px 0">Nenhum compromisso neste dia.</div>'}`;
+  const cancelados=lista.filter(a=>a.status==='cancelado');
+  const bloco=cancelados.length?Object.assign(document.createElement('details'),{className:'cancel-bloco',innerHTML:`<summary>Cancelados (${cancelados.length})</summary>`}):null;
   lista.forEach(a=>{
     const card=document.createElement('div'); card.className='appt-card';
     if(!ATIVOS(a)) card.style.opacity='.55';
@@ -4260,8 +4262,9 @@ function buildCalendar() {
         <div class="appt-meta"><span class="badge ${STATUS_MAP[a.status].cls}">${STATUS_MAP[a.status].label}</span>${pagBadge(a)}</div></div>
       <div class="appt-price">${fmtR(a.price)}</div>`;
     card.onclick=()=>openDetail(a);
-    el.appendChild(card);
+    (a.status==='cancelado'?bloco:el).appendChild(card);
   });
+  if(bloco) el.appendChild(bloco);
 }
 function agendarNoDiaCal(){
   selectedDate=new Date(calSel);
