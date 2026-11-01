@@ -367,6 +367,8 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
 /* Pill tabs */
 /* quebra em mais de uma linha em vez de esconder opções fora da tela */
 .pill-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.cancel-bloco{margin-top:14px;border-top:1px dashed var(--border);padding-top:10px}
+.cancel-bloco>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--fg-muted);padding:4px 2px 10px;list-style-position:inside}
 .pill-tabs::-webkit-scrollbar{display:none}
 .pill{padding:6px 13px;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);font-size:13px;font-weight:500;color:var(--fg-muted);cursor:pointer;white-space:nowrap;transition:all .15s}
 .pill:hover{color:var(--fg)}
@@ -1581,7 +1583,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.70'; const VERSAO_DATA='01/11/2026 15:01';
+const VERSAO_APP='3.71'; const VERSAO_DATA='01/11/2026 18:31';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2121,8 +2123,10 @@ function renderAppointments() {
   const folga=BLOQUEIOS.find(b=>b.tipo==='folga'&&b.ini<=addDias(selectedDate,1)&&b.fim>selectedDate);
   if(folga) list.innerHTML=`<div class="alert alert-info"><span>Folga${folga.motivo?': '+esc(folga.motivo):''}</span></div>`;
   let total=0;
-  if(!APPTS.length) list.innerHTML+=`<div class="empty-state">Nada marcado ${label==='Hoje'?'para hoje':'neste dia'}.<br><br><button class="btn btn-ghost btn-sm" style="width:auto" onclick="openDrawer('novoAgendDrawer')">Agendar horário</button></div>`;
-  APPTS.forEach(a => {
+  // cancelados saem da linha do dia e vão para um bloco recolhido no fim da lista
+  const cancelados=APPTS.filter(a=>a.status==='cancelado'), noDia=APPTS.filter(a=>a.status!=='cancelado');
+  if(!noDia.length) list.innerHTML+=`<div class="empty-state">Nada marcado ${label==='Hoje'?'para hoje':'neste dia'}.<br><br><button class="btn btn-ghost btn-sm" style="width:auto" onclick="openDrawer('novoAgendDrawer')">Agendar horário</button></div>`;
+  const cardAppt=a => {
     if(ATIVOS(a)) total+=a.falta;
     const dot = corTipo(a.type);
     const typeB = '';
@@ -2144,9 +2148,9 @@ function renderAppointments() {
       </div>
       <div class="appt-price">${fmtR(a.price)}</div>`;
     card.onclick = ()=>openDetail(a);
-    card.dataset.ini=a.ini.getTime();
-    list.appendChild(card);
-  });
+    return card;
+  };
+  noDia.forEach(a=>{const card=cardAppt(a); card.dataset.ini=a.ini.getTime(); list.appendChild(card)});
   // compromissos pessoais do dia (bloqueios) entram na lista, na ordem do horário
   const d0=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),selectedDate.getDate()), d1=addDias(d0,1);
   BLOQUEIOS.filter(b=>b.tipo==='bloqueio'&&b.ini<d1&&b.fim>d0).forEach(b=>{
@@ -2159,8 +2163,14 @@ function renderAppointments() {
     list.appendChild(card);
   });
   if(list.querySelector('[data-ini]')){
-    const vazio=list.querySelector('.empty-state'); if(vazio&&!APPTS.length) vazio.remove();
+    const vazio=list.querySelector('.empty-state'); if(vazio&&!noDia.length) vazio.remove();
     [...list.querySelectorAll('[data-ini]')].sort((x,y)=>x.dataset.ini-y.dataset.ini).forEach(c=>list.appendChild(c));
+  }
+  if(cancelados.length){
+    const bloco=document.createElement('details'); bloco.className='cancel-bloco';
+    bloco.innerHTML=`<summary>Cancelados (${cancelados.length})</summary>`;
+    cancelados.sort((x,y)=>x.ini-y.ini).forEach(a=>bloco.appendChild(cardAppt(a)));
+    list.appendChild(bloco);
   }
   document.getElementById('stat-hoje').textContent = APPTS.filter(ATIVOS).length;
   // em destaque: o que entrou no caixa no dia (pela data do pagamento); o que falta receber fica embaixo, menor
