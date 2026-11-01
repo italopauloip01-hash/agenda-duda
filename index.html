@@ -1581,7 +1581,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.69'; const VERSAO_DATA='31/10/2026 20:01';
+const VERSAO_APP='3.70'; const VERSAO_DATA='01/11/2026 15:01';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2596,6 +2596,30 @@ async function salvarTelRevisar(id){
   ALL_APPTS.filter(a=>a.cliente_id===id).forEach(a=>a.phone=n);
   toast('WhatsApp salvo'); renderRevisar(); atualizarPillRevisar(); recarregar();
 }
+// excluir pela ficha. Os horários dela vão junto (o banco não deixa um horário sem cliente), então avisa
+// quanto some do histórico e do financeiro; se for cadastro repetido, o certo é Juntar (não perde nada)
+async function excluirCliente(id){
+  const c=CLIENTS.find(x=>x.id===id); if(!c) return;
+  const {data:hs,error:e0}=await sb.from('agendamentos').select('id,inicio,status,pagamentos(valor)').eq('cliente_id',id);
+  if(e0){toast('Erro: '+e0.message);return}
+  const agora=Date.now(), futuros=(hs||[]).filter(h=>new Date(h.inicio)>=agora&&!['cancelado','faltou'].includes(h.status));
+  const pago=(hs||[]).flatMap(h=>h.pagamentos||[]).reduce((s,p)=>s+Number(p.valor),0);
+  const repetida=CLIENTS.some(x=>x.id!==id&&chaveNome(x.name)===chaveNome(c.name));
+  let msg=`Excluir ${c.name}?`;
+  if(hs?.length) msg+=`\n\nAtenção: ela tem ${hs.length} horário${hs.length>1?'s':''} no app${futuros.length?` (${futuros.length} ainda por vir)`:''}${pago?` e ${fmtR(pago)} em pagamentos`:''}. Tudo isso também será apagado e sai dos relatórios.`;
+  if(repetida) msg+=`\n\nExiste outra cliente com o mesmo nome — se for a mesma pessoa, use "Revisar → Juntar" em vez de excluir, assim nada se perde.`;
+  if(!confirm(msg)) return;
+  if(hs?.length&&!confirm(`Tem certeza? Não dá para desfazer.`)) return;
+  try{
+    // cancela os futuros antes, para sumirem também do Google Agenda
+    for(const h of futuros){await q(sb.from('agendamentos').update({status:'cancelado'}).eq('id',h.id)); await syncEvento(h.id).catch(()=>{})}
+    if(hs?.length) await q(sb.from('agendamentos').delete().eq('cliente_id',id)); // pagamentos vão junto
+    await q(sb.from('clientes').delete().eq('id',id));
+  }catch(e){return}
+  CLIENTS=CLIENTS.filter(x=>x.id!==id);
+  closeDrawer('fichaClienteDrawer'); toast(`${c.name.split(' ')[0]} foi excluída`);
+  await recarregar();
+}
 async function excluirClienteRevisar(id){
   const c=CLIENTS.find(x=>x.id===id); if(!c||!confirm(`Excluir o cadastro de ${c.name}?`)) return;
   const {error}=await sb.from('clientes').delete().eq('id',id);
@@ -2713,6 +2737,7 @@ function openFicha(c) {
       ${wa?`<a class="btn btn-ghost btn-sm" style="text-decoration:none" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>`:'<button class="btn btn-ghost btn-sm" disabled>Sem WhatsApp</button>'}
       ${wa?`<button class="btn btn-ghost btn-sm" style="grid-column:1/-1" onclick="enviarMensagem('${c.id}')">Enviar mensagem pronta</button>`:''}
       <button class="btn btn-ghost btn-sm" style="grid-column:1/-1" onclick="editarCliente('${c.id}')">✎ Editar dados</button>
+      <button class="btn btn-ghost btn-sm" style="grid-column:1/-1;color:var(--danger)" onclick="excluirCliente('${c.id}')">Excluir cliente</button>
     </div>
     <button class="btn btn-ghost" onclick="closeDrawer('fichaClienteDrawer')">Fechar</button>`;
   openDrawer('fichaClienteDrawer');
