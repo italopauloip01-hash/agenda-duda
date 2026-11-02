@@ -1583,7 +1583,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.75'; const VERSAO_DATA='02/11/2026 13:40';
+const VERSAO_APP='3.76'; const VERSAO_DATA='02/11/2026 14:01';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2642,7 +2642,21 @@ async function colocar9(){
 }
 async function salvarTelRevisar(id){
   const el=document.getElementById('revTel_'+id), n=normTel(el.value);
-  if(erroTel(n)){toast(erroTel(n));el.focus();return}
+  // aqui o número antigo (sem o 9) também vale: serve para achar e juntar com a cliente que já tem o número
+  if(!celularSem9(n)&&erroTel(n)){toast(erroTel(n));el.focus();return}
+  const c0=CLIENTS.find(x=>x.id===id), outra=CLIENTS.find(x=>x.id!==id&&x.phone&&chaveTel(x.phone)===chaveTel(n));
+  if(outra){
+    if(confirm(`Esse número já é de ${outra.name} (${fmtTel(outra.phone)}).\n\nJuntar ${c0?.name||'esta'} com ${outra.name}? Os horários e pagamentos passam para ${outra.name}, que fica com o número com 9.`)){
+      try{
+        await juntarIds(outra.id,[id]);
+        // digitou com 9 e a que fica tinha o antigo: atualiza para o com 9
+        if(tem9(n)&&!tem9(outra.phone)) await q(sb.from('clientes').update({telefone:n}).eq('id',outra.id));
+        toast(`Pronto: juntei com ${outra.name}`);
+      }catch(e){ toast('Não deu para juntar: '+(e.message||e)) }
+      await recarregar(); renderRevisar(); atualizarPillRevisar(); return;
+    }
+    if(outra.phone===n){toast(`Esse número exato já é de ${outra.name}; sem juntar, digite com ou sem o 9 para diferenciar`);return}
+  }
   const {error}=await sb.from('clientes').update({telefone:n}).eq('id',id);
   if(error){toast(error.code==='23505'?'Esse WhatsApp já está em outra cliente — talvez seja a mesma pessoa com outro nome':'Erro: '+error.message);return}
   const c=CLIENTS.find(x=>x.id===id); if(c) c.phone=n;
@@ -2686,10 +2700,17 @@ async function juntarClientes(gi){
   const fica=g.find(c=>c.id===ficaId), saem=g.filter(c=>c.id!==ficaId);
   if(!confirm(`Juntar ${g.length} cadastros de ${fica.name} em um só?\nOs horários e pagamentos passam todos para o que fica.`)) return;
   try{
-    const {data:linhas,error:e0}=await sb.from('clientes').select('*').in('id',g.map(c=>c.id)); if(e0) throw e0;
+    await juntarIds(ficaId,saem.map(c=>c.id));
+    toast(`Pronto: ${fica.name} ficou com um cadastro só`);
+  }catch(e){ toast('Não deu para juntar: '+(e.message||e)); }
+  await recarregar(); renderRevisar(); atualizarPillRevisar();
+}
+// passa horários e avaliações das que saem para a que fica, aproveita o que faltar nela e apaga as outras
+async function juntarIds(ficaId,saemIds){
+    const {data:linhas,error:e0}=await sb.from('clientes').select('*').in('id',[ficaId,...saemIds]); if(e0) throw e0;
     const lFica=linhas.find(l=>l.id===ficaId), extra={};
-    for(const c of saem){
-      const l=linhas.find(x=>x.id===c.id)||{};
+    for(const sid of saemIds){
+      const c={id:sid}, l=linhas.find(x=>x.id===sid)||{};
       for(const r of [['agendamentos'],['avaliacoes']]){
         const {error}=await sb.from(r[0]).update({cliente_id:ficaId}).eq('cliente_id',c.id); if(error) throw error;
       }
@@ -2702,9 +2723,6 @@ async function juntarClientes(gi){
     }
     // só depois de apagar as outras (WhatsApp e CPF não podem repetir)
     if(Object.keys(extra).length){const {error}=await sb.from('clientes').update(extra).eq('id',ficaId); if(error) throw error}
-    toast(`Pronto: ${fica.name} ficou com um cadastro só`);
-  }catch(e){ toast('Não deu para juntar: '+(e.message||e)); }
-  await recarregar(); renderRevisar(); atualizarPillRevisar();
 }
 function setClientFilter(f,el) {
   currentClientFilter = f;
@@ -2919,7 +2937,8 @@ async function salvarCliente(){
   const cpf=v('cliCpf').replace(/\D/g,'')||null;
   if(cpf&&!cpfValido(cpf)){toast('CPF inválido — confira os números');document.getElementById('cliCpf').focus();return}
   const tel=normTel(v('cliTel'));
-  if(tel&&erroTel(tel)){toast(erroTel(tel));document.getElementById('cliTel').focus();return}
+  if(tel&&celularSem9(tel)){ if(!confirm('Número sem o 9 da frente. Salvar assim mesmo?\n(Serve para achar e juntar depois em Revisar; o padrão é com o 9.)')){document.getElementById('cliTel').focus();return} }
+  else if(tel&&erroTel(tel)){toast(erroTel(tel));document.getElementById('cliTel').focus();return}
   if(!tel&&!confirm('Salvar sem WhatsApp? Sem o número o robô não consegue mandar confirmação nem lembrete para ela.')){document.getElementById('cliTel').focus();return}
   const mesma=tel&&CLIENTS.find(c=>c.id!==CLI_EDIT&&chaveTel(c.phone)===chaveTel(tel));
   if(mesma&&mesma.phone!==tel&&!confirm(`${mesma.name} já tem esse número ${tem9(mesma.phone)?'com':'sem'} o 9 (${fmtTel(mesma.phone)}). Deve ser a mesma pessoa.\n\nSalvar mesmo assim? Depois dá para juntar as duas em Clientes → ⚠️ Revisar.`)){document.getElementById('cliTel').focus();return}
