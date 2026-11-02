@@ -886,6 +886,7 @@ textarea.form-input.big{resize:none;line-height:1.35;min-height:62px;overflow:hi
       <div class="form-group"><label class="form-label">Até</label><input class="form-input" type="date" id="relAte" onchange="renderRelatorios()"></div>
     </div>
     <div style="height:8px"></div>
+    <div id="relProjecao"></div>
     <div class="stats-row" id="relTiles"></div>
     <div class="card rel-tendencia" id="relTendencia"></div>
     <div class="section-label">Receita e tendência</div>
@@ -1583,7 +1584,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.76'; const VERSAO_DATA='02/11/2026 14:01';
+const VERSAO_APP='3.77'; const VERSAO_DATA='02/11/2026 14:34';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -4533,13 +4534,42 @@ function dadosRelatorio(i,f){
     faltas:at.filter(a=>a.status==='faltou').length,cancel:at.filter(a=>a.status==='cancelado').length,
     desp:EXPENSES.filter(e=>e.dataD>=i&&e.dataD<f).reduce((s,e)=>s+e.valor,0)};
 }
-function renderRelatorios(){
+// projeção do mês corrente: o que já foi feito + o que está marcado, se todas vierem; e quanto entra no caixa
+function renderProjecaoMes(){
+  const el=document.getElementById('relProjecao'); if(!el) return;
+  const h=new Date(), m0=new Date(h.getFullYear(),h.getMonth(),1), m1=new Date(h.getFullYear(),h.getMonth()+1,1);
+  const doMes=ALL_APPTS.filter(a=>a.ini>=m0&&a.ini<m1&&ATIVOS(a)&&a.origem!=='google');
+  const feitos=doMes.filter(a=>a.status==='concluido'), marcados=doMes.filter(a=>a.status!=='concluido');
+  const vFeito=feitos.reduce((s,a)=>s+a.price,0), vMarcado=marcados.reduce((s,a)=>s+a.price,0), previsto=vFeito+vMarcado;
+  const entrou=pagsValidos().filter(p=>p.em>=m0&&p.em<m1).reduce((s,p)=>s+p.valor,0);
+  const falta=doMes.reduce((s,a)=>s+(a.falta||0),0), caixa=entrou+falta;
+  const desp=EXPENSES.filter(e=>e.dataD>=m0&&e.dataD<m1).reduce((s,e)=>s+e.valor,0);
+  const mesAnt=dadosRelatorio(new Date(h.getFullYear(),h.getMonth()-1,1),m0).receita;
+  const vp=mesAnt?Math.round((previsto-mesAnt)/mesAnt*100):null;
+  const pct=previsto?Math.round(vFeito/previsto*100):0;
+  const nomeMes=m0.toLocaleDateString('pt-BR',{month:'long'});
+  const linha=(r,v,forte)=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:13px"><span style="color:var(--fg-muted)">${r}</span><span style="${forte?'font-weight:700':''}">${v}</span></div>`;
+  el.innerHTML=`<div class="card" style="margin-bottom:12px">
+    <div style="font-size:12px;font-weight:600;color:var(--fg-muted);text-transform:uppercase;letter-spacing:.04em">Projeção de ${nomeMes}</div>
+    <div style="font-size:24px;font-weight:700;margin:4px 0 2px">${fmtR(previsto)}${vp!=null?`<span class="rel-var ${vp>=0?'sobe':'desce'}">${vp>=0?'▲':'▼'} ${Math.abs(vp)}%</span>`:''}</div>
+    <div style="font-size:12px;color:var(--fg-muted);margin-bottom:8px">esperado no mês se todas as marcadas vierem${mesAnt?` · mês passado: ${fmtR(mesAnt)}`:''}</div>
+    <div style="height:8px;border-radius:99px;background:var(--border);overflow:hidden;margin-bottom:10px"><div style="height:100%;width:${pct}%;background:var(--accent)"></div></div>
+    ${linha(`✓ Já feito (${feitos.length} atendimento${feitos.length===1?'':'s'})`,fmtR(vFeito))}
+    ${linha(`📅 Ainda marcado (${marcados.length} horário${marcados.length===1?'':'s'})`,fmtR(vMarcado))}
+    <div style="border-top:1px dashed var(--border);margin:8px 0 6px"></div>
+    ${linha('💰 Já entrou no caixa',fmtR(entrou))}
+    ${linha('⏳ Falta receber dos horários do mês',fmtR(falta))}
+    ${linha('Caixa previsto no fim do mês',fmtR(caixa),true)}
+    ${desp?linha('Despesas lançadas no mês','− '+fmtR(desp))+linha('Sobra prevista',fmtR(caixa-desp),true):''}
+  </div>`;
+}function renderRelatorios(){
   const box=document.getElementById('finTabRelatorios'); if(!box||box.hidden) return;
   document.getElementById('relPeriodos').innerHTML=REL_PERIODOS.map(([k,n])=>`<div class="pill${REL.periodo===k?' active':''}" onclick="relSet('periodo','${k}')">${n}</div>`).join('');
   document.getElementById('relCustom').hidden=REL.periodo!=='custom';
   const [i,f]=relIntervalo(), dur=f-i, ant=dadosRelatorio(new Date(i-dur),i), d=dadosRelatorio(i,f);
   const varPct=(x,y)=>y?Math.round((x-y)/y*100):null;
   const tile=(rot,val,sub,vp)=>`<div class="stat-tile"><div class="stat-label">${rot}</div><div class="stat-value" style="font-size:21px">${val}${vp!=null?`<span class="rel-var ${vp>=0?'sobe':'desce'}">${vp>=0?'▲':'▼'} ${Math.abs(vp)}%</span>`:''}</div><div class="stat-sub">${sub}</div></div>`;
+  renderProjecaoMes();
   const ticket=d.concl.length?d.receita/d.concl.length:0, ticketAnt=ant.concl.length?ant.receita/ant.concl.length:0;
   document.getElementById('relTiles').innerHTML=
     tile('Faturamento',fmtR(d.receita),'concluídos no período',varPct(d.receita,ant.receita))+
