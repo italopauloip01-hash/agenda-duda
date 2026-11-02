@@ -1583,7 +1583,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.73'; const VERSAO_DATA='02/11/2026 13:16';
+const VERSAO_APP='3.74'; const VERSAO_DATA='02/11/2026 13:31';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2552,14 +2552,28 @@ async function aplicarPrecos(){
 }
 // ── REVISAR CADASTROS: nomes repetidos (ex.: importados pela foto sem o número) e clientes sem WhatsApp ──
 const chaveNome=n=>semAcento(String(n||'')).toLowerCase().replace(/[^a-z ]/g,' ').replace(/\s+/g,' ').trim();
+// o mesmo celular com e sem o 9 da frente (cadastros antigos): 55 33 9 8888-7777 e 55 33 8888-7777 dão a mesma chave
+const chaveTel=t=>{const d=normTel(t); if(!d) return null; return d.length===13&&d[4]==='9'?d.slice(0,4)+d.slice(5):d};
+const tem9=t=>{const d=normTel(t); return !!d&&d.length===13};
 function problemasCadastro(){
+  // junta no mesmo grupo quem tem o mesmo número (o principal) ou o mesmo nome
+  const pai={}, raiz=id=>pai[id]===id?id:(pai[id]=raiz(pai[id]));
+  CLIENTS.forEach(c=>pai[c.id]=c.id);
+  const porTel={}, porNome={};
+  for(const c of CLIENTS){
+    const kt=chaveTel(c.phone), kn=chaveNome(c.name);
+    if(kt){ if(porTel[kt]) pai[raiz(c.id)]=raiz(porTel[kt]); else porTel[kt]=c.id }
+    if(kn){ if(porNome[kn]) pai[raiz(c.id)]=raiz(porNome[kn]); else porNome[kn]=c.id }
+  }
   const grupos={};
-  for(const c of CLIENTS){const k=chaveNome(c.name); if(k) (grupos[k]=grupos[k]||[]).push(c)}
+  for(const c of CLIENTS) (grupos[raiz(c.id)]=grupos[raiz(c.id)]||[]).push(c);
   const agora=Date.now();
   const futuro=id=>ALL_APPTS.filter(a=>a.cliente_id===id&&a.ini>=agora&&ATIVOS(a)).sort((x,y)=>x.ini-y.ini)[0];
   const repetidas=Object.values(grupos).filter(g=>g.length>1)
-    // fica a que tem WhatsApp; empate: a com mais visitas
-    .map(g=>g.sort((x,y)=>(!!y.phone-!!x.phone)||(y.visits-x.visits)));
+    // fica a que tem WhatsApp (de preferência o número novo, com 9); empate: a com mais visitas
+    .map(g=>g.sort((x,y)=>(!!y.phone-!!x.phone)||(tem9(y.phone)-tem9(x.phone))||(y.visits-x.visits)))
+    .map(g=>Object.assign(g,{mesmoTel:g.some((c,i)=>c.phone&&g.some((d,j)=>j!==i&&chaveTel(d.phone)===chaveTel(c.phone)))}))
+    .sort((x,y)=>y.mesmoTel-x.mesmoTel);
   const nasRepetidas=new Set(repetidas.flat().map(c=>c.id));
   const semNumero=CLIENTS.filter(c=>!c.phone&&!nasRepetidas.has(c.id)).map(c=>({c,prox:futuro(c.id)}))
     .sort((x,y)=>(!!y.prox-!!x.prox)||((x.prox?.ini||0)-(y.prox?.ini||0))||(y.c.visits-x.c.visits));
@@ -2579,11 +2593,12 @@ function renderRevisar(){
   let h='';
   if(!repetidas.length&&!semNumero.length) h='<div class="card" style="text-align:center;color:var(--fg-muted)">Tudo certo: nenhuma cliente repetida e todas têm WhatsApp ✓</div>';
   if(repetidas.length){
-    h+=tit(`Repetidas (${repetidas.length})`,'Mesmo nome cadastrado mais de uma vez. "Juntar" deixa uma só: os horários, pagamentos e avaliações das outras passam para ela, e o que faltar (WhatsApp, aniversário, CPF, observações) é aproveitado.');
+    h+=tit(`Repetidas (${repetidas.length})`,'Mesmo número (com ou sem o 9 da frente) ou mesmo nome cadastrado mais de uma vez. "Juntar" deixa uma só: os horários, pagamentos e avaliações das outras passam para ela, e o que faltar (WhatsApp, aniversário, CPF, observações) é aproveitado. Se uma tiver o número com 9, ele é o que fica.');
     h+=repetidas.map((g,gi)=>`<div class="card" style="margin-bottom:8px">
+      <div style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:2px">${g.mesmoTel?'📞 Mesmo número':'Mesmo nome'}</div>
       ${g.map((c,i)=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:13px">
         <input type="radio" name="fica${gi}" value="${c.id}" ${i===0?'checked':''} style="margin-top:3px">
-        <span><b>${esc(c.name)}</b> — ${c.phone?esc(fmtTel(c.phone)):'<span style="color:var(--danger)">sem WhatsApp</span>'}<br><span style="color:var(--fg-muted);font-size:12px">${info(c)}</span></span></label>`).join('')}
+        <span><b>${esc(c.name)}</b> — ${c.phone?esc(fmtTel(c.phone))+(tem9(c.phone)?'':' <span style="color:var(--warn,#d9a441);font-size:11px">(sem o 9)</span>'):'<span style="color:var(--danger)">sem WhatsApp</span>'}<br><span style="color:var(--fg-muted);font-size:12px">${info(c)}</span></span></label>`).join('')}
       <div style="font-size:11px;color:var(--fg-muted);margin:2px 0 8px">Marque a que fica.</div>
       <button class="btn btn-primary btn-sm" onclick="juntarClientes(${gi})">Juntar em uma só</button></div>`).join('');
   }
@@ -2614,10 +2629,10 @@ async function excluirCliente(id){
   if(e0){toast('Erro: '+e0.message);return}
   const agora=Date.now(), futuros=(hs||[]).filter(h=>new Date(h.inicio)>=agora&&!['cancelado','faltou'].includes(h.status));
   const pago=(hs||[]).flatMap(h=>h.pagamentos||[]).reduce((s,p)=>s+Number(p.valor),0);
-  const repetida=CLIENTS.some(x=>x.id!==id&&chaveNome(x.name)===chaveNome(c.name));
+  const repetida=CLIENTS.some(x=>x.id!==id&&(chaveNome(x.name)===chaveNome(c.name)||(c.phone&&chaveTel(x.phone)===chaveTel(c.phone))));
   let msg=`Excluir ${c.name}?`;
   if(hs?.length) msg+=`\n\nAtenção: ela tem ${hs.length} horário${hs.length>1?'s':''} no app${futuros.length?` (${futuros.length} ainda por vir)`:''}${pago?` e ${fmtR(pago)} em pagamentos`:''}. Tudo isso também será apagado e sai dos relatórios.`;
-  if(repetida) msg+=`\n\nExiste outra cliente com o mesmo nome — se for a mesma pessoa, use "Revisar → Juntar" em vez de excluir, assim nada se perde.`;
+  if(repetida) msg+=`\n\nExiste outra cliente com o mesmo nome ou número — se for a mesma pessoa, use "Revisar → Juntar" em vez de excluir, assim nada se perde.`;
   if(!confirm(msg)) return;
   if(hs?.length&&!confirm(`Tem certeza? Não dá para desfazer.`)) return;
   try{
@@ -2653,6 +2668,8 @@ async function juntarClientes(gi){
       for(const k of ['telefone','nascimento','cpf','preferencias','observacoes','google_resource'])
         if(!lFica?.[k]&&!extra[k]&&l[k]) extra[k]=l[k];
       if(l.vip) extra.vip=true;
+      // a que fica tem o número antigo (sem o 9) e esta tem o mesmo com 9: fica o novo
+      if(lFica?.telefone&&!tem9(lFica.telefone)&&tem9(l.telefone)&&chaveTel(l.telefone)===chaveTel(lFica.telefone)) extra.telefone=l.telefone;
       const {error}=await sb.from('clientes').delete().eq('id',c.id); if(error) throw error;
     }
     // só depois de apagar as outras (WhatsApp e CPF não podem repetir)
@@ -2876,13 +2893,15 @@ async function salvarCliente(){
   const tel=normTel(v('cliTel'));
   if(tel&&(tel.length<12||tel.length>13)){toast('WhatsApp incompleto — coloque com DDD, ex.: (33) 99999-9999');document.getElementById('cliTel').focus();return}
   if(!tel&&!confirm('Salvar sem WhatsApp? Sem o número o robô não consegue mandar confirmação nem lembrete para ela.')){document.getElementById('cliTel').focus();return}
+  const mesma=tel&&CLIENTS.find(c=>c.id!==CLI_EDIT&&chaveTel(c.phone)===chaveTel(tel));
+  if(mesma&&mesma.phone!==tel&&!confirm(`${mesma.name} já tem esse número ${tem9(mesma.phone)?'com':'sem'} o 9 (${fmtTel(mesma.phone)}). Deve ser a mesma pessoa.\n\nSalvar mesmo assim? Depois dá para juntar as duas em Clientes → ⚠️ Revisar.`)){document.getElementById('cliTel').focus();return}
   const dados={nome,telefone:tel,nascimento:v('cliNasc')||null,cpf,tipo:v('cliTipo'),origem:v('cliOrigem'),
     preferencias:v('cliPref')||null,observacoes:v('cliObs')||null,vip:document.getElementById('cliVip').checked};
   const editando=CLI_EDIT;
   const {error}=editando
     ? await sb.from('clientes').update(dados).eq('id',editando)
     : await sb.from('clientes').insert({...dados,cor:CORES_CLIENTE[CLIENTS.length%CORES_CLIENTE.length]});
-  if(error){toast(error.code==='23505'?'Já existe uma cliente com esse WhatsApp':'Erro: '+error.message);return}
+  if(error){toast(error.code==='23505'?`Já existe uma cliente com esse WhatsApp${mesma?': '+mesma.name:''}`:'Erro: '+error.message);return}
   CLI_EDIT=null; preencherFormCliente(null);
   closeDrawer('novoClienteDrawer');
   toast(editando?'Dados atualizados':'Cliente cadastrada');
