@@ -1584,7 +1584,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.77'; const VERSAO_DATA='02/11/2026 14:34';
+const VERSAO_APP='3.78'; const VERSAO_DATA='02/11/2026 14:37';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -5063,6 +5063,8 @@ setInterval(()=>{ if(!document.hidden&&!gavetasAbertas().length&&Date.now()-ulti
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&!gavetasAbertas().length&&Date.now()-ultimaAtualizacao>15e3) atualizarAgora(false) });
 (()=>{
   const PUXAR=200; // quanto o dedo precisa descer (px) para atualizar
+  // como no calendário: só começa com o dedo na parte de cima da tela (cabeçalho e abas); no meio da tela, arrastar é só rolar
+  const dentroDeRolagem=el=>{for(;el&&el!==document.body;el=el.parentElement){if(el.scrollTop>0)return true}return false};
   const ind=document.createElement('div'); ind.id='ptr'; ind.innerHTML='<svg class="ptr-ic" viewBox="0 0 24 24"><circle class="trilha" cx="12" cy="12" r="9"/><circle class="arco" cx="12" cy="12" r="9"/></svg><span class="ptr-txt">Puxe para atualizar</span>';
   document.body.appendChild(ind);
   // só vale quando a página já estava parada no topo: subir rolando até o alto não dispara
@@ -5070,7 +5072,8 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&!gavetas
   window.addEventListener('scroll',()=>{ if(window.scrollY>0) saiuDoTopo=Date.now() },{passive:true});
   const reset=()=>{ind.style.transition='transform .25s,opacity .25s';ind.style.transform='translate(-50%,-70px)';ind.style.opacity='0';ind.classList.remove('pronto','girando')};
   document.addEventListener('touchstart',e=>{
-    if(ocupado||!USER||gavetasAbertas().length||e.target.closest('.modal-overlay,#loginScreen,#calGrid')||window.scrollY>0||Date.now()-saiuDoTopo<600){y0=null;return}
+    if(ocupado||!USER||gavetasAbertas().length||e.target.closest('.modal-overlay,#loginScreen,#calGrid')||window.scrollY>0||Date.now()-saiuDoTopo<600
+       ||e.touches[0].clientY>innerHeight*.3||dentroDeRolagem(e.target)){y0=null;return}
     y0=e.touches[0].clientY; x0=e.touches[0].clientX; dy=0; ativo=false;
   },{passive:true});
   document.addEventListener('touchmove',e=>{
