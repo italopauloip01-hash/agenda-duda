@@ -1583,7 +1583,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.74'; const VERSAO_DATA='02/11/2026 13:31';
+const VERSAO_APP='3.75'; const VERSAO_DATA='02/11/2026 13:40';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -1671,11 +1671,18 @@ function fmtRReal(v){
   v=Number(v)||0;const s=v<0?'−':'';v=Math.abs(v);
   return s+(v>=1000?'R$'+(v/1000).toFixed(1).replace('.0','').replace('.',',')+'k':'R$'+(Number.isInteger(v)?v:v.toFixed(2).replace('.',',')));
 }
-function normTel(s){let d=String(s||'').replace(/\D/g,'');if(!d)return null;if(d.length<=11)d='55'+d;return d}
+function normTel(s){const intl=/^\s*\+/.test(String(s||''));let d=String(s||'').replace(/\D/g,'');if(!d)return null;if(!intl&&d.length<=11)d='55'+d;return d}
+// padrão do sistema: Brasil = 55 + DDD + 9 + 8 dígitos; outro país = começa com + e o código. Devolve o problema ou null
+function erroTel(n){
+  if(!n) return 'Coloque o WhatsApp com DDD, ex.: (33) 99999-9999';
+  if(!n.startsWith('55')) return n.length>=8&&n.length<=15?null:'Confira o número. De outro país, comece com + e o código, ex.: +1 305 555 1234';
+  if(/^55[1-9][1-9][6-9]\d{7}$/.test(n)) return 'Faltou o 9 na frente do número, ex.: (33) 99999-9999';
+  return /^55[1-9][1-9]9\d{8}$/.test(n)?null:'Confira o WhatsApp: DDD + 9 + número, ex.: (33) 99999-9999';
+}
 function cpfValido(s){const d=String(s||'').replace(/\D/g,'');if(d.length!==11||/^(\d)\1{10}$/.test(d))return false;const dv=n=>{let t=0;for(let i=0;i<n;i++)t+=+d[i]*(n+1-i);const r=t*10%11;return r===10?0:r};return dv(9)===+d[9]&&dv(10)===+d[10]}
 function fmtCpf(s){const d=String(s||'').replace(/\D/g,'');return d.length===11?`${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`:''}
 function mascaraCpf(el){const d=el.value.replace(/\D/g,'').slice(0,11);el.value=d.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2')}
-function fmtTel(s){const d=String(s||'').replace(/^55/,'');if(d.length===11)return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;if(d.length===10)return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;return s||'—'}
+function fmtTel(s){if(s&&!String(s).startsWith('55'))return '+'+String(s).replace(/\D/g,'');const d=String(s||'').replace(/^55/,'');if(d.length===11)return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;if(d.length===10)return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;return s||'—'}
 function relDia(d){
   if(!d)return 'Nunca';
   d=new Date(d);const diff=Math.round((hoje0()-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5);
@@ -2553,8 +2560,11 @@ async function aplicarPrecos(){
 // ── REVISAR CADASTROS: nomes repetidos (ex.: importados pela foto sem o número) e clientes sem WhatsApp ──
 const chaveNome=n=>semAcento(String(n||'')).toLowerCase().replace(/[^a-z ]/g,' ').replace(/\s+/g,' ').trim();
 // o mesmo celular com e sem o 9 da frente (cadastros antigos): 55 33 9 8888-7777 e 55 33 8888-7777 dão a mesma chave
-const chaveTel=t=>{const d=normTel(t); if(!d) return null; return d.length===13&&d[4]==='9'?d.slice(0,4)+d.slice(5):d};
-const tem9=t=>{const d=normTel(t); return !!d&&d.length===13};
+const chaveTel=t=>{const d=normTel(t); if(!d) return null; return d.startsWith('55')&&d.length===13&&d[4]==='9'?d.slice(0,4)+d.slice(5):d};
+const tem9=t=>{const d=normTel(t); return !!d&&(!d.startsWith('55')||d.length===13)};
+const celularSem9=t=>/^55[1-9][1-9][6-9]\d{7}$/.test(t||'');
+// número no padrão para gravar contatos importados: celular antigo ganha o 9
+const telPadrao=t=>{const d=normTel(t); return celularSem9(d)?d.slice(0,4)+'9'+d.slice(4):d};
 function problemasCadastro(){
   // junta no mesmo grupo quem tem o mesmo número (o principal) ou o mesmo nome
   const pai={}, raiz=id=>pai[id]===id?id:(pai[id]=raiz(pai[id]));
@@ -2577,21 +2587,22 @@ function problemasCadastro(){
   const nasRepetidas=new Set(repetidas.flat().map(c=>c.id));
   const semNumero=CLIENTS.filter(c=>!c.phone&&!nasRepetidas.has(c.id)).map(c=>({c,prox:futuro(c.id)}))
     .sort((x,y)=>(!!y.prox-!!x.prox)||((x.prox?.ini||0)-(y.prox?.ini||0))||(y.c.visits-x.c.visits));
-  return {repetidas,semNumero,futuro};
+  const sem9=CLIENTS.filter(c=>celularSem9(c.phone)&&!nasRepetidas.has(c.id));
+  return {repetidas,semNumero,sem9,futuro};
 }
 function atualizarPillRevisar(){
   const p=document.getElementById('pillRevisar'); if(!p) return;
-  const {repetidas,semNumero}=problemasCadastro(), n=repetidas.length+semNumero.length;
+  const {repetidas,semNumero,sem9}=problemasCadastro(), n=repetidas.length+semNumero.length+sem9.length;
   p.hidden=!n; p.textContent=`⚠️ Revisar (${n})`;
 }
 function abrirRevisar(){ renderRevisar(); openDrawer('revisarDrawer'); }
 function renderRevisar(){
-  const {repetidas,semNumero,futuro}=problemasCadastro();
+  const {repetidas,semNumero,sem9,futuro}=problemasCadastro();
   const quando=a=>a?` · <b style="color:var(--warn,#d9a441)">horário ${a.ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${a.time}</b>`:'';
   const info=c=>`${c.visits} visita${c.visits===1?'':'s'}${quando(futuro(c.id))}`;
   const tit=(t,s)=>`<div style="font-size:14px;font-weight:600;margin:14px 0 4px">${t}</div><div style="font-size:12px;color:var(--fg-muted);margin-bottom:8px">${s}</div>`;
   let h='';
-  if(!repetidas.length&&!semNumero.length) h='<div class="card" style="text-align:center;color:var(--fg-muted)">Tudo certo: nenhuma cliente repetida e todas têm WhatsApp ✓</div>';
+  if(!repetidas.length&&!semNumero.length&&!sem9.length) h='<div class="card" style="text-align:center;color:var(--fg-muted)">Tudo certo: nenhuma cliente repetida e todas têm WhatsApp ✓</div>';
   if(repetidas.length){
     h+=tit(`Repetidas (${repetidas.length})`,'Mesmo número (com ou sem o 9 da frente) ou mesmo nome cadastrado mais de uma vez. "Juntar" deixa uma só: os horários, pagamentos e avaliações das outras passam para ela, e o que faltar (WhatsApp, aniversário, CPF, observações) é aproveitado. Se uma tiver o número com 9, ele é o que fica.');
     h+=repetidas.map((g,gi)=>`<div class="card" style="margin-bottom:8px">
@@ -2610,11 +2621,28 @@ function renderRevisar(){
       <button class="btn btn-primary btn-sm" style="width:auto" onclick="salvarTelRevisar('${c.id}')">Salvar</button></div>
       ${!c.visits&&!prox&&!ALL_APPTS.some(a=>a.cliente_id===c.id)?`<button class="btn btn-ghost btn-sm" style="margin-top:6px;color:var(--danger)" onclick="excluirClienteRevisar('${c.id}')">Excluir cadastro (nunca veio)</button>`:''}</div>`).join('');
   }
+  if(sem9.length){
+    h+=tit(`Número antigo, sem o 9 (${sem9.length})`,'Celulares cadastrados no formato antigo. Para manter um padrão (e o link achar a cliente pelo número), todos ficam com o 9 da frente.');
+    h+=`<div class="card" style="margin-bottom:8px;font-size:13px">${sem9.map(c=>`<div style="padding:3px 0"><b>${esc(c.name)}</b> — ${esc(fmtTel(c.phone))} → ${esc(fmtTel(c.phone.slice(0,4)+'9'+c.phone.slice(4)))}</div>`).join('')}
+      <button class="btn btn-primary btn-sm" style="margin-top:8px" id="sem9Btn" onclick="colocar9()">Colocar o 9 em todos (${sem9.length})</button></div>`;
+  }
   document.getElementById('revisarBody').innerHTML=h;
+}
+async function colocar9(){
+  const l=problemasCadastro().sem9; if(!l.length) return;
+  const btn=document.getElementById('sem9Btn'); btn.disabled=true; let ok=0, erro=null;
+  for(const c of l){
+    const n=c.phone.slice(0,4)+'9'+c.phone.slice(4);
+    const {error}=await sb.from('clientes').update({telefone:n}).eq('id',c.id);
+    if(error){erro=error;break}
+    c.phone=n; ALL_APPTS.filter(a=>a.cliente_id===c.id).forEach(a=>a.phone=n); ok++; btn.textContent=`Atualizando… ${ok}/${l.length}`;
+  }
+  toast(erro?`Atualizei ${ok}, mas parou: ${erro.message}`:`Pronto: ${ok} número${ok===1?'':'s'} com o 9`);
+  renderRevisar(); atualizarPillRevisar(); recarregar();
 }
 async function salvarTelRevisar(id){
   const el=document.getElementById('revTel_'+id), n=normTel(el.value);
-  if(!n||n.length<12||n.length>13){toast('Coloque o número com DDD, ex.: (33) 99999-9999');el.focus();return}
+  if(erroTel(n)){toast(erroTel(n));el.focus();return}
   const {error}=await sb.from('clientes').update({telefone:n}).eq('id',id);
   if(error){toast(error.code==='23505'?'Esse WhatsApp já está em outra cliente — talvez seja a mesma pessoa com outro nome':'Erro: '+error.message);return}
   const c=CLIENTS.find(x=>x.id===id); if(c) c.phone=n;
@@ -2891,7 +2919,7 @@ async function salvarCliente(){
   const cpf=v('cliCpf').replace(/\D/g,'')||null;
   if(cpf&&!cpfValido(cpf)){toast('CPF inválido — confira os números');document.getElementById('cliCpf').focus();return}
   const tel=normTel(v('cliTel'));
-  if(tel&&(tel.length<12||tel.length>13)){toast('WhatsApp incompleto — coloque com DDD, ex.: (33) 99999-9999');document.getElementById('cliTel').focus();return}
+  if(tel&&erroTel(tel)){toast(erroTel(tel));document.getElementById('cliTel').focus();return}
   if(!tel&&!confirm('Salvar sem WhatsApp? Sem o número o robô não consegue mandar confirmação nem lembrete para ela.')){document.getElementById('cliTel').focus();return}
   const mesma=tel&&CLIENTS.find(c=>c.id!==CLI_EDIT&&chaveTel(c.phone)===chaveTel(tel));
   if(mesma&&mesma.phone!==tel&&!confirm(`${mesma.name} já tem esse número ${tem9(mesma.phone)?'com':'sem'} o 9 (${fmtTel(mesma.phone)}). Deve ser a mesma pessoa.\n\nSalvar mesmo assim? Depois dá para juntar as duas em Clientes → ⚠️ Revisar.`)){document.getElementById('cliTel').focus();return}
@@ -3834,7 +3862,7 @@ async function avisarCliente(tipo,apptId){
     const btn=document.getElementById('avisoBtn'); btn.textContent='Salvar número e avisar';
     btn.onclick=async()=>{
       const n=normTel(tel.value);
-      if(!n||n.length<12||n.length>13){toast('Coloque o número com DDD, ex.: (33) 99999-9999');tel.focus();return}
+      if(erroTel(n)){toast(erroTel(n));tel.focus();return}
       const {error}=await sb.from('clientes').update({telefone:n}).eq('id',a.cliente_id);
       if(error){toast(error.code==='23505'?'Já existe outra cliente com esse WhatsApp':'Erro: '+error.message);return}
       ALL_APPTS.filter(x=>x.cliente_id===a.cliente_id).forEach(x=>x.phone=n);
@@ -4338,9 +4366,9 @@ async function importContacts() {
   try {
     const contacts = await navigator.contacts.select(['name','tel'], {multiple: true});
     if(!contacts.length) return;
-    const rows=contacts.map((c,i)=>({nome:(c.name||[])[0]||'Sem nome',telefone:normTel((c.tel||[])[0]),tipo:tipoPadrao(),
+    const rows=contacts.map((c,i)=>({nome:(c.name||[])[0]||'Sem nome',telefone:telPadrao((c.tel||[])[0]),tipo:tipoPadrao(),
       origem:'WhatsApp',cor:CORES_CLIENTE[(CLIENTS.length+i)%CORES_CLIENTE.length]}))
-      .filter(r=>!CLIENTS.some(c=>(r.telefone&&c.phone===r.telefone)||c.name===r.nome));
+      .filter(r=>!CLIENTS.some(c=>(r.telefone&&chaveTel(c.phone)===chaveTel(r.telefone))||c.name===r.nome));
     if(!rows.length){toast('Esses contatos já estão cadastrados');return}
     const {error}=await sb.from('clientes').upsert(rows,{onConflict:'owner_id,telefone',ignoreDuplicates:true});
     if(error){toast('Erro: '+error.message);return}
@@ -5344,7 +5372,7 @@ async function abrirContatosGoogle(){
     }while(token);
     CONTATOS_G=todos.map(p=>{
       const b=p.birthdays?.find(x=>x.date?.month)?.date;
-      return {resource:p.resourceName,nome:p.names?.[0]?.displayName||'',tel:normTel(p.phoneNumbers?.[0]?.value),
+      return {resource:p.resourceName,nome:p.names?.[0]?.displayName||'',tel:telPadrao(p.phoneNumbers?.[0]?.value),
         nasc:b&&b.month?`${b.year||1900}-${pad2(b.month)}-${pad2(b.day||1)}`:null};
     }).filter(c=>c.nome&&c.tel);
     renderContatosGoogle();
@@ -5352,7 +5380,7 @@ async function abrirContatosGoogle(){
 }
 // marcados ficam num Set (sobrevive à busca e ao "mostrar mais"); a lista cresce de 300 em 300
 let SEL_G=new Set(), LIMITE_G=300;
-const jaTemContato=c=>CLIENTS.some(x=>x.phone===c.tel);
+const jaTemContato=c=>CLIENTS.some(x=>x.phone&&chaveTel(x.phone)===chaveTel(c.tel));
 function filtroContatosG(){
   const q=semAcento(document.getElementById('gContatosBusca').value||''), dig=q.replace(/\D/g,'');
   return CONTATOS_G.filter(c=>!q||semAcento(c.nome).includes(q)||(dig&&c.tel.includes(dig)));
@@ -5434,11 +5462,11 @@ async function sincronizarContatos(forcar){
       if(!pagina) break;
     }
     if(token){
-      const tels=new Set(CLIENTS.map(c=>normTel(c.phone)).filter(Boolean));
+      const tels=new Set(CLIENTS.map(c=>chaveTel(c.phone)).filter(Boolean));
       const rows=mudou.filter(p=>!p.metadata?.deleted).map(p=>{const b=p.birthdays?.find(x=>x.date?.month)?.date;
-        return {nome:(p.names?.[0]?.displayName||'').slice(0,80),telefone:normTel(p.phoneNumbers?.[0]?.value),google_resource:p.resourceName,
+        return {nome:(p.names?.[0]?.displayName||'').slice(0,80),telefone:telPadrao(p.phoneNumbers?.[0]?.value),google_resource:p.resourceName,
           nascimento:b?.month?`${b.year||2000}-${String(b.month).padStart(2,'0')}-${String(b.day||1).padStart(2,'0')}`:null}})
-        .filter(r=>r.nome.length>=2&&r.telefone&&!tels.has(r.telefone));
+        .filter(r=>r.nome.length>=2&&r.telefone&&!tels.has(chaveTel(r.telefone)));
       for(const r of rows){
         const {error}=await sb.from('clientes').insert({...r,tipo:tipoPadrao(),origem:'Outro',cor:CORES_CLIENTE[(CLIENTS.length+trazidos)%CORES_CLIENTE.length]});
         if(!error){trazidos++;tels.add(r.telefone)}

@@ -185,6 +185,9 @@ section{margin-top:46px}
 .campo label{font-size:13.5px;font-weight:500;color:var(--muted)}
 .campo input,.campo textarea{padding:15px 16px;border-radius:16px;border:1.5px solid var(--line);background:var(--bg);font-size:16px;outline:none;width:100%;transition:border-color .2s,box-shadow .2s}
 .campo input:focus,.campo textarea:focus{border-color:var(--rose);box-shadow:0 0 0 4px var(--rose-lt)}
+.tel-linha{display:flex;gap:8px}
+.tel-linha select{flex:none;width:auto;padding:0 10px;border-radius:16px;border:1.5px solid var(--line);background:var(--bg);font-size:15px;color:inherit}
+.tel-linha #ddi{flex:none;width:84px}
 .lembrar{display:flex;align-items:center;gap:10px;font-size:14.5px;color:var(--muted);margin:4px 0 6px}
 .lembrar input{width:20px;height:20px;accent-color:var(--rose)}
 .erro{color:var(--danger);font-size:14.5px;margin-top:8px;line-height:1.45;animation:surge .3s both}
@@ -576,14 +579,38 @@ function renderDados(){
   document.getElementById('etapa').innerHTML=`
     <div class="etapa-tit"><h3>Seus dados</h3></div>
     <div class="campo"><label for="nome">Seu nome</label><input id="nome" autocomplete="name" placeholder="Como podemos te chamar?" maxlength="80" value="${esc(salvo.nome||'')}"></div>
-    <div class="campo"><label for="tel">WhatsApp</label><input id="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" value="${esc(salvo.tel||'')}" oninput="mascara(this)"></div>
+    <div class="campo"><label for="tel">WhatsApp <span style="color:var(--soft)">(com DDD)</span></label><div class="tel-linha"><select id="pais" aria-label="País" onchange="trocarPais()">${PAISES.map(([c,n])=>`<option value="${c}" ${String(salvo.pais||'55')===c?'selected':''}>${n}</option>`).join('')}</select><input id="ddi" inputmode="numeric" placeholder="+ código" maxlength="4" hidden value="${esc(salvo.ddi||'')}"><input id="tel" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(00) 90000-0000" value="${esc(salvo.tel||'')}" oninput="mascara(this)"></div></div>
     <div class="campo"><label for="cpf">CPF <span style="color:var(--soft)">(opcional, para nota fiscal)</span></label><input id="cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" oninput="mascaraCpf(this)"></div>
     <div class="campo"><label for="obs">Alguma observação? <span style="color:var(--soft)">(opcional)</span></label><textarea id="obs" rows="2" maxlength="300" placeholder="Preferência de cor, alergia, primeira vez…"></textarea></div>
     <label class="lembrar"><input type="checkbox" id="lembrar" ${salvo.nome?'checked':''}> Lembrar meus dados neste celular</label>
     <div class="erro" id="erro" hidden></div>`;
   if(!salvo.nome) setTimeout(()=>document.getElementById('nome')?.focus({preventScroll:true}),450);
+  trocarPais(true);
+}
+// o número é o que identifica a cliente: Brasil sempre com DDD e o 9 da frente; fora do Brasil, código do país + número
+const PAISES=[['55','🇧🇷 +55'],['1','🇺🇸 +1'],['351','🇵🇹 +351'],['34','🇪🇸 +34'],['39','🇮🇹 +39'],['54','🇦🇷 +54'],['595','🇵🇾 +595'],['outro','Outro']];
+function paisAtual(){const p=document.getElementById('pais')?.value||'55';return p==='outro'?(document.getElementById('ddi')?.value||'').replace(/\D/g,''):p}
+function trocarPais(inicio){
+  const br=document.getElementById('pais').value==='55', t=document.getElementById('tel');
+  document.getElementById('ddi').hidden=document.getElementById('pais').value!=='outro';
+  t.placeholder=br?'(00) 90000-0000':'Número';
+  if(!inicio) t.value=''; else mascara(t);
+}
+// devolve o número completo (só dígitos, com o código do país) ou o motivo do erro
+function telCompleto(){
+  const d=document.getElementById('tel').value.replace(/\D/g,''), p=paisAtual();
+  if(p==='55'){
+    if(d.length<10) return {erro:'Coloque o WhatsApp com DDD, ex.: (33) 99999-9999.'};
+    if(d.length===10) return {erro:'Faltou o 9 na frente do número. Ex.: (33) 99999-9999.'};
+    if(d.length!==11||d[2]!=='9') return {erro:'Confira o WhatsApp: DDD + 9 + número, ex.: (33) 99999-9999.'};
+    return {tel:'55'+d};
+  }
+  if(!p) return {erro:'Coloque o código do país.'};
+  if(d.length<6||(p+d).length>15) return {erro:'Confira o número do WhatsApp.'};
+  return {tel:p+d};
 }
 function mascara(i){
+  if((document.getElementById('pais')?.value||'55')!=='55'){i.value=i.value.replace(/[^\d ()-]/g,'').slice(0,18);return}
   let d=i.value.replace(/\D/g,'').slice(0,11);
   i.value=d.length>6?`(${d.slice(0,2)}) ${d.slice(2,d.length-4)}-${d.slice(-4)}`:d.length>2?`(${d.slice(0,2)}) ${d.slice(2)}`:d;
 }
@@ -623,13 +650,13 @@ async function confirmar(){
   const erro=document.getElementById('erro');
   const mostrar=m=>{erro.textContent=m;erro.hidden=false;erro.scrollIntoView({behavior:'smooth',block:'center'})};
   if(nome.length<2){document.getElementById('nome').focus();return mostrar(ERROS.nome_invalido)}
-  if(tel.replace(/\D/g,'').length<10){document.getElementById('tel').focus();return mostrar(ERROS.telefone_invalido)}
+  const tc=telCompleto(); if(tc.erro){document.getElementById('tel').focus();return mostrar(tc.erro)}
   const cpf=document.getElementById('cpf').value.replace(/\D/g,'');
   if(cpf&&!cpfValido(cpf)){document.getElementById('cpf').focus();return mostrar(ERROS.cpf_invalido)}
-  if(document.getElementById('lembrar').checked) store.set('agenda_cliente',{nome,tel}); else store.del('agenda_cliente');
+  if(document.getElementById('lembrar').checked) store.set('agenda_cliente',{nome,tel,pais:document.getElementById('pais').value,ddi:document.getElementById('ddi').value}); else store.del('agenda_cliente');
   const btn=document.getElementById('barraBtn');btn.disabled=true;btn.textContent='Agendando…';
   try{
-    await rpc('agendar_online',{p_slug:SLUG,p_servico:escolha.svc.id,p_inicio:`${ymd(escolha.dia)}T${escolha.hora}:00-03:00`,p_nome:nome,p_telefone:tel,p_obs:obs||null,p_cpf:cpf||null,p_extras:(escolha.svc.ids||[]).slice(1)});
+    await rpc('agendar_online',{p_slug:SLUG,p_servico:escolha.svc.id,p_inicio:`${ymd(escolha.dia)}T${escolha.hora}:00-03:00`,p_nome:nome,p_telefone:'+'+tc.tel,p_obs:obs||null,p_cpf:cpf||null,p_extras:(escolha.svc.ids||[]).slice(1)});
     sucesso(nome);
   }catch(e){
     btn.disabled=false;atualizarBarra();
