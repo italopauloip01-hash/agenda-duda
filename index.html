@@ -266,6 +266,9 @@ select.form-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://
 /* já tem cliente nesse horário: a dona pode encaixar mesmo assim (vermelho = aviso) */
 .slot.slot-encaixe{color:var(--danger,#c0392b);background:color-mix(in srgb,var(--danger,#c0392b) 9%,var(--bg-card));border-color:color-mix(in srgb,var(--danger,#c0392b) 35%,transparent)}
 .slot.slot-encaixe.selected{background:var(--danger,#c0392b);color:#fff;border-color:var(--danger,#c0392b)}
+/* horário que já passou: a dona pode registrar depois (atendeu e esqueceu de marcar) */
+.slot.slot-passado{color:var(--fg-muted);background:var(--bg-subtle);border-style:dashed}
+.slot.slot-passado.selected{background:var(--fg-muted);color:var(--on-fg);border-color:var(--fg-muted)}
 .aviso-encaixe{grid-column:1/-1;font-size:12.5px;color:var(--danger,#c0392b);background:color-mix(in srgb,var(--danger,#c0392b) 8%,transparent);border-radius:9px;padding:8px 10px;line-height:1.4}
 .badge-encaixe{background:color-mix(in srgb,var(--danger,#c0392b) 12%,transparent);color:var(--danger,#c0392b)}
 
@@ -1584,7 +1587,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.78'; const VERSAO_DATA='02/11/2026 14:37';
+const VERSAO_APP='3.79'; const VERSAO_DATA='11/11/2026 10:40';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2504,7 +2507,7 @@ function novoAgendamentoPara(nome,servicoId,tipo){
   if(tipo) document.getElementById('inputTipo').value=tipo;
   document.getElementById('inputServico').value=servicoId||''; // pode ser vários: "id1,id2"
   loadServicesForm();
-  document.getElementById('inputData').value=ymd(selectedDate<hoje0()?hoje0():selectedDate);
+  document.getElementById('inputData').value=ymd(selectedDate);
   loadSlots();
   if(svcSelecionado()) calcSlotDuration();
   openDrawer('novoAgendDrawer');
@@ -3871,6 +3874,7 @@ function textoAviso(tipo,a){
   return ['pedir_confirmacao','remarcado','confirmacao'].includes(tipo)&&v.link_confirmar&&!t.includes(v.link_confirmar)?t+' '+v.link_confirmar:t;
 }
 async function avisarCliente(tipo,apptId){
+  if(!tipo) return;
   const a=ALL_APPTS.find(x=>x.id===apptId); if(!a) return;
   document.getElementById('avisoTelBox').hidden=true;
   // sem número a mensagem nunca sai: em vez de um aviso que passa rápido, pede o número aqui mesmo
@@ -4138,12 +4142,14 @@ function loadSlots() {
   for(let min=ah*60+Math.ceil(am/30)*30;min<toMin(fecha);min+=30){
     const t=pad2(Math.floor(min/60))+':'+pad2(min%60);
     const ini=new Date(dataStr+'T'+t), fim=new Date(ini.getTime()+durMin*6e4);
-    const taken = ini<agora || fim>fimDia || ocupados.some(([oi,of])=>ini<of&&fim>oi);
+    // horário que já passou continua clicável: a Duda registra depois o atendimento que esqueceu de marcar
+    const passou = ini<agora;
+    const taken = fim>fimDia || ocupados.some(([oi,of])=>ini<of&&fim>oi);
     const choques = taken?[]:atendDia.filter(a=>ini<a.fim&&fim>a.ini);
     const meus = taken?[]:BLOQUEIOS.filter(b=>ini<b.fim&&fim>b.ini);
-    if(!taken&&!choques.length&&!meus.length)livres++;
+    if(!taken&&!passou&&!choques.length&&!meus.length)livres++;
     const d = document.createElement('div');
-    d.className='slot'+(taken?' slot-taken':choques.length||meus.length?' slot-encaixe':'');
+    d.className='slot'+(taken?' slot-taken':choques.length||meus.length?' slot-encaixe':passou?' slot-passado':'');
     d.textContent=t;
     const nomeBloq=b=>b.motivo||(b.tipo==='folga'?'folga':'compromisso pessoal');
     if(choques.length||meus.length) d.title=[...choques.map(a=>'Já tem '+a.name.split(' ')[0]+' '+a.time+'–'+a.end),...meus.map(b=>'Seu compromisso: '+nomeBloq(b))].join(', ');
@@ -4152,9 +4158,10 @@ function loadSlots() {
       d.classList.add('selected');
       grid.querySelector('.aviso-encaixe')?.remove();
       const avisos=[];
+      if(passou) avisos.push('Horário que já passou: fica registrado na agenda, sem mandar WhatsApp para a cliente.');
       if(choques.length) avisos.push(`Encaixe: nesse horário já tem ${choques.map(a=>`<b>${esc(a.name.split(' ')[0])}</b> (${a.time}–${a.end})`).join(' e ')}.`);
       if(meus.length) avisos.push(`Nesse horário você tem <b>${meus.map(b=>esc(nomeBloq(b))).join('</b> e <b>')}</b> (fechado para as clientes no link).`);
-      if(avisos.length) d.insertAdjacentHTML('afterend',`<div class="aviso-encaixe">⚠️ ${avisos.join(' ')} Dá para marcar mesmo assim.</div>`);
+      if(avisos.length) d.insertAdjacentHTML('afterend',`<div class="aviso-encaixe"${passou&&!choques.length&&!meus.length?' style="color:var(--fg-muted);background:var(--bg-subtle)"':''}>${passou&&!choques.length&&!meus.length?'🕘':'⚠️'} ${avisos.join(' ')}${choques.length||meus.length?' Dá para marcar mesmo assim.':''}</div>`);
       calcSlotDuration(t);
     };
     grid.appendChild(d);
@@ -4195,7 +4202,8 @@ async function salvarAgendamento() {
   const pagarAte=pagModo==='pago'?null:(document.getElementById('pagarAte').value||null);
   const cli=(CLI_ESCOLHIDA&&CLIENTS.find(c=>c.id===CLI_ESCOLHIDA))||CLIENTS.find(c=>c.name.toLowerCase()===nome.toLowerCase());
   const novoId=crypto.randomUUID();
-  const it={id:novoId,criado:Date.now(),remarcandoId:remarcandoId||null,tipoAviso:remarcandoId?'remarcado':'pedir_confirmacao',
+  // horário que já passou é só registro: não pede confirmação nem avisa a cliente
+  const it={id:novoId,criado:Date.now(),remarcandoId:remarcandoId||null,tipoAviso:ini<new Date()?null:remarcandoId?'remarcado':'pedir_confirmacao',
     cliente:cli?null:{id:crypto.randomUUID(),nome,tipo:svc.tipo,cor:CORES_CLIENTE[CLIENTS.length%CORES_CLIENTE.length]},
     agendamento:{id:novoId,cliente_id:null,servico_id:svc.id,servico_nome:svc.name.slice(0,200),tipo:svc.tipo,
       servicos:svc.itens.length>1?svc.itens.map(s=>({id:s.id,nome:s.name,dur:s.dur,preco:s.promo??s.price})):null,
