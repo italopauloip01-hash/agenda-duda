@@ -179,8 +179,10 @@ Deno.serve(async (req) => {
         return fim({ etapa: "categoria" });
       }
       if (quer(/obrigad|brigad|valeu|agradec/)) { R.push("Imagina! 💖 Qualquer coisa é só chamar."); return { respostas: R, estado: null, silenciar_min: 60 }; }
-      // conversa livre depois do menu (ex.: "oi, tudo bem?"): quem responde é a profissional
-      if (st.etapa === "menu" && !num) return { respostas: [], estado: null, silenciar_min: 60 };
+      // conversa livre depois do menu (ex.: "oi, tudo bem?"): o robô não responde, mas continua
+      // esperando o número — a cliente costuma mandar duas mensagens seguidas antes de ler o menu.
+      // Se a Duda entrar na conversa, o robô sai sozinho (regra do robô).
+      if (st.etapa === "menu" && !num) return { respostas: [], estado: st };
       R.push("Não entendi direitinho 🙈", MENU);
       return fim({ etapa: "menu" });
     }
