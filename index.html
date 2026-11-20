@@ -1587,7 +1587,7 @@ let INVENTORY = [];
 let EXPENSES = [];
 let AVALIACOES = [];
 // versão do app — sobe sozinha a cada publicação (tools/publicar.ps1); mostrada em Ajustes → Sobre o sistema
-const VERSAO_APP='3.80'; const VERSAO_DATA='20/11/2026 20:57';
+const VERSAO_APP='3.81'; const VERSAO_DATA='20/11/2026 20:59';
 let NOTIFS = [];
 let BLOQUEIOS = [];
 let FIN_DATA = {semana:null, mes:null, ano:null};
@@ -2039,7 +2039,7 @@ function aplicarDados({cli,svc,prod,desp,aval,notif,bloq,appts,fotos,hors,perf,g
     SVCS_TIPO=Object.fromEntries(TIPOS_SVC.map(t=>[t.id,svc.filter(s=>s.tipo===t.id).map(mapSvc)]));
     INVENTORY=prod.map(p=>({id:p.id,name:p.nome,cat:p.categoria,qtd:Number(p.quantidade),min:Number(p.minimo),custo:Number(p.custo)}));
     EXPENSES=desp.map(e=>({id:e.id,desc:e.descricao,cat:e.categoria,valor:Number(e.valor),dataD:new Date(e.data+'T12:00:00'),data:relDia(e.data+'T12:00:00')}));
-    AVALIACOES=aval.map(a=>({id:a.id,name:a.nome,nota:a.nota,comentario:a.comentario||'',pendente:!a.publicada,data:relDia(a.criado_em)}));
+    AVALIACOES=aval.map(a=>({id:a.id,name:a.nome,nota:a.nota,comentario:a.comentario||'',pendente:!a.publicada,destaque:!!a.destaque,data:relDia(a.criado_em)}));
     NOTIFS=notif.map(n=>({id:n.id,icon:n.icone,text:n.texto,time:relTempo(n.criado_em),lida:n.lida,agendamento_id:n.agendamento_id}));
     BLOQUEIOS=bloq.map(b=>({id:b.id,tipo:b.tipo,ini:new Date(b.inicio),fim:new Date(b.fim),motivo:b.motivo}));
     ALL_APPTS=appts.map(mapAgend);
@@ -3399,17 +3399,22 @@ function renderAvaliacoes() {
     d.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span style="font-weight:600;font-size:14px">${esc(a.name)}</span>
-        ${a.pendente?'<span class="badge badge-warn">Só você vê</span>':'<span class="badge badge-ok">Publicada</span>'}
+        ${a.pendente?'<span class="badge badge-warn">Só você vê</span>':a.destaque?'<span class="badge badge-ok">⭐ Destaque no site</span>':'<span class="badge badge-ok">Publicada</span>'}
       </div>
       <div class="stars">${'★'.repeat(a.nota)}<span style="color:var(--border-strong)">${'★'.repeat(5-a.nota)}</span></div>
       ${a.comentario?`<div style="font-size:13px;color:var(--fg-muted);margin-top:7px;line-height:1.5">"${esc(a.comentario)}"</div>`:''}
       <div style="font-size:11px;color:var(--fg-soft);margin-top:6px">${esc(a.data)}</div>
-      ${a.pendente?`<div style="display:flex;gap:7px;margin-top:10px"><button class="btn btn-ok btn-sm" onclick="aprovarAvaliacao('${a.id}',true)">Mostrar no site</button><button class="btn btn-danger btn-sm" onclick="aprovarAvaliacao('${a.id}',false)">Apagar</button></div>`:`<button class="btn btn-ghost btn-sm" style="margin-top:10px;width:auto;padding:6px 12px" onclick="tirarDoSite('${a.id}')">Tirar do site</button>`}`;
+      ${a.pendente?`<div style="display:flex;gap:7px;margin-top:10px"><button class="btn btn-ok btn-sm" onclick="aprovarAvaliacao('${a.id}',true)">Mostrar no site</button><button class="btn btn-danger btn-sm" onclick="aprovarAvaliacao('${a.id}',false)">Apagar</button></div>`:`<div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap"><button class="btn ${a.destaque?'btn-ghost':'btn-primary'} btn-sm" style="width:auto;padding:6px 12px" onclick="destacarAvaliacao('${a.id}',${!a.destaque})">${a.destaque?'Tirar do destaque':'⭐ Destacar no site'}</button><button class="btn btn-ghost btn-sm" style="width:auto;padding:6px 12px" onclick="tirarDoSite('${a.id}')">Tirar do site</button></div>`}`;
     el.appendChild(d);
   });
 }
+// destaque: aparece entre as primeiras do carrossel no site (sempre, mesmo sendo antiga)
+async function destacarAvaliacao(id,sim){
+  try{await q(sb.from('avaliacoes').update({destaque:sim}).eq('id',id))}catch(e){return}
+  toast(sim?'Em destaque: aparece entre as primeiras no site':'Tirada do destaque'); await recarregar();
+}
 async function tirarDoSite(id){
-  try{await q(sb.from('avaliacoes').update({publicada:false}).eq('id',id))}catch(e){return}
+  try{await q(sb.from('avaliacoes').update({publicada:false,destaque:false}).eq('id',id))}catch(e){return}
   toast('Avaliação tirada do site — continua aqui só para você'); await recarregar();
 }
 async function aprovarAvaliacao(id,ok){
